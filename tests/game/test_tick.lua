@@ -97,16 +97,58 @@ describe("tick", function()
     storage.belt_stack = {}
   end)
 
-  it("sushi in sorted stacks out", function()
+  it("releases at belt stack", function()
+    -- C-2 v6: belt stack 4 -> box releases as soon as one kind has 4 on a lane (not item stack 50).
     local _, _, feed, front = build(surface, force, {})
     local q = {}
-    for i = 1, 50 do q[#q + 1] = "iron-ore"; q[#q + 1] = "copper-ore" end
-    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 100 end, 3400, function()
-      local r = runs(output(front, 1))
-      assert.are_equal(2, #r, "two sorted runs")
-      assert.are_equal(50, r[1].count); assert.are_equal(50, r[2].count)
-      assert.are_not_equal(r[1].name, r[2].name)
+    for i = 1, 8 do q[#q + 1] = "iron-ore"; q[#q + 1] = "copper-ore" end
+    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 16 end, 1800, function()
+      local seq = output(front, 1)
+      assert.are_equal(16, total(seq))
+      for _, s in ipairs(seq) do assert.are_equal(4, s.count, "every belt item is a full 4-stack of one kind") end
+      assert.are_equal(8, total(seq, "iron-ore")); assert.are_equal(8, total(seq, "copper-ore"))
+    end)
+  end)
+
+  it("belt stack 1 passes through", function()
+    -- C-2 v6 + author: no belt capacity research -> every item leaves at once, lane and order kept.
+    force.belt_stack_size_bonus = 0
+    local _, _, feed, front = build(surface, force, {})
+    local q = { "iron-ore", "copper-ore", "iron-ore", "coal", "copper-ore" }
+    run_until(feeder(feed, { { table.unpack(q) }, {} }), function() return total(output(front, 1)) >= 5 end, 1200, function()
+      local seq = output(front, 1)
+      local names = {}
+      for _, s in ipairs(seq) do assert.are_equal(1, s.count); names[#names + 1] = s.name end
+      assert.are.same(q, names)
       assert.are_equal(0, total(output(front, 2)))
+    end)
+  end)
+
+  it("decon marked box stops, cancel resumes", function()
+    -- E-8: marked for deconstruction -> no intake, no output, LED hidden; cancel -> resumes.
+    local box, rec, feed, front = build(surface, force, {})
+    box.order_deconstruction(force)
+    local fed = feeder(feed, { rep("iron-ore", 8), {} })
+    local phase, marked_ticks = 1, 0
+    on_tick(function()
+      fed()
+      if phase == 1 then
+        marked_ticks = marked_ticks + 1
+        if marked_ticks == 400 then
+          assert.are_equal(0, rec.box.stored_count, "no intake while marked")
+          assert.are_equal(0, total(output(front, 1)), "no output while marked")
+          assert.is_false(rec.led.sprite.visible, "LED off while marked")
+          box.cancel_deconstruction(force)
+          phase = 2
+        end
+      elseif total(output(front, 1)) >= 8 then
+        assert.is_true(rec.led.sprite.visible, "LED back on")
+        return false
+      elseif marked_ticks > 2000 then
+        error("no output after cancel")
+      else
+        marked_ticks = marked_ticks + 1
+      end
     end)
   end)
 
