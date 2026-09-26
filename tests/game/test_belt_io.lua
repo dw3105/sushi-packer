@@ -111,8 +111,9 @@ describe("belt_io", function()
     force.belt_stack_size_bonus = 3
     local line = belt.get_transport_line(1)
     assert.is_true(line.insert_at_back({ name = "iron-plate", count = 4 }, 4))
-    after_ticks(1, function()
-      io.pull(rec, { 1, 0 }, function(_, _, _, count) assert.are_equal(4, count); return 2 end)
+    after_ticks(120, function()
+      local got = io.pull(rec, { 1, 0 }, function(_, _, _, count) assert.are_equal(4, count); return 2 end)
+      assert.are_equal(1, got[1])
       local contents = line.get_detailed_contents()
       assert.are_equal(1, #contents); assert.are_equal(2, contents[1].stack.count)
     end)
@@ -139,7 +140,11 @@ describe("belt_io", function()
   it("push returns zero when front blocked", function()
     local rec, _, belt = setup("north")
     local line = belt.get_transport_line(1)
-    for i = 1, 8 do assert.is_true(line.insert_at(i / 10, { name = "iron-plate", count = 1 })) end
+    for _ = 1, 32 do
+      if not line.can_insert_at_back() then break end
+      assert.is_true(line.insert_at_back({ name = "iron-plate", count = 1 }, 1))
+    end
+    assert.is_true(not line.can_insert_at_back())
     assert.are_equal(0, io.push(rec, 1, { name = "copper-plate", quality = "normal", count = 1 }, 1))
   end)
   it("push returns zero without front belt", function()
