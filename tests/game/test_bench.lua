@@ -29,7 +29,7 @@ describe("bench", function()
     local positions = builder.build(surface, force, 1, { 0, 0 })
     local p = positions[1]
     after_ticks(240, function()
-      local source = surface.find_entity("infinity-chest", { p.x + 5, p.y })
+      local source = surface.find_entity("infinity-chest", { p.x + 4, p.y - 1 })
       assert.is_not_nil(source)
       assert.is_true(source.get_inventory(defines.inventory.chest).get_item_count("iron-plate") > 0, "source has mixed stock")
       local belt = surface.find_entity("transport-belt", { p.x + 1, p.y })
