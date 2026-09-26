@@ -1,5 +1,5 @@
 -- Offline test runner, lua5.2 (SP-06). usage: lua5.2 tests/offline/run.lua <file.lua> [full test name]
--- Full test name = describe names + " " + it name, joined by single spaces.
+-- Full test name = describe names and it name joined by " > " (same shape as FactorioTest paths).
 -- With a name: runs only that test; exit 1 if it fails OR is not found (typo never passes).
 -- Without a name: runs every test in the file (integrator full suite only, SP-02).
 package.path = "./?.lua;" .. package.path
@@ -12,7 +12,7 @@ function it(name, fn)
   local parts = {}
   for i = 1, #stack do parts[i] = stack[i] end
   parts[#parts + 1] = name
-  tests[#tests + 1] = { name = table.concat(parts, " "), fn = fn }
+  tests[#tests + 1] = { name = table.concat(parts, " > "), fn = fn }
 end
 test = it
 

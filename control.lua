@@ -69,5 +69,5 @@ end
 
 -- In-game tests (FactorioTest). Absent in release zip: tests/ not shipped, mod not active.
 if script.active_mods["factorio-test"] then
-  require("__factorio-test__/init")(require("tests.game.index"))
+  require("__factorio-test__/init")(require("tests.game.index"), { load_luassert = true })
 end

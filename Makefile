@@ -16,8 +16,8 @@ factorio: ## Download headless Factorio FV=2.0 (2.0.77) or FV=2.1 (2.1.20) into 
 test: ## FULL suite on FV (queues in gateslot). Integrator only; lanes never run this
 	$(GATE) tools/run_tests.sh $(FV) --full
 
-test-one: ## One test only: make test-one FV=2.0 T='tests/game/test_probe.lua::probe placer keeps direction'
-	@test -n "$(T)" || { echo "usage: make test-one FV=<2.0|2.1> T='<file>::<full test name>'" >&2; exit 2; }
+test-one: ## One test only: make test-one FV=2.0 T='tests/game/test_probe.lua::probe > placer keeps direction'
+	@test -n "$(T)" || { echo "usage: make test-one FV=<2.0|2.1> T='<file>::<describe> > <it>'" >&2; exit 2; }
 	$(GATE) tools/run_tests.sh $(FV) '$(T)'
 
 ci-collect: ## List offline test names, runs nothing

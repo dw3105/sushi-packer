@@ -17,8 +17,8 @@ suite_label = "sushi-packer/heavy"
 # lane merge runs this in lane worktree. Guard tests only: full suite belongs to integrator (SP-02).
 # `{tests}` is never substituted by ~/skills/tools (FND-0002 in local-transcriber), so no placeholder.
 # Direct runner, not make: verify already holds sushi-packer/heavy; make would queue a second lease.
-default = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard contract frozen' && tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard names frozen' && tools/run_tests.sh 2.0 'tests/game/test_guard.lua::guard prototypes exist' && tools/run_tests.sh 2.1 'tests/game/test_guard.lua::guard prototypes exist'"
-scaffold = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard contract frozen'"
+default = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard > contract frozen' && tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard > names frozen' && tools/run_tests.sh 2.0 'tests/game/test_guard.lua::guard > prototypes exist' && tools/run_tests.sh 2.1 'tests/game/test_guard.lua::guard > prototypes exist'"
+scaffold = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard > contract frozen'"
 ci_collect = "make ci-collect"
 
 [records]

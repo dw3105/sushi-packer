@@ -20,3 +20,15 @@ Verified-by: `curl -s https://mods.factorio.com/api/mods/factorio-test | python3
 ## FND-0002 - Rotated blueprint does not rotate a not-rotatable container
 
 Found 2026-09-26 by web research (https://forums.factorio.com/127223): since 2.0.42 blueprint rotation leaves not-rotatable entities facing their stored direction. Per-direction container variants in a blueprint would build facing wrong way after rotating the blueprint. Closed by placer design (`docs/DECISIONS.md` D-4): blueprints store rotatable placer, not variant.
+
+## FND-0003 - FactorioTest CLI 3.0.1 tries to download builtin mods through fmtk
+
+Found 2026-09-26 on `legalcopilot-dev`, S0 first in-game run. CLI 3.0.1 `installModDependencies` treats `space-age` from `info.json` as portal mod and runs `npx fmtk mods install ... space-age`: `npm error 404 'fmtk@*' is not in this registry`, no test runs. CLI 3.6.0 has `BUILTIN_MODS` (`base`, `quality`, `elevated-rails`, `space-age`, `recycler`) and accepts mod ≥ 3.0.0. Second trap: CLI shells out to `npx fmtk`, which resolves from cwd, not PATH. Closed by `tools/run_tests.sh`: one CLI 3.6.0 in main checkout `tools/ft/`, run with cwd there, all paths absolute; mod 3.0.1 on 2.0, 3.1.0 on 2.1.
+
+Verified-by: `grep -n BUILTIN_MODS tools/ft/node_modules/factorio-test-cli/mod-setup.js`
+
+## FND-0004 - Transport line position shrinks toward exit; web summary said it grows
+
+Found 2026-09-26 on `legalcopilot-dev`, S0 probe. Research summary said front-most item = highest `position`. Measured on 2.0.77 and 2.1.20: iron inserted at 0.1, copper at 0.6 on a lone north belt; after 120 ticks `line_length=1 iron-plate@0 copper-plate@0.25`. Front-most (next to leave) = lowest `position`; items stop at 0 on belt end. Code taking highest position would pull the item farthest from box. Closed by probe `probe > front-most item has lowest position` and `docs/CONTRACT.md` Lanes section.
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > front-most item has lowest position'`

@@ -45,7 +45,13 @@ Default settings = `copy.default_settings()`.
 
 ## Lanes
 
-Lane index 1 = left, 2 = right, facing belt motion (`LuaEntity.get_transport_line(i)`). Box input lane i ↔ output lane i (L-1).
+Measured facts (S0 probes, `tests/game/test_probe.lua`, green on 2.0.77 and 2.1.20):
+- Lane index 1 = left, 2 = right, facing belt motion (`LuaEntity.get_transport_line(i)`). Box input lane i ↔ output lane i (L-1).
+- `LuaTransportLine` `position` shrinks toward exit. Front-most item (next to enter box) = LOWEST `position`; on a belt end it rests at 0 (FND-0004).
+- `insert_at_back({name, count=4}, 4)` with `force.belt_stack_size_bonus = 3` makes one belt item of count 4.
+- Placer `simple-entity-with-owner` keeps `direction`; blueprint of placer built with `direction = east` turns ghost east → south (D-4).
+- Test world: 1 connected player with character (`game.players[1]`): GUI via `player.opened`, mining via `player.mine_entity`.
+- In-game test full name = `<describe> > <it>`; FactorioTest path = `tests.game.<file> > <describe> > <it>`.
 
 ## scripts/core.lua — pure engine (lane A). No game API at all.
 
