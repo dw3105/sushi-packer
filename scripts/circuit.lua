@@ -24,7 +24,7 @@ function M.evaluate(rec)
   end
 
   local enabled = true
-  if circuit.enable ~= false and cond.first_signal then
+  if circuit.enable == true and cond.first_signal then
     enabled = M.compare(signal_value(cond.first_signal), cond.comparator, cond.constant)
   end
 

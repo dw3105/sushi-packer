@@ -47,9 +47,9 @@ function M.on_setup_blueprint(e)
     if v then
       local index = ent.entity_number
       local rec = mapping[index] and get_rec(mapping[index])
+      ent.name = N.placer(v.tier)
+      ent.direction = defines.direction[v.dir]
       if rec then
-        ent.name = N.placer(v.tier)
-        ent.direction = defines.direction[v.dir]
         ent.tags = ent.tags or {}
         ent.tags.sushi_packer = M.export(rec)
       end
