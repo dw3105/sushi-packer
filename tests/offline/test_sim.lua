@@ -85,8 +85,9 @@ describe("sim", function()
   end)
 
   it("belt box and sink", function()
-    local sim, created = setup()
+    local sim, created, _, force = setup()
     sim.scene("factoriopedia")
+    eq(force.belt_stack_size_bonus, 3)
     eq(find(created, N.placer("yellow"), { 0.5, 0.5 }).direction, defines.direction.east)
     local box = find(created, N.placer("yellow"), { 0.5, 0.5 })
     eq(box.raise_built, true)
@@ -95,6 +96,14 @@ describe("sim", function()
     eq(loader.type, "input")
     local sink = find(created, "infinity-chest", { 5.5, 0.5 })
     eq(sink.entity.remove_unfiltered_items, true)
+    local belt_count = 0
+    for _, spec in ipairs(created) do
+      if spec.name == "transport-belt" then
+        belt_count = belt_count + 1
+        eq(spec.direction, defines.direction.east)
+      end
+    end
+    eq(belt_count, 8)
     for x = -5, -1 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
     for x = 1, 3 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
   end)
