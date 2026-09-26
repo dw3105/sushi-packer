@@ -51,7 +51,7 @@ describe("gui", function()
     rec.settings.circuit.flush_signal = { type = "virtual", name = "signal-A" }
     gui.on_opened({ player_index = player.index, entity = box, gui_type = defines.gui_type.entity })
     local f = player.gui.relative.sushi_packer_frame
-    assert.are_equal("custom", element(f, "timeout_mode").switch_state and "custom" or "global")
+    assert.are_equal("right", element(f, "timeout_mode").switch_state, "custom mode = right side of switch")
     assert.are_equal("42", element(f, "timeout_s").text)
     assert.are_equal("iron-plate", element(f, "filter_item_1").elem_value.name)
     assert.is_true(element(f, "circuit_enable").state)
