@@ -16,7 +16,8 @@ Author answers and integrator defaults. Author may overturn any default; then `d
 | Q-5 | Flush signal flushes partials only, not pass-through hold. | default (proposed in reqs) |
 | Q-6 | Reference machine `legalcopilot-dev` (4 vCPU GCP VM); budget 200 boxes ≤ 1 ms/tick script time. | default |
 | Q-7 | Mod name and prefix `sushi-packer`. | default |
-| D-1 | Stored items live in container inventory; engine counters = logic truth. Reconcile on `on_gui_closed` of box + every 60 ticks: deficit removed newest partial first, then back of ready queue; surplus adopted as left-lane arrival. | integrator |
+| D-1 | Stored items live in container inventory; engine counters = logic truth. Reconcile every tick for boxes a connected player has opened (E-6 "next tick") + every 60 ticks for all: deficit removed newest partial first, then back of ready queue; surplus adopted as left-lane arrival. | integrator |
 | D-2 | Map setting `sushi-packer-flush-timeout`, int seconds, default 0 (off), range 0..3600. | integrator |
 | D-3 | Pass-through hold items live in `storage`, not inventory; returned on mine, spilled on death. | integrator |
 | D-4 | Placer: item `place_result` = `sushi-packer-<tier>-placer` (`simple-entity-with-owner`, Sprite4Way). Build events swap placer → variant by `direction`. `on_player_setup_blueprint` rewrites variants → placer + direction + tags. Rotate placed box via custom inputs linked to `rotate` / `reverse-rotate` on `player.selected`. Swap copies inventory + wires, destroys old, creates new, rekeys storage. | integrator (FND-0002) |
+| REV | Lane review by integrator session (code author = codex, a different agent). `lane merge` refuses reviewer = merger, so integrator merges with `git merge --no-ff lane/<id>` in `int/v1` worktree after reading full diff, `lane verify <id>` (guard nodes) and lane PASS verdict; weak tests hardened on `int/v1` with mutation-proven red. | author, 2026-09-26 |
