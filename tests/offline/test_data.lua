@@ -22,6 +22,48 @@ local function science_names(unit)
 end
 
 describe("data", function()
+  it("own subgroup row after belts", function()
+    local raw = load()
+    local row = raw["item-subgroup"][N.SUBGROUP]
+    eq(row.group, "logistics"); eq(row.order, "b-a")
+    local count = 0
+    for _, prototype in ipairs(F.extended) do if prototype.type == "item-subgroup" and prototype.name == N.SUBGROUP then count = count + 1 end end
+    eq(count, 1, "subgroup is extended once")
+    for _, tier in ipairs(N.TIERS) do eq(raw.item[N.item(tier)].subgroup, N.SUBGROUP) end
+  end)
+
+  it("order yellow red blue turbo", function()
+    local raw = load()
+    for i, tier in ipairs(N.TIERS) do eq(raw.item[N.item(tier)].order, "a[sushi-packer]-" .. string.char(96 + i), tier) end
+  end)
+
+  it("item names follow vanilla series", function()
+    eq({ N.item("yellow"), N.item("red"), N.item("blue"), N.item("turbo") },
+      { "sushi-packer", "fast-sushi-packer", "express-sushi-packer", "turbo-sushi-packer" })
+  end)
+
+  it("simulations call scene with mods", function()
+    local raw = load()
+    dofile("prototypes/tips.lua")
+    local expected = { mods = { "sushi-packer" }, init_update_count = 0, checkboard = true }
+    for _, tier in ipairs(N.TIERS) do
+      expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
+      eq(raw.item[N.item(tier)].factoriopedia_simulation, expected, tier .. " item")
+      expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
+      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation, expected, tier .. " north")
+    end
+    expected.init = 'remote.call("sushi-packer", "scene", "tips")'
+    eq(raw["tips-and-tricks-item"][N.TIPS].simulation, expected)
+  end)
+
+  it("placer joins belt group variants do not", function()
+    local raw = load()
+    for _, tier in ipairs(N.TIERS) do
+      eq(raw["simple-entity-with-owner"][N.placer(tier)].fast_replaceable_group, N.BELT_GROUP)
+      for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier, dir)].fast_replaceable_group, N.FAST_REPLACE_GROUP) end
+    end
+  end)
+
   it("yellow recipe matches table", function()
     local raw = load()
     eq(ingredients(raw.recipe[N.item("yellow")]), {

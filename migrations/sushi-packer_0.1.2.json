@@ -1,0 +1,46 @@
+{
+  "entity": [
+    ["sushi-packer-yellow-placer", "sushi-packer-placer"],
+    ["sushi-packer-yellow-north", "sushi-packer-north"],
+    ["sushi-packer-yellow-east", "sushi-packer-east"],
+    ["sushi-packer-yellow-south", "sushi-packer-south"],
+    ["sushi-packer-yellow-west", "sushi-packer-west"],
+    ["sushi-packer-yellow-remnants", "sushi-packer-remnants"],
+    ["sushi-packer-red-placer", "fast-sushi-packer-placer"],
+    ["sushi-packer-red-north", "fast-sushi-packer-north"],
+    ["sushi-packer-red-east", "fast-sushi-packer-east"],
+    ["sushi-packer-red-south", "fast-sushi-packer-south"],
+    ["sushi-packer-red-west", "fast-sushi-packer-west"],
+    ["sushi-packer-red-remnants", "fast-sushi-packer-remnants"],
+    ["sushi-packer-blue-placer", "express-sushi-packer-placer"],
+    ["sushi-packer-blue-north", "express-sushi-packer-north"],
+    ["sushi-packer-blue-east", "express-sushi-packer-east"],
+    ["sushi-packer-blue-south", "express-sushi-packer-south"],
+    ["sushi-packer-blue-west", "express-sushi-packer-west"],
+    ["sushi-packer-blue-remnants", "express-sushi-packer-remnants"],
+    ["sushi-packer-turbo-placer", "turbo-sushi-packer-placer"],
+    ["sushi-packer-turbo-north", "turbo-sushi-packer-north"],
+    ["sushi-packer-turbo-east", "turbo-sushi-packer-east"],
+    ["sushi-packer-turbo-south", "turbo-sushi-packer-south"],
+    ["sushi-packer-turbo-west", "turbo-sushi-packer-west"],
+    ["sushi-packer-turbo-remnants", "turbo-sushi-packer-remnants"]
+  ],
+  "item": [
+    ["sushi-packer-yellow", "sushi-packer"],
+    ["sushi-packer-red", "fast-sushi-packer"],
+    ["sushi-packer-blue", "express-sushi-packer"],
+    ["sushi-packer-turbo", "turbo-sushi-packer"]
+  ],
+  "recipe": [
+    ["sushi-packer-yellow", "sushi-packer"],
+    ["sushi-packer-red", "fast-sushi-packer"],
+    ["sushi-packer-blue", "express-sushi-packer"],
+    ["sushi-packer-turbo", "turbo-sushi-packer"]
+  ],
+  "technology": [
+    ["sushi-packer-yellow", "sushi-packer"],
+    ["sushi-packer-red", "fast-sushi-packer"],
+    ["sushi-packer-blue", "express-sushi-packer"],
+    ["sushi-packer-turbo", "turbo-sushi-packer"]
+  ]
+}

@@ -4,6 +4,14 @@ local N = require("scripts.names")
 
 local G = "__sushi-packer__/graphics/"
 local BUILT_TIERS = N.TIERS
+local TIER_INDEX = {}
+for i, tier in ipairs(N.TIERS) do TIER_INDEX[tier] = i end
+local FACTORIOPEDIA_SIMULATION = {
+  mods = { N.SIM_INTERFACE },
+  init = 'remote.call("' .. N.SIM_INTERFACE .. '", "scene", "factoriopedia")',
+  init_update_count = 0,
+  checkboard = true,
+}
 
 local function layers(base)
   return {
@@ -32,11 +40,12 @@ local function make_tier(tier)
     type = "item",
     name = N.item(tier),
     icon = icon(tier), icon_size = 64,
-    subgroup = "belt",
-    order = "z[sushi-packer]-" .. tier,
+    subgroup = N.SUBGROUP,
+    order = "a[sushi-packer]-" .. string.char(96 + TIER_INDEX[tier]),
     place_result = N.placer(tier),
     stack_size = 50,
     weight = N.ITEM_WEIGHT,
+    factoriopedia_simulation = FACTORIOPEDIA_SIMULATION,
   }
 
   protos[#protos + 1] = {
@@ -133,7 +142,7 @@ local function make_tier(tier)
       south = picture(tier, "south"), west = picture(tier, "west"),
     },
     hidden_in_factoriopedia = true,
-    fast_replaceable_group = "transport-belt",  -- E-9 probe: placer may replace belt; variants keep own group (one way)
+    fast_replaceable_group = N.BELT_GROUP,
   }
   for k, v in pairs(common) do placer[k] = v end
   protos[#protos + 1] = placer
@@ -154,6 +163,7 @@ local function make_tier(tier)
       circuit_connector = circuit_connector_definitions["chest"],
       circuit_wire_max_distance = default_circuit_wire_max_distance,
       hidden_in_factoriopedia = dir ~= "north",
+      factoriopedia_simulation = dir == "north" and FACTORIOPEDIA_SIMULATION or nil,
       next_upgrade = next_tier and N.variant(next_tier, dir) or nil,  -- U-3 upgrade planner, same dir
     }
     for k, v in pairs(common) do box[k] = v end
@@ -175,6 +185,7 @@ local function make_tier(tier)
   return protos
 end
 
+data:extend({ { type = "item-subgroup", name = N.SUBGROUP, group = "logistics", order = "b-a" } })
 for _, tier in ipairs(BUILT_TIERS) do
   data:extend(make_tier(tier))
 end
