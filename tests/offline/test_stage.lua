@@ -28,7 +28,7 @@ describe("stage", function()
     local s = read("changelog.txt")
     local sep = string.rep("-", 99)
     for _, v in ipairs({"0.2.1", "0.2.0", "0.1.1", "0.1.0"}) do
-      assert(s:find(sep .. "\nVersion: " .. v .. "\nDate: 2026%-09%-26"), "missing changelog block " .. v)
+      assert(s:find(sep .. "\nVersion: " .. v .. "\nDate: 2026-09-26", 1, true), "missing changelog block " .. v)
     end
   end)
 end)
