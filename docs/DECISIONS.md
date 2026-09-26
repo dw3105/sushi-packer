@@ -14,7 +14,7 @@ Author answers and integrator defaults. Author may overturn any default; then `d
 | Q-3 | Timeout clock from first item arrival of partial. | default (proposed in reqs) |
 | Q-4 | Circuit disabled = input and output stop. | default (current spec) |
 | Q-5 | Flush signal flushes partials only, not pass-through hold. | default (proposed in reqs) |
-| Q-6 | Reference machine `legalcopilot-dev` (4 vCPU GCP VM); budget 200 boxes ≤ 1 ms/tick script time. | default |
+| Q-6 | Reference machine `legalcopilot-dev` (4 vCPU GCP VM, shared); budget 200 boxes ≤ 5 ms/tick script time (R-1 v4). | author, 2026-09-26 |
 | Q-7 | Mod name and prefix `sushi-packer`. | default |
 | D-1 | Stored items live in container inventory; engine counters = logic truth. Reconcile every tick for boxes a connected player has opened (E-6 "next tick") + every 60 ticks for all: deficit removed newest partial first, then back of ready queue; surplus adopted as left-lane arrival. | integrator |
 | D-2 | Map setting `sushi-packer-flush-timeout`, int seconds, default 0 (off), range 0..3600. | integrator |

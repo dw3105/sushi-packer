@@ -4,3 +4,63 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 
 | ID | 2.0 | 2.1 | Proof |
 |---|---|---|---|
+| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.0 = 2.0, 0.2.0 = 2.1) load headless; full suites green on both |
+| T-2 | NOT-TESTED | NOT-TESTED |  — NOT-TESTED: no save/load or multiplayer desync run; design: all state in `storage` (`core > box is plain data`), no pairs-order logic |
+| E-1 | PASS | PASS | `belt_io > works in all four directions`, `lifecycle > placer becomes variant facing its direction` |
+| E-2 | PASS | PASS | `data > variants are 48 slot not rotatable containers` |
+| E-3 | PASS | PASS | `belt_io > behind finds belt moving into box`, `belt_io > push returns zero without front belt`, `tick > full box flushes oldest partial and loses nothing` |
+| E-4 | PASS | PASS | `data > every tier has item placer variants and remnant`, `tick > red tier twice yellow throughput` |
+| E-5 | PASS | PASS | `lifecycle > mining returns contents and hold to player`, `lifecycle > mining with full inventory spills rest`, `lifecycle > died box spills contents and hold` |
+| E-6 | PASS | PASS | `tick > player removal reconciles next tick`, `tick > opened box reconciles next tick` — GUI shows contents: native container GUI |
+| E-7 | PASS | PASS | `lifecycle > swap keeps inventory and settings`, `lifecycle > rotate input turns selected box`, `probe > rotated blueprint turns placer ghost` — Q-8: 4 variants + placer |
+| C-1 | PASS | PASS | `core > same item on two lanes keeps two buffers`, `core > quality is separate buffer` |
+| C-2 | PASS | PASS | `core > full stack becomes ready on its lane` |
+| C-3 | PASS | PASS | `core > full stack becomes ready on its lane`, `tick > sushi in sorted stacks out` |
+| C-4 | PASS | PASS | `core > ready stacks leave in ready order` |
+| C-5 | PASS | PASS | `core > arrival after ready starts new partial` |
+| L-1 | PASS | PASS | `tick > lanes kept end to end`, `belt_io > pull keeps lanes` |
+| L-2 | PASS | PASS | `core > used slots counts ready and partials` |
+| L-3 | PASS | PASS | `tick > blocked left lane does not stall right`, `tick > blocked lane does not stall other lane` |
+| F-1 | PASS | PASS | `core > oldest partial chosen across lanes`, `tick > full box flushes oldest partial and loses nothing` |
+| F-2 | PASS | PASS | `core > full box flushes oldest partial and accepts zero` |
+| F-3 | PASS | PASS | `tick > full box flushes oldest partial and loses nothing` |
+| F-4 | PASS | PASS | `core > all ready refuses input` |
+| O-1 | PASS | PASS | `belt_io > push inserts stacked item on matching lane` |
+| O-2 | PASS | PASS | `tick > sushi in sorted stacks out`, `core > hold waits while stack run started` |
+| O-3 | PASS | PASS | `tick > output stacked to research size`, `belt_io > belt stack size follows research capped at 4`, `tick > on research caches belt stack size` |
+| O-4 | PASS | PASS | `tick > output never faster than tier`, `perf > credits per visit keep tier rate over 800 ticks` |
+| O-5 | PASS | PASS | `tick > output stacked to research size`, `core > take out last piece may be small` |
+| S-1 | PASS | PASS | `tick > custom timeout flushes partial`, `core > timeout flushes old partial only` |
+| S-2 | PASS | PASS | `data > timeout setting defaults to off`, `gui > custom timeout written to settings`, `tick > timeout ticks custom and global` |
+| S-3 | PASS | PASS | `gui > filter item any quality written`, `tick > filtered item passes between stacks` |
+| S-4 | PASS (undo/redo NOT-TESTED) | PASS (undo/redo NOT-TESTED) | `lifecycle > paste settings copies settings`, `lifecycle > blueprint stores placer with tags`, `lifecycle > rotated blueprint builds rotated box with settings`, `lifecycle > clone copies settings and box state` — undo/redo NOT-TESTED (no headless undo driver) |
+| P-1 | PASS | PASS | `gui > filter item with quality written`, `tick > filter without quality matches any quality` |
+| P-2 | PASS | PASS | `core > passthrough uses hold not slots` |
+| P-3 | PASS | PASS | `core > hold busy refuses second passthrough`, `tick > filtered item passes between stacks` |
+| N-1 | PASS | PASS | `circuit > wire connects to box` |
+| N-2 | PASS | PASS | `circuit > box outputs contents with quality` |
+| N-3 | PASS | PASS | `circuit > condition false disables`, `tick > circuit disable stops both ways and hides led` — Q-4 |
+| N-4 | PASS | PASS | `circuit > flush fires once per rising edge`, `tick > flush signal queues partials` — Q-5 |
+| U-1 | PASS | PASS | `data > tech requires matching belt tech`, `data > tech unlocks its recipe` |
+| U-2 | PASS | PASS | `data > recipe is steel chest belt and circuits` — Q-1 default |
+| R-1 | PASS | NOT-TESTED | `make bench FV=2.0`: `script_ms_avg=3.318`, `3.258` (2 runs, 200 boxes, 3600 ticks, load avg ~10, 2026-09-26); budget ≤ 5 ms (R-1 v4) — 2.1: bench not run (R-1 reference = 2.0 build) |
+| R-2 | PASS | PASS | `tick > idle box sleeps 30 ticks`, `perf > yellow box visited every 8 ticks` |
+| V-1 | PASS | PASS | `lifecycle > built box gets rec and green led` |
+| V-2 | PASS | PASS | `core > new box is idle and green`, `tick > led green then yellow` |
+| V-3 | PASS | PASS | `core > led yellow with items and red when full`, `tick > led green then yellow` |
+| V-4 | PASS | PASS | `tick > full box flushes oldest partial and loses nothing` |
+| V-5 | PASS | PASS | `perf > led checked every tick` |
+| V-6 | PASS | PASS | `lifecycle > led set writes only on change` |
+| V-7 | PASS | PASS | `lifecycle > built box gets rec and green led` — light drawn with sprite; night look NOT-TESTED visually |
+| V-8 | PASS | PASS | `lifecycle > led destroyed with box`, `lifecycle > ensure recreates missing led` |
+| G-1 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-2 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-3 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-4 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-5 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-6 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-7 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-8 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+| G-9 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
+
+Runs 2026-09-26 on `legalcopilot-dev`, tree `int/v1` `75de299`: `make test FV=2.0` → `full-2.0-ok`, `make test FV=2.1` → `full-2.1-ok` (each 77 offline + 88 headless game tests). Zips `sushi-packer_0.1.0.zip` (sha256 `5a1852be…`) and `sushi-packer_0.2.0.zip` (sha256 `93f0d49e…`) load headless (`load-check-2.0-ok`, `load-check-2.1-ok`). Author checks in real game: G- look, V-7 night light, S-4 undo/redo, T-2 multiplayer/save-load.

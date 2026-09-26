@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v3, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered.
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `legalcopilot-dev`; Q-6 answered.
 
 ## 1. Target
 
@@ -97,7 +97,7 @@ Status: v3, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 
 | ID | Requirement |
 |----|-------------|
-| R-1 | Scripted design costs UPS per box. Target: 200 boxes ≤ 1 ms/tick average on reference machine (TBD). |
+| R-1 | Scripted design costs UPS per box. Target: 200 boxes at full flow ≤ 5 ms/tick average script time on reference machine `legalcopilot-dev` (4 shared vCPU GCP VM), measured by `make bench FV=2.0`. |
 | R-2 | Idle boxes (empty input, nothing queued) skip work. Update cadence per tier may batch work (`on_nth_tick`) as long as O-4 throughput holds. |
 
 ## 12. Status LED
@@ -142,7 +142,7 @@ Status: v3, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | Q-3 | Timeout clock: from first item arrival (proposed) or from last item arrival? |
 | Q-4 | Enabled=false: should input still fill storage (only output stops)? Current spec: both stop. |
 | Q-5 | Flush signal: partials only (proposed), or also items in pass-through hold? |
-| Q-6 | Reference machine and UPS budget for R-1. |
+| Q-6 | ANSWERED 2026-09-26: `legalcopilot-dev`, 5 ms/tick for 200 boxes (R-1). |
 | Q-7 | Mod name / internal prefix. Working name `sushi-packer`. |
 | Q-8 | ANSWERED 2026-09-26: 4 container variants swapped by script (placer mechanics in `docs/DECISIONS.md`). |
 | Q-9 | ANSWERED 2026-09-26: LED off (sprite + light hidden) while circuit disables box. |
