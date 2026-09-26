@@ -68,10 +68,12 @@ function M.on_tick(e)
         local inv = rec.entity.get_inventory(defines.inventory.chest)
         local rate = N.TIER[rec.tier].lane_rate
         local taken_any = false
+        local budget = {0, 0}
         for lane = 1, 2 do
           rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate, 2)
-          local budget = {0, 0}; budget[lane] = math.floor(rec.in_credit[lane])
-          local function sink(name, quality, input_lane, count)
+          budget[lane] = math.floor(rec.in_credit[lane])
+        end
+        local function sink(name, quality, input_lane, count)
             if has_filter(rec.settings.filters, name, quality) then
               return core.accept(rec.box, name, quality, input_lane, count, 1, e.tick, true)
             end
@@ -81,8 +83,9 @@ function M.on_tick(e)
             local inserted = inv.insert({name=name, count=accepted, quality=quality})
             if inserted < accepted then core.remove_external(rec.box, name, quality, accepted - inserted) end
             return inserted
-          end
-          local got = belt_io.pull(rec, budget, sink) or {0, 0}
+        end
+        local got = belt_io.pull(rec, budget, sink) or {0, 0}
+        for lane = 1, 2 do
           local n = got[lane] or 0
           rec.in_credit[lane] = rec.in_credit[lane] - n
           if n > 0 then taken_any = true end
