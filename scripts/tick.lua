@@ -5,6 +5,16 @@ local circuit = require("scripts.circuit")
 local led = require("scripts.led")
 local M = {}
 local INTERVAL = { yellow = 8, red = 4, blue = 2, turbo = 2 }
+local stack_sizes = {}
+
+local function stack_size(name)
+  local size = stack_sizes[name]
+  if size == nil then
+    size = prototypes.item[name].stack_size
+    stack_sizes[name] = size
+  end
+  return size
+end
 
 function M.timeout_ticks(rec)
   if rec.settings.timeout_mode == "custom" then return rec.settings.timeout_s * 60 end
@@ -49,7 +59,7 @@ local function reconcile(rec, tick, inv)
     local inv_count = chest[k] or 0
     if inv_count < core_count then core.remove_external(rec.box, name, quality, core_count - inv_count)
     elseif inv_count > core_count then
-      core.adopt_external(rec.box, name, quality, inv_count - core_count, prototypes.item[name].stack_size, tick)
+      core.adopt_external(rec.box, name, quality, inv_count - core_count, stack_size(name), tick)
     end
   end
 end
@@ -91,7 +101,7 @@ function M.on_tick(e)
             if has_filter(rec.settings.filters, name, quality) then
               return core.accept(rec.box, name, quality, input_lane, count, 1, e.tick, true)
             end
-            local stack = prototypes.item[name].stack_size
+            local stack = stack_size(name)
             local accepted = core.accept(rec.box, name, quality, input_lane, count, stack, e.tick, false)
             if accepted <= 0 then return 0 end
             local inserted = inventory().insert({name=name, count=accepted, quality=quality})
@@ -124,7 +134,10 @@ function M.on_tick(e)
           if core.is_idle(rec.box) and not taken_any then rec.next_poll = e.tick + 30 else rec.next_poll = 0 end
         end
       end
-      led.set(rec, core.led_state(rec.box), rec.enabled ~= false)
+      local state, visible = core.led_state(rec.box), rec.enabled ~= false
+      if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then
+        led.set(rec, state, visible)
+      end
     end
   end
 end

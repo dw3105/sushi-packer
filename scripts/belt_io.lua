@@ -76,20 +76,15 @@ function M.pull(rec, budget, sink)
     local line = belt.get_transport_line(lane)
     local tries = 0
     while tries < budget[lane] do
-      local details = line.get_detailed_contents()
-      local selected, position = nil, math.huge
-      for _, detail in ipairs(details) do
-        if detail.position < position then selected, position = detail, detail.position end
-      end
-      if not selected or position > 0.125 then break end
-      local name = selected.stack.name
-      local quality = selected.stack.quality and selected.stack.quality.name or "normal"
-      local count = selected.stack.count
+      if #line == 0 or line.can_insert_at(0) then break end
+      local s = line[1]
+      local name = s.name
+      local quality = s.quality and s.quality.name or "normal"
+      local count = s.count
       local accepted = sink(name, quality, lane, count)
       tries = tries + 1
       if accepted <= 0 then break end
-      local removed = line.remove_item({ name = name, quality = quality, count = accepted })
-      if removed <= 0 then break end
+      line.remove_item({ name = name, count = accepted, quality = quality })
       taken[lane] = taken[lane] + 1
     end
   end
