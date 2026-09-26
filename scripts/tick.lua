@@ -69,14 +69,11 @@ function M.on_tick(e)
         inv = rec.entity.get_inventory(defines.inventory.chest)
         reconcile(rec, e.tick, inv)
       end
-      led.set(rec, core.led_state(rec.box), rec.enabled ~= false)
       local interval = INTERVAL[rec.tier] or 1
       if (e.tick + rec.unit_number) % interval == 0 and e.tick >= (rec.next_poll or 0) then
         local enabled, flush_now = circuit.evaluate(rec)
         rec.enabled = enabled
-        if not enabled then
-          led.set(rec, core.led_state(rec.box), false)
-        else
+        if enabled then
           if flush_now then core.flush_partials(rec.box, e.tick) end
           core.on_tick(rec.box, e.tick, M.timeout_ticks(rec))
           local function inventory()
@@ -127,6 +124,7 @@ function M.on_tick(e)
           if core.is_idle(rec.box) and not taken_any then rec.next_poll = e.tick + 30 else rec.next_poll = 0 end
         end
       end
+      led.set(rec, core.led_state(rec.box), rec.enabled ~= false)
     end
   end
 end
