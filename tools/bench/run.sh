@@ -56,15 +56,20 @@ sep = ',' if ',' in hline else ';'
 cols = next(csv.reader([hline], delimiter=sep))
 si, wi = cols.index('scriptUpdate'), cols.index('wholeUpdate')
 values=[]
+tick_ids=[]
 for line in lines[header+1:]:
     if not line.strip(): continue
     try:
         row=next(csv.reader([line], delimiter=sep))
-        if len(row) <= max(si,wi): continue
+        if len(row) <= max(si,wi) or not re.fullmatch(r't\d+', row[0]): continue
         a,b=float(row[si]),float(row[wi])
-        if a >= 0 and b >= 0: values.append((a,b))
+        if a >= 0 and b >= 0:
+            values.append((a,b))
+            tick_ids.append(int(row[0][1:]))
     except (ValueError, csv.Error): continue
 if not values: raise SystemExit('benchmark parse failed: no per-tick rows')
+if len(values) != int(ticks) or tick_ids != list(range(int(ticks))):
+    raise SystemExit(f'benchmark parse failed: expected {ticks} ordered tick rows, found {len(values)}')
 raw_script=sum(x for x,_ in values)/len(values); raw_whole=sum(y for _,y in values)/len(values)
 # The verbose CSV timing columns are nanoseconds. Cross-check that unit against
 # Factorio's summary average (which is printed in milliseconds) to reject an
