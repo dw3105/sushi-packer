@@ -4,7 +4,7 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 
 | ID | 2.0 | 2.1 | Proof |
 |---|---|---|---|
-| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.0 = 2.0, 0.2.0 = 2.1) load headless; full suites green on both |
+| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.1 = 2.0, 0.2.1 = 2.1) load headless; full suites green on both |
 | T-2 | NOT-TESTED | NOT-TESTED |  — NOT-TESTED: no save/load or multiplayer desync run; design: all state in `storage` (`core > box is plain data`), no pairs-order logic |
 | E-1 | PASS | PASS | `belt_io > works in all four directions`, `lifecycle > placer becomes variant facing its direction` |
 | E-2 | PASS | PASS | `data > variants are 48 slot not rotatable containers` |
@@ -41,9 +41,13 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | N-2 | PASS | PASS | `circuit > box outputs contents with quality` |
 | N-3 | PASS | PASS | `circuit > condition false disables`, `tick > circuit disable stops both ways and hides led` — Q-4 |
 | N-4 | PASS | PASS | `circuit > flush fires once per rising edge`, `tick > flush signal queues partials` — Q-5 |
-| U-1 | PASS | PASS | `data > tech requires matching belt tech`, `data > tech unlocks its recipe` |
-| U-2 | PASS | PASS | `data > recipe is steel chest belt and circuits` — Q-1 default |
-| R-1 | PASS | NOT-TESTED | `make bench FV=2.0`: `script_ms_avg=3.318`, `3.258` (2 runs, 200 boxes, 3600 ticks, load avg ~10, 2026-09-26); budget ≤ 5 ms (R-1 v4) — 2.1: bench not run (R-1 reference = 2.0 build) |
+| U-1 | PASS | PASS | `data > every ingredient unlocked by prereq closure`, `data > tech cost is belt tech x 1.5`, `data > tech unlocks its recipe`; offline `data > tech prereqs include ingredient unlock techs`, `data > tech ingredients are union over prereqs` |
+| U-2 | PASS | PASS | `data > recipes match table` (names, amounts, craft 30/45/60/120 s, crafting category) — Q-1 answered v5 |
+| U-3 | PASS | PASS | `lifecycle > upgrade keeps state` (robot upgrade: settings, hold, items, wire, LED), `data > upgrade chain weight and no surface limit`, `probe > upgrade events`; offline `registry > *` (9) |
+| U-4 | PASS | PASS | `data > upgrade chain weight and no surface limit` (20 kg, no `surface_conditions`), `data > recycling recipe exists` |
+| U-5 | PASS | PASS | offline `locale > every prototype has name and description`, `locale > recipes and setting described`, `locale > tips entry has locale and prototype`, `locale > mod name and description`; `LOAD-2.0`, `LOAD-2.1` load tips prototype |
+| U-6 | PASS | PASS | offline `stage > release info has no test dependency`, `stage > thumbnail is 144 by 144 png`, `stage > changelog format valid`, `stage > release ships thumbnail and changelog`; zip listing: deps `base >= 2.0.0`, `space-age` only |
+| R-1 | PASS | NOT-TESTED | `make bench FV=2.0`: `script_ms_avg=1.957` (200 boxes, 3600 ticks, load avg 1.76, 2026-09-26, `legalcopilot-dev`, v1.1); v1: 3.318 / 3.258 at load avg ~10; budget ≤ 5 ms (R-1 v4) — 2.1: bench not run (R-1 reference = 2.0 build) |
 | R-2 | PASS | PASS | `tick > idle box sleeps 30 ticks`, `perf > yellow box visited every 8 ticks` |
 | V-1 | PASS | PASS | `lifecycle > built box gets rec and green led` |
 | V-2 | PASS | PASS | `core > new box is idle and green`, `tick > led green then yellow` |
@@ -64,3 +68,5 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | G-9 | PASS (load), look NOT-TESTED | PASS (load), look NOT-TESTED | `LOAD-2.0`, `LOAD-2.1` — files load; visual look NOT-TESTED (author eyes) |
 
 Runs 2026-09-26 on `legalcopilot-dev`, tree `int/v1` `75de299`: `make test FV=2.0` → `full-2.0-ok`, `make test FV=2.1` → `full-2.1-ok` (each 77 offline + 88 headless game tests). Zips `sushi-packer_0.1.0.zip` (sha256 `5a1852be…`) and `sushi-packer_0.2.0.zip` (sha256 `93f0d49e…`) load headless (`load-check-2.0-ok`, `load-check-2.1-ok`). Author checks in real game: G- look, V-7 night light, S-4 undo/redo, T-2 multiplayer/save-load.
+
+Runs v1.1 2026-09-26 on `legalcopilot-dev`, tree `int/v1.1`: `make test FV=2.0` → `full-2.0-ok`, `make test FV=2.1` → `full-2.1-ok` (each 106 offline + 92 headless game tests). Zips `sushi-packer_0.1.1.zip` (sha256 `bff8a50d…`) and `sushi-packer_0.2.1.zip` (sha256 `4fca5d68…`) load headless (`load-check-2.0-ok`, `load-check-2.1-ok`). Author checks in real game still open: G- look, V-7 night light, S-4 undo/redo, T-2 multiplayer/save-load; new: tech tree placement, tips text, upgrade planner by hand.
