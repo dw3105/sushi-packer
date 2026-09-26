@@ -35,6 +35,14 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   (cd "$FT" && "$CLI" "$@")
 }
 
+# SP-02 (author 2026-09-26): lanes run offline Lua tests only. Headless Factorio (tests/game, --full)
+# is for integrator merge and release. lane_run sets LANE_RUN_ID in engine and checks env.
+if [ -n "${LANE_RUN_ID:-}" ]; then
+  case "$T" in
+    --full|tests/game/*) echo "run_tests: refuse, lanes run offline tests only (SP-02); headless is integrator merge/release" >&2; exit 2 ;;
+  esac
+fi
+
 if [ "$T" = --full ]; then
   status=0
   for f in tests/offline/test_*.lua; do lua5.2 tests/offline/run.lua "$f" || status=1; done

@@ -20,8 +20,9 @@ Headless Factorio: `~/factorio-2.0/factorio` (2.0.77), `~/factorio-2.1/factorio`
 
 ## Build
 
-- `make test-one FV=2.0 T='tests/<dir>/<file>.lua::<test name>'` — one test only, refuses file or dir.
-- `make test FV=2.0` / `FV=2.1` — FULL suite, queued in gateslot `sushi-packer/heavy`. Integrator only, after all lanes merged. Lanes never run it.
+- `make test-one T='tests/offline/<file>.lua::<describe> > <it>'` — one offline test, mocks, ms. Lanes use only this.
+- `make test-one FV=<2.0|2.1> T='tests/game/<file>.lua::<describe> > <it>'` — one headless test. Integrator only (refused under `LANE_RUN_ID`).
+- `make test FV=2.0` / `FV=2.1` — FULL suite incl. headless, gateslot `sushi-packer/heavy`. Integrator only, at merge and release.
 - `make zip` — two zips in `build/`. `make load-check FV=<v>` — headless load, zero errors.
 - `make bench FV=2.0` — R-1 measure.
 

@@ -1,9 +1,9 @@
 ---
 name: sushi-packer-code
-description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking box mod: requirements contract, frozen seams, lanes run single tests only, integrator runs full suite on both versions, API in both versions only, no push from VM. Read before editing prototypes/, scripts/, tests/, control.lua, data.lua, or claiming anything about this repo."
+description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking box mod: requirements contract, frozen seams, lanes run single offline mock-based Lua tests only, headless Factorio only at integrator merge and release, API in both versions only, no push from VM. Read before editing prototypes/, scripts/, tests/, control.lua, data.lua, or claiming anything about this repo."
 ---
 
-**v0.1 - 26 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
+**v0.2 - 26 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
 
 **Canonical copy is `skills/sushi-packer-code/` in this repo.** Live copy `~/.claude/skills/sushi-packer-code` installed by `make skill-install` from clean `main` only. Edit live copy and SessionStart audit report drift. Shape copied from `local-transcriber-code`; lane rules follow shared `codex-tasks`. Requirements file in docs outranks this skill; when they disagree, requirements win and this skill gets fixed on next round by integrator.
 
@@ -11,19 +11,19 @@ description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking bo
 
 | State | Rules |
 |---|---|
-| Machine check | SP-01 (`tests/offline/test_guard.lua`, `tests/game/test_guard.lua`), SP-02 (`make test-one` refuses non-test `T`) |
+| Machine check | SP-01 (`tests/offline/test_guard.lua`, `tests/game/test_guard.lua`), SP-02 (`tools/run_tests.sh` refuses non-test `T`, and refuses `tests/game/*` and `--full` when `LANE_RUN_ID` is set) |
 | Human checklist | SP-03 .. SP-09 |
 
-SP-02 has machine stop inside `make test-one` and `tools/run_tests.sh`: both refuse file or dir, and one-test mode fails unless exactly one test ran and passed. Lane calling `tools/run_tests.sh <v> --full` meets no stop, only task-file ban and reviewer read of lane log. Integrator greps lane log for `make test `, `--full` and bare `lua5.2` runner calls before merge. Green lint prove copy match only, never rule read or obeyed.
+SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which calls it): refuses file or dir, one-test mode fails unless exactly one test ran and passed, and under `LANE_RUN_ID` (set by `lane_run` for engine and checks) refuses every headless run. Lane calling Factorio binary or `lua5.2 tests/offline/run.lua <file>` direct meets no stop, only task-file ban and reviewer read of lane log. Integrator greps lane log for `factorio`, `make test ` and bare runner calls before merge. Green lint prove copy match only, never rule read or obeyed.
 
 ## Code and tests
 
 - **SP-01** **Seams frozen.** `docs/CONTRACT.md` signatures, names module `scripts.names`, storage layout pinned by guard tests. Lane never edits guard, contract or names. Change = integrator decision in `docs/DECISIONS.md`.
-- **SP-02** **Lanes run single tests only.** `make test-one FV=<v> T='<file>::<test name>'`. Never `make test`, never runner without test name, never full suite of any kind. Full suite belongs to integrator after all lanes merged: run once per version, fix each red with `make test-one`, rerun full, repeat until green.
+- **SP-02** **Lanes run single offline Lua tests only, built on mocks.** `make test-one T='tests/offline/<file>.lua::<describe> > <it>'`. Never Factorio, never `tests/game/*`, never `make test`, never full suite of any kind. Game API faked with plain Lua tables in the test file. Headless Factorio belongs to integrator: at merge and release, full suite once per version after all lanes merged, fix each red with `make test-one`, rerun full, repeat until green (author, 2026-09-26).
 - **SP-03** **Red first.** Every new test seen failing against stub before code. Green without seen red is not evidence (`proving`).
-- **SP-04** **Both versions.** Only API present in 2.0 and 2.1. Docs https://lua-api.factorio.com/2.0.72/ first, `/latest/` second. Forbidden 2.1-only: `LuaTransportLine.get_item_position`, container `direction_count`. In-game test counts only when run on both `FV=2.0` and `FV=2.1`.
+- **SP-04** **Both versions.** Only API present in 2.0 and 2.1. Docs https://lua-api.factorio.com/2.0.72/ first, `/latest/` second. Forbidden 2.1-only: `LuaTransportLine.get_item_position`, container `direction_count`. Headless result counts only when run on both `FV=2.0` and `FV=2.1`.
 - **SP-05** **State in `storage` only.** No upvalue caches that survive save/load, no `math.random` without game RNG, no `pairs` order in logic (desync; see requirements §1).
-- **SP-06** **Offline tests `lua5.2` only.** Pure logic (module `scripts.core`) never touches `game`, `defines`, `storage`.
+- **SP-06** **Offline tests `lua5.2` only.** Pure logic (module `scripts.core`) never touches `game`, `defines`, `storage`. Adapter modules take game objects as arguments or read globals inside functions, so a test swaps in mock tables.
 
 ## Assets, shipping
 
