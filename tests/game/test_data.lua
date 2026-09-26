@@ -56,7 +56,14 @@ describe("data", function()
       local got = {}
       for _, ing in ipairs(r.ingredients) do got[ing.name] = ing.amount end
       for _, w in ipairs(want[tier]) do assert.are_equal(w[2], got[w[1]], tier .. " " .. w[1]) end
-      assert.are_equal("crafting", r.category)
+      -- 2.1 dropped LuaRecipePrototype.category (measured 2.1.20); accept category or categories.
+      local ok1, cat = pcall(function() return r.category end)
+      local ok2, cats = pcall(function() return r.categories end)
+      local crafting = ok1 and cat == "crafting"
+      if not crafting and ok2 and type(cats) == "table" then
+        for k, v in pairs(cats) do if k == "crafting" or v == "crafting" then crafting = true end end
+      end
+      assert.is_true(crafting, tier .. " crafting category")
     end
   end)
 

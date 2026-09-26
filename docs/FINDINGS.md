@@ -50,3 +50,9 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > upgrade
 Found 2026-09-26 on `legalcopilot-dev`, `factorio --dump-data` of both builds with space-age. Every U-2 ingredient recipe starts disabled; unlock techs: `steel-chest` steel-processing, `splitter` logistics, `fast-splitter` logistics-2, `express-splitter` logistics-3, `turbo-splitter` turbo-transport-belt, `inserter` + `electronic-circuit` electronics (research trigger, no unit), `fast-inserter` fast-inserter, `bulk-inserter` bulk-inserter, `stack-inserter` stack-inserter, `advanced-circuit` advanced-circuit, `processing-unit` processing-unit, `quantum-processor` quantum-processor. Space Age already makes `sushi-packer-<tier>-recycling`. Offline fixture `tests/offline/fake_data.lua` carries these values; a tech with `research_trigger` has no `unit` (skip it in ingredient union).
 
 Verified-by: `python3 -c "import json;d=json.load(open('build/2.1/write/script-output/data-raw-dump.json'));print(d['technology']['bulk-inserter']['unit']['count'])"`
+
+## FND-0008 - Runtime recipe prototype differs: ingredient order and `category` (2.1)
+
+Found 2026-09-26 on `legalcopilot-dev`, v1.1 integrator full suite. `LuaRecipePrototype.ingredients` comes back reordered vs data stage (yellow: `electronic-circuit` first) on 2.0.77. On 2.1.20 reading `LuaRecipePrototype.category` raises `LuaRecipePrototype doesn't contain key category.` Mod runtime code reads neither; only test did. What it looks like: `data > recipes match table` red. Closed: test matches ingredients by name and reads category via `pcall` (`category` or `categories`).
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_data.lua::data > recipes match table'`
