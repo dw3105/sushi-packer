@@ -38,6 +38,7 @@ rec = {
   out_credit = { 0, 0 },                         -- belt-items allowed per lane, owned by scripts/tick.lua
   in_credit = { 0, 0 },
   next_poll = 0,                                 -- idle skip (R-2), owned by scripts/tick.lua
+  belt = { behind = LuaEntity|nil, front = LuaEntity|nil, scan = 0 },  -- cached neighbours, owned by scripts/belt_io.lua (PERF-1)
 }
 ```
 
