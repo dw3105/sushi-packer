@@ -58,14 +58,16 @@ local function build(player, rec)
   frame.add({ type = "label", caption = { "gui.circuit" } })
   local circuit = frame.add({ type = "flow", direction = "horizontal" })
   add(circuit, { type = "checkbox", name = "circuit_enable", caption = { "gui.enable" }, state = c.enable }, unit, "circuit.enable")
-  add(circuit, { type = "choose-elem-button", elem_type = "signal", name = "circuit_signal", elem_value = signal_elem(c.cond.first_signal) }, unit, "circuit.cond.first_signal")
+  local circuit_signal = add(circuit, { type = "choose-elem-button", elem_type = "signal", name = "circuit_signal" }, unit, "circuit.cond.first_signal")
+  if c.cond.first_signal then circuit_signal.elem_value = signal_elem(c.cond.first_signal) end
   local selected = 1
   for i, comparator in ipairs(COMPARATORS) do if comparator == c.cond.comparator then selected = i end end
   add(circuit, { type = "drop-down", name = "circuit_comparator", items = COMPARATORS, selected_index = selected }, unit, "circuit.cond.comparator")
   add(circuit, { type = "textfield", name = "circuit_constant", text = tostring(c.cond.constant or 0), numeric = true, allow_decimal = false, allow_negative = true }, unit, "circuit.cond.constant")
   local flush = frame.add({ type = "flow", direction = "horizontal" })
   add(flush, { type = "checkbox", name = "circuit_flush", caption = { "gui.flush" }, state = c.flush }, unit, "circuit.flush")
-  add(flush, { type = "choose-elem-button", elem_type = "signal", name = "flush_signal", elem_value = signal_elem(c.flush_signal) }, unit, "circuit.flush_signal")
+  local flush_signal = add(flush, { type = "choose-elem-button", elem_type = "signal", name = "flush_signal" }, unit, "circuit.flush_signal")
+  if c.flush_signal then flush_signal.elem_value = signal_elem(c.flush_signal) end
 end
 
 function M.on_opened(e)
