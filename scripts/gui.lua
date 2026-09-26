@@ -14,6 +14,13 @@ local function add(parent, spec, unit, field, row)
   return parent.add(spec)
 end
 
+-- LuaGuiElement.tags returns a copy: read, change, write back.
+local function set_tag(el, key, value)
+  local t = el.tags or {}
+  t[key] = value
+  el.tags = t
+end
+
 local function frame_for(player)
   local f = player.gui.relative[FRAME]
   if f and f.valid then return f end
@@ -52,26 +59,32 @@ local function quality_items()
   return items
 end
 
+-- filters is an ipairs array (scripts/filter.lua): empty slots before `slot` must be false, never nil.
+local function pad(filters, slot)
+  for i = 1, slot - 1 do if filters[i] == nil then filters[i] = false end end
+end
+
 local function write_filter(frame, editor, settings)
   local slot = frame.tags.selected_slot or 1
-  local item = editor.filter_item and editor.filter_item.elem_value
-  if not item or not item.name then
+  pad(settings.filters, slot)
+  local item = editor.filter_item and editor.filter_item.elem_value  -- elem_type "item": string or nil
+  if not item then
     settings.filters[slot] = false
     return
   end
   local quality_choice = editor.filter_quality.selected_index or 1
   local comparator = FILTER_COMPARATORS[editor.filter_comparator.selected_index or 1]
-  local filter = { name = item.name, comparator = comparator }
+  local filter = { name = item, comparator = comparator }
   if quality_choice ~= 1 then filter.quality = editor.filter_quality.items[quality_choice] end
   settings.filters[slot] = filter
 end
 
 local function show_filter_editor(frame, box, settings, slot)
-  frame.tags.selected_slot = slot
+  set_tag(frame, "selected_slot", slot)
   local filter = settings.filters[slot]
   if filter == false then filter = nil end
   box.filter_editor.slot_label.caption = { "gui.slot", slot }
-  box.filter_editor.filter_item.elem_value = filter and { name = filter.name } or nil
+  box.filter_editor.filter_item.elem_value = filter and filter.name or nil
   box.filter_editor.filter_comparator.selected_index = select_index(FILTER_COMPARATORS, filter and filter.comparator, 1)
   box.filter_editor.filter_quality.selected_index = filter and filter.quality and select_index(box.filter_editor.filter_quality.items, filter.quality, 1) or 1
 end
@@ -123,7 +136,6 @@ local function build(player, rec)
     type = "frame", name = FRAME, direction = "vertical", caption = { "gui.title" },
     anchor = { gui = defines.relative_gui_type.container_gui, position = defines.relative_gui_position.right, names = variant_names },
   })
-  frame.tags = frame.tags or {}
   local settings, unit = rec.settings, rec.unit_number
   local filters = section(frame, { "gui.filters" }, "filters_section"); build_filters(filters, frame, unit, settings)
   local timeout = section(frame, { "gui.timeout" }, "timeout_section"); build_timeout(timeout, unit, settings)
@@ -165,7 +177,15 @@ function M.on_event(e)
   elseif field == "filter_slot" then
     local player = game.players[e.player_index]
     local frame = player and frame_for(player)
-    if frame then show_filter_editor(frame, frame.filters_section, s, el.tags.row) end
+    local slot = el.tags.row
+    if e.name == defines.events.on_gui_elem_changed then
+      -- Item picked (or cleared) straight in grid slot: save it, keep rule when same item.
+      local old = s.filters[slot]
+      pad(s.filters, slot)
+      if not el.elem_value then s.filters[slot] = false
+      elseif not (old and old.name == el.elem_value) then s.filters[slot] = { name = el.elem_value } end
+    end
+    if frame then show_filter_editor(frame, frame.filters_section, s, slot) end
   elseif field == "filter_item" or field == "filter_comparator" or field == "filter_quality" then
     local player = game.players[e.player_index]
     local frame = player and frame_for(player)
@@ -174,7 +194,7 @@ function M.on_event(e)
       local section_box = frame.filters_section
       write_filter(frame, section_box.filter_editor, s)
       local button = section_box.filter_grid["filter_slot_" .. slot]
-      button.elem_value = section_box.filter_editor.filter_item.elem_value and section_box.filter_editor.filter_item.elem_value.name or nil
+      button.elem_value = section_box.filter_editor.filter_item.elem_value
     end
   elseif field == "circuit.enable" then
     c.enable = el.state

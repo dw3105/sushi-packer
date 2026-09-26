@@ -62,3 +62,9 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_data.lua::data > recipes m
 Found 2026-09-26 on `legalcopilot-dev`, S1 probe v1.2. Placer (`simple-entity-with-owner`) with `fast_replaceable_group = "transport-belt"`, container variants with `"sushi-packer"`. `player.build_from_cursor` with box item over east belt carrying 1 iron: `can_build_from_cursor = true`, belt gone, box built, player inventory +1 `transport-belt` +1 `iron-plate`. Belt in cursor over placed box: `can_build_from_cursor = false`, box kept. Without group line: `can=false boxes=0 belts=1` (red seen). Both 2.0.77 and 2.1.20.
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > placer over belt replaces belt'`
+
+## FND-0010 - Mock GUI hid real LuaGuiElement semantics: tags is a copy, item elem_value is a string
+
+Found 2026-09-26 on `legalcopilot-dev`, integrator review of lane 016 + real-API game tests. `frame.tags.selected_slot = n` changes a copy (write back `el.tags = t`); `choose-elem-button` `elem_type = "item"` value is a plain string, not `{name}` (writing a table raised at `gui.lua:74`); picking item straight in grid slot did not save filter; nil holes in filters array stop `ipairs` in `filter.match`. What it looks like: 4 reds in `tests/game/test_gui.lua` (`item picked in slot saved as filter`, `editor sets comparator and quality on selected slot`, `editor item change writes selected slot`, `clearing slot writes false`). Closed: `set_tag`, string values, slot pick saves, `pad` empty slots with `false`.
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_gui.lua::gui > editor sets comparator and quality on selected slot'`
