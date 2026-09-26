@@ -105,7 +105,8 @@ function M.on_tick(e)
           end
           local function sink(name, quality, input_lane, count)
             local release_size = math.min(bss, stack_size(name))
-            if filter.match(rec.settings.filters, name, quality, levels()) then
+            local filters = rec.settings.filters
+            if filters and filters[1] ~= nil and filter.match(filters, name, quality, levels()) then  -- no filters: skip level table
               return core.accept(rec.box, name, quality, input_lane, count, release_size, e.tick, true)
             end
             local stack = release_size
