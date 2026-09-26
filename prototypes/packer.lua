@@ -23,6 +23,10 @@ local function icon(tier) return G .. "icons/sushi-packer-" .. tier .. ".png" en
 local function make_tier(tier)
   local T = N.TIER[tier]
   local protos = {}
+  local previous_tier
+  for i, built_tier in ipairs(N.TIERS) do
+    if built_tier == tier and i > 1 then previous_tier = N.TIERS[i - 1] end
+  end
 
   protos[#protos + 1] = {
     type = "item",
@@ -41,7 +45,7 @@ local function make_tier(tier)
     enabled = false,
     energy_required = T.craft_s,
     ingredients = {
-      { type = "item", name = tier == N.TIERS[1] and N.RECIPE_BASE or N.item(N.TIERS[({ yellow = 1, red = 2, blue = 3, turbo = 4 })[tier] - 1]), amount = 1 },
+      { type = "item", name = previous_tier and N.item(previous_tier) or N.RECIPE_BASE, amount = 1 },
       { type = "item", name = T.splitter, amount = 1 },
       { type = "item", name = T.inserter, amount = 2 },
       { type = "item", name = T.circuit, amount = T.circuits },
@@ -52,10 +56,6 @@ local function make_tier(tier)
   local belt_tech = data.raw.technology[T.tech]
   if not belt_tech or not belt_tech.unit then
     error("sushi-packer: matching belt technology has no research unit: " .. T.tech)
-  end
-  local previous_tier
-  for i, built_tier in ipairs(N.TIERS) do
-    if built_tier == tier and i > 1 then previous_tier = N.TIERS[i - 1] end
   end
   local prerequisites = { T.tech }
   local prerequisite_set = { [T.tech] = true }

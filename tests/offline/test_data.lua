@@ -15,13 +15,6 @@ local function ingredients(recipe)
   return out
 end
 
-local function recipe_names(raw)
-  local out = {}
-  for name in pairs(raw.recipe) do out[#out + 1] = name end
-  table.sort(out)
-  return out
-end
-
 local function science_names(unit)
   local out = {}
   for _, ingredient in ipairs(unit.ingredients) do out[#out + 1] = ingredient[1] end
@@ -40,8 +33,8 @@ describe("data", function()
   it("chained tiers use previous box", function()
     local raw = load()
     for _, tier in ipairs({ "red", "blue", "turbo" }) do
-      local i = tier == "red" and 1 or (tier == "blue" and 1 or 1)
-      eq(ingredients(raw.recipe[N.item(tier)])[i], { N.item(tier == "red" and "yellow" or (tier == "blue" and "red" or "blue")), 1 }, tier .. " base")
+      local previous = { red = "yellow", blue = "red", turbo = "blue" }
+      eq(ingredients(raw.recipe[N.item(tier)])[1], { N.item(previous[tier]), 1 }, tier .. " base")
     end
     eq(ingredients(raw.recipe[N.item("turbo")]), {
       { N.item("blue"), 1 }, { "turbo-splitter", 1 }, { "stack-inserter", 2 }, { "quantum-processor", 2 },
