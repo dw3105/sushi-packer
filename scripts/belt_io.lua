@@ -54,13 +54,14 @@ end
 
 local function cached(rec, field, sign)
   local b = rec.belt
-  if not b then b = { behind = nil, front = nil, scan = -60 }; rec.belt = b end
+  if not b then b = { behind = nil, front = nil, scan = {} }; rec.belt = b end
+  if type(b.scan) ~= "table" then b.scan = {} end -- one rescan clock per side: a missing side never starves the other
   local belt = b[field]
   if matches(belt, rec.entity, rec.dir, sign) then return belt end
   b[field] = nil
   local tick = game.tick or 0
-  if tick < (b.scan or -60) + 60 then return nil end
-  b.scan = tick
+  if tick < (b.scan[field] or -60) + 60 then return nil end
+  b.scan[field] = tick
   belt = find_belt(rec.entity, rec.dir, sign)
   b[field] = belt
   return belt

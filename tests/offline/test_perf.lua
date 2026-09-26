@@ -110,3 +110,24 @@ describe("perf", function()
     eq(n,5); restore(o)
   end)
 end)
+
+describe("perf scan", function()
+  it("front rescan not starved by missing behind", function()
+    -- both neighbours missing; behind asks first every visit; front must still get its own rescan
+    defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
+    local calls = { front = 0 }
+    local surface = {}
+    function surface.find_entities_filtered(f)
+      if f.position.y < 0 then calls.front = calls.front + 1 end
+      return {}
+    end
+    local rec = { entity = { valid = true, position = { x = 0.5, y = 0.5 }, surface = surface }, dir = "north" }
+    local belt_io = require("scripts.belt_io")
+    for t = 0, 600, 8 do
+      game = { tick = t }
+      belt_io.pull(rec, { 1, 1 }, function() return 0 end)
+      belt_io.push(rec, 1, { name = "iron-plate", count = 1, quality = "normal" }, 1)
+    end
+    ok(calls.front >= 9, "front rescans over 600 ticks: " .. calls.front)
+  end)
+end)
