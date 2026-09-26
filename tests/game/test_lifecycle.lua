@@ -252,5 +252,36 @@ describe("lifecycle", function()
       assert.are_equal(1, n, "old rec gone")
     end)
   end)
+
+  it("box placed over belt replaces it", function()
+    -- E-9 (FND-0009): box item over belt -> belt + its items to player, box registered.
+    local player = game.players[1]
+    local p0 = player.position
+    local pos = { math.floor(p0.x) + 2.5, math.floor(p0.y) + 0.5 }
+    local belt = surface.create_entity({ name = "transport-belt", position = pos, direction = defines.direction.east, force = force })
+    belt.get_transport_line(1).insert_at(0.5, { name = "iron-plate", count = 1 })
+    player.cursor_stack.set_stack({ name = N.item("yellow"), count = 1 })
+    player.build_from_cursor({ position = pos, direction = defines.direction.east })
+    local box = surface.find_entities_filtered({ position = pos, radius = 0.4, name = N.variant("yellow", "east") })[1]
+    assert.is_not_nil(box)
+    assert.is_not_nil(registry.get(box))
+    assert.are_equal(0, #surface.find_entities_filtered({ position = pos, radius = 0.4, type = "transport-belt" }))
+    assert.are_equal(1, player.get_main_inventory().get_item_count("transport-belt"))
+    assert.are_equal(1, player.get_main_inventory().get_item_count("iron-plate"))
+    player.cursor_stack.clear()
+  end)
+
+  it("belt cannot replace box", function()
+    local player = game.players[1]
+    local p0 = player.position
+    local pos = { math.floor(p0.x) + 2.5, math.floor(p0.y) + 0.5 }
+    local e = surface.create_entity({ name = N.variant("yellow", "east"), position = pos, force = force, raise_built = true })
+    player.cursor_stack.set_stack({ name = "transport-belt", count = 1 })
+    assert.is_false(player.can_build_from_cursor({ position = pos, direction = defines.direction.east }))
+    player.build_from_cursor({ position = pos, direction = defines.direction.east })
+    assert.is_true(e.valid)
+    assert.is_not_nil(registry.get(e))
+    player.cursor_stack.clear()
+  end)
 end)
 

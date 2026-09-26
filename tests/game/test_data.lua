@@ -142,4 +142,21 @@ describe("data", function()
   it("timeout setting defaults to off", function()
     assert.are_equal(0, settings.global[N.SETTING_TIMEOUT].value)
   end)
+
+  it("tiers sort yellow red blue turbo in own row", function()
+    -- U-7: own subgroup in logistics after belt row; vanilla-style names.
+    local sub = prototypes.item_subgroup[N.SUBGROUP]
+    assert.are_equal("logistics", sub.group.name)
+    assert.is_true(sub.order > prototypes.item_subgroup["belt"].order, "after belt row")
+    local prev
+    for _, tier in ipairs(N.TIERS) do
+      local item = prototypes.item[N.item(tier)]
+      assert.are_equal(N.SUBGROUP, item.subgroup.name, tier)
+      if prev then assert.is_true(item.order > prev, tier .. " sorts after previous tier") end
+      prev = item.order
+    end
+    assert.are_equal("sushi-packer", N.item("yellow"))
+    assert.are_equal("turbo-sushi-packer", N.item("turbo"))
+  end)
 end)
+
