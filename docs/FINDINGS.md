@@ -74,3 +74,10 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_gui.lua::gui > editor sets
 Found 2026-09-26 on `legalcopilot-dev`, S1 probe v1.3 (scene redo). Inserter at y=-0.5: `direction = north` → `pickup_position.y = -1.5`, `drop_position.y = 0.699` (far half of belt tile south of it); `direction = south` → pickup 0.5, drop -1.699. Both 2.0.77 and 2.1.20. Scene inserters above belt use `north`, below use `south`.
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > inserter direction picks from chest drops on belt'`
+
+## FND-0011 - OPEN: author sees only left lane working on north turbo box (not reproduced)
+
+Reported 2026-09-26 by author (play-test v1.2, screenshot): turbo box facing north, input from south, output north, only left lane works. Repro on `legalcopilot-dev` 2.0.77, north turbo box, both lanes fed: straight belts single items, straight belts stacked 4, curve behind, curve in front — all four move both lanes. Suspect (unconfirmed): side-load into belt behind box puts every item on one lane (vanilla). Next: author save `~/share/sushi-packer/one-lane.zip` → headless load → check lanes behind box.
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north turbo box moves both lanes with curve behind'`
+
