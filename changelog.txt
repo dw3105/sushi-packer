@@ -1,4 +1,17 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.2
+Date: 2026-09-26
+  Changes:
+    - Box releases as soon as one item kind fills a belt stack (1 to 4 with research), not a full item stack.
+    - Renamed to vanilla belt series: Sushi packer, Fast, Express, Turbo sushi packer (old saves migrated).
+    - Own crafting menu row after belts, sorted by tier.
+    - Settings window: aligned sections, 10-slot skip filter with splitter-style quality rule, circuit network section.
+  Features:
+    - Live Factoriopedia and tip scene.
+    - Box marked for deconstruction stops and turns its LED off.
+    - Box can be placed straight over a belt (belt cannot replace a box).
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.1
 Date: 2026-09-26
   Features:
@@ -11,6 +24,19 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.2
+Date: 2026-09-26
+  Changes:
+    - Box releases as soon as one item kind fills a belt stack (1 to 4 with research), not a full item stack.
+    - Renamed to vanilla belt series: Sushi packer, Fast, Express, Turbo sushi packer (old saves migrated).
+    - Own crafting menu row after belts, sorted by tier.
+    - Settings window: aligned sections, 10-slot skip filter with splitter-style quality rule, circuit network section.
+  Features:
+    - Live Factoriopedia and tip scene.
+    - Box marked for deconstruction stops and turns its LED off.
+    - Box can be placed straight over a belt (belt cannot replace a box).
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.1
