@@ -1,0 +1,8 @@
+{
+  "name": "sushi-packer-bench",
+  "version": "0.1.0",
+  "title": "Sushi Packer benchmark map",
+  "author": "OpenAI",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0.0", "sushi-packer"]
+}
