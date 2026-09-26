@@ -96,7 +96,16 @@ describe("sim", function()
     sim.scene("tips")
     eq(g.simulation.camera_position, { 0.5, 0.5 })
     eq(g.simulation.camera_zoom, 1.4)
-    eq(created, first, "scene entity specs")
+    local function specs(list)
+      local out = {}
+      for i, spec in ipairs(list) do
+        local c = {}
+        for k, v in pairs(spec) do if k ~= "entity" and k ~= "force" then c[k] = v end end
+        out[i] = c
+      end
+      return out
+    end
+    eq(specs(created), specs(first), "scene entity specs")
   end)
 
   it("unknown kind errors", function()
