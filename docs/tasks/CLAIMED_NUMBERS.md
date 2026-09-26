@@ -9,3 +9,5 @@
 | `005` | `sushi-packer/agent` | entity gui | 2026-09-26 |
 | `006` | `sushi-packer/agent` | circuit | 2026-09-26 |
 | `007` | `sushi-packer/agent` | bench harness | 2026-09-26 |
+| `008` | `sushi-packer/agent` | tick glue | 2026-09-26 |
+| `009` | `sushi-packer/agent` | review hardening | 2026-09-26 |
