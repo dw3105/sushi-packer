@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `legalcopilot-dev`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged).
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `legalcopilot-dev`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9).
 
 ## 1. Target
 
@@ -21,6 +21,8 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | E-4 | Tier per belt: yellow, red, blue, turbo. Tier sets max input and output rate = matching belt throughput. Tier does NOT set belt stack size (see O-3). |
 | E-5 | Mining entity returns stored items to player (spill on ground if inventory full). Destroyed entity spills contents on ground. |
 | E-6 | Player GUI shows contents. Player may take items out manually; script state reconciles on next tick. |
+| E-8 | Box marked for deconstruction stops: no input, no output, LED off. Cancel → resumes. |
+| E-9 | Box item placed over belt replaces that belt (belt + its items to player), like splitter. One way: belt never replaces placed box. |
 | E-7 | `ContainerPrototype` cannot rotate. Rotation must come from 4 container variants (one per direction, swapped by script on build/rotate) or other rotatable host. Choice = Q-8: 4 container variants + rotatable placer entity (item `place_result`, carries direction in hand and in blueprints). |
 
 ## 3. Core behavior — accumulate and release
@@ -28,7 +30,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | ID | Requirement |
 |----|-------------|
 | C-1 | Buffer key = (item name, quality, lane). Each quality is separate type. Same item on left and right lane = two separate buffers. |
-| C-2 | Full stack = item prototype `stack_size` (e.g. iron plate 100, ore 50). Quality does not change stack size. |
+| C-2 | Full stack = N = min(belt stack size (O-3), item prototype `stack_size`). With belt stack 4: 4 iron plates of one quality on one lane = full. Belt stack 1 (no research) → every item leaves at once, lane kept (pass-through look). Quality does not change N. |
 | C-3 | When buffer reaches full stack, that stack is marked ready and queued for output on its own lane. |
 | C-4 | Output queue per lane is FIFO by time stack became ready. |
 | C-5 | Item arriving while its buffer already has queued ready stack starts new partial. |
@@ -58,7 +60,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | O-2 | One stack leaves fully before next queued stack on same lane starts. No interleave of types inside one lane's stack run (except P-3). |
 | O-3 | Belt stack size = `1 + force.belt_stack_size_bonus`, capped at 4. Follows research live (re-read when research completes). Early game = 1. |
 | O-4 | Output rate never exceeds tier belt throughput (E-4). Front belt faster tier → still limited by box tier. |
-| O-5 | Last belt item of stack may be smaller than belt stack size (e.g. 50 ore @ 4 → 12×4 + 1×2). |
+| O-5 | Full stack leaves as one belt item of N. Flushed partial (F-1, S-1, N-4) leaves as one smaller belt item. Research raise changes N for stacks started after it. |
 
 ## 7. Settings
 
@@ -66,14 +68,14 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 |----|-------------|
 | S-1 | Flush timeout: partial older than N seconds is flushed even if storage not full. 0 = off. |
 | S-2 | Global map setting = default timeout for new boxes. Per-entity GUI override (use global / custom value). |
-| S-3 | Item filter (pass-through list), per entity, set in GUI. Listed items never stored; go straight to output on same lane. |
+| S-3 | Item filter (pass-through list, 10 entries), per entity, set in GUI: row of 10 slots like vanilla logistic filters; selected slot opens editor line (item, comparator, quality/any). Listed items never stored; go straight to output on same lane. GUI frame sits right of container window, aligned sections: Items to skip, Flush timeout, Circuit network. |
 | S-4 | Per-entity settings survive copy-paste (`on_entity_settings_pasted`), blueprints (tags on build), undo/redo, cloning (`on_entity_cloned`). |
 
 ## 8. Pass-through (filter)
 
 | ID | Requirement |
 |----|-------------|
-| P-1 | Filtered item = item+quality or item any quality (GUI choice). |
+| P-1 | Filter = item + quality rule like vanilla splitter: comparator (`=`, `≠`, `>`, `<`, `≥`, `≤`) + quality, or any quality. Match compares `LuaQualityPrototype.level`. |
 | P-2 | Pass-through items take no storage slot. |
 | P-3 | Pass-through items go out between stacks, not inside a stack run. If output lane busy with stack, pass-through item waits in small internal hold (max 1 belt item per lane); input on that lane pauses while hold full. |
 
@@ -83,8 +85,8 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 |----|-------------|
 | N-1 | Connect red/green wire. |
 | N-2 | Read contents: output all stored items (both lanes summed, per quality) as signals. |
-| N-3 | Enable/disable condition: when false, input AND output stop. Contents kept. |
-| N-4 | Flush signal: configurable signal; when > 0, all partials are queued for output (rising edge, one flush per edge). |
+| N-3 | Enable/disable condition (in GUI Circuit network section): when false, input AND output stop. Contents kept. |
+| N-4 | Flush signal (in GUI Circuit network section): configurable signal; when > 0, all partials are queued for output (rising edge, one flush per edge). |
 
 ## 10. Unlock and recipes
 
@@ -95,6 +97,8 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | U-3 | Upgrade planner: yellow → red → blue → turbo, same direction. Upgraded box keeps settings, stored items, pass-through hold, circuit wires. |
 | U-4 | Item weight 20 kg (50 per rocket). No surface conditions (works on space platforms). Space Age recycler recipes exist per tier (auto-generated). |
 | U-5 | Every item, entity, technology, recipe and setting has locale name + description. One tips-and-tricks entry explains lanes and stacks. |
+| U-7 | Names follow vanilla belt series: Sushi packer, Fast sushi packer, Express sushi packer, Turbo sushi packer (internal `sushi-packer`, `fast-sushi-packer`, `express-sushi-packer`, `turbo-sushi-packer`). Own crafting-menu row after belts, sorted yellow, red, blue, turbo. Old names migrated. |
+| U-8 | Factoriopedia page and tip show live scene: mixed items in, 4-stacks sorted per lane out, real box logic (simulation `mods`). |
 | U-6 | Release zip ships `thumbnail.png` (144×144), `changelog.txt`; repo has `README.md`. Release `info.json` has no test-only dependency. |
 
 ## 11. Performance

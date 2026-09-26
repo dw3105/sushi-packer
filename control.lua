@@ -4,6 +4,7 @@ local registry = require("scripts.registry")
 local copy = require("scripts.copy")
 local gui = require("scripts.gui")
 local tick = require("scripts.tick")
+local sim = require("scripts.sim")
 
 local function init_storage()
   storage.boxes = storage.boxes or {}
@@ -41,6 +42,8 @@ for _, ev in ipairs({
   script.on_event(ev, registry.on_removed, box_filter)
 end
 script.on_event(defines.events.on_entity_died, registry.on_died, box_filter)
+script.on_event(defines.events.on_marked_for_deconstruction, function(e) tick.on_decon(e, true) end, box_filter)
+script.on_event(defines.events.on_cancelled_deconstruction, function(e) tick.on_decon(e, false) end, box_filter)
 
 script.on_event(N.INPUT_ROTATE, function(e) registry.on_rotate_input(e, false) end)
 script.on_event(N.INPUT_REVERSE_ROTATE, function(e) registry.on_rotate_input(e, true) end)
@@ -66,6 +69,9 @@ for _, ev in ipairs({
 }) do
   script.on_event(ev, tick.on_research)
 end
+
+-- U-8: simulations (Factoriopedia, tips) load this control.lua via `mods`; their init calls scene.
+remote.add_interface(N.SIM_INTERFACE, { scene = function(kind) sim.scene(kind) end })
 
 -- In-game tests (FactorioTest). Absent in release zip: tests/ not shipped, mod not active.
 if script.active_mods["factorio-test"] then

@@ -44,9 +44,9 @@ describe("data", function()
     -- U-2 v5 (author 2026-09-26), exact names and amounts, both builds.
     local want = {
       yellow = { { "steel-chest", 1 }, { "splitter", 1 }, { "inserter", 2 }, { "electronic-circuit", 5 }, craft = 30 },
-      red = { { "sushi-packer-yellow", 1 }, { "fast-splitter", 1 }, { "fast-inserter", 2 }, { "advanced-circuit", 5 }, craft = 45 },
-      blue = { { "sushi-packer-red", 1 }, { "express-splitter", 1 }, { "bulk-inserter", 2 }, { "processing-unit", 5 }, craft = 60 },
-      turbo = { { "sushi-packer-blue", 1 }, { "turbo-splitter", 1 }, { "stack-inserter", 2 }, { "quantum-processor", 2 }, craft = 120 },
+      red = { { "sushi-packer", 1 }, { "fast-splitter", 1 }, { "fast-inserter", 2 }, { "advanced-circuit", 5 }, craft = 45 },
+      blue = { { "fast-sushi-packer", 1 }, { "express-splitter", 1 }, { "bulk-inserter", 2 }, { "processing-unit", 5 }, craft = 60 },
+      turbo = { { "express-sushi-packer", 1 }, { "turbo-splitter", 1 }, { "stack-inserter", 2 }, { "quantum-processor", 2 }, craft = 120 },
     }
     for _, tier in ipairs(N.TIERS) do
       local r = prototypes.recipe[N.item(tier)]

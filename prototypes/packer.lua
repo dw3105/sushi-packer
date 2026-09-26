@@ -133,6 +133,7 @@ local function make_tier(tier)
       south = picture(tier, "south"), west = picture(tier, "west"),
     },
     hidden_in_factoriopedia = true,
+    fast_replaceable_group = "transport-belt",  -- E-9 probe: placer may replace belt; variants keep own group (one way)
   }
   for k, v in pairs(common) do placer[k] = v end
   protos[#protos + 1] = placer

@@ -56,3 +56,9 @@ Verified-by: `python3 -c "import json;d=json.load(open('build/2.1/write/script-o
 Found 2026-09-26 on `legalcopilot-dev`, v1.1 integrator full suite. `LuaRecipePrototype.ingredients` comes back reordered vs data stage (yellow: `electronic-circuit` first) on 2.0.77. On 2.1.20 reading `LuaRecipePrototype.category` raises `LuaRecipePrototype doesn't contain key category.` Mod runtime code reads neither; only test did. What it looks like: `data > recipes match table` red. Closed: test matches ingredients by name and reads category via `pcall` (`category` or `categories`).
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_data.lua::data > recipes match table'`
+
+## FND-0009 - One-way fast replace: placer in "transport-belt" group replaces belt, belt cannot replace placed box
+
+Found 2026-09-26 on `legalcopilot-dev`, S1 probe v1.2. Placer (`simple-entity-with-owner`) with `fast_replaceable_group = "transport-belt"`, container variants with `"sushi-packer"`. `player.build_from_cursor` with box item over east belt carrying 1 iron: `can_build_from_cursor = true`, belt gone, box built, player inventory +1 `transport-belt` +1 `iron-plate`. Belt in cursor over placed box: `can_build_from_cursor = false`, box kept. Without group line: `can=false boxes=0 belts=1` (red seen). Both 2.0.77 and 2.1.20.
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > placer over belt replaces belt'`

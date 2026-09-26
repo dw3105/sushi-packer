@@ -49,8 +49,8 @@ describe("copy clone", function()
     local copy = require("scripts.copy")
     local led = require("scripts.led")
     local saved = led.create; led.create = function() end
-    local src_ent = { valid = true, unit_number = 1, name = "sushi-packer-yellow-north" }
-    local dst_ent = { valid = true, unit_number = 2, name = "sushi-packer-yellow-north" }
+    local src_ent = { valid = true, unit_number = 1, name = "sushi-packer-north" }
+    local dst_ent = { valid = true, unit_number = 2, name = "sushi-packer-north" }
     local src = { entity = src_ent, unit_number = 1, settings = copy.default_settings(), box = core.new_box() }
     core.accept(src.box, "iron-plate", "normal", 1, 5, 100, 1, false)
     storage = { boxes = { [1] = src } }

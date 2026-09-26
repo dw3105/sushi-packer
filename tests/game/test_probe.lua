@@ -178,4 +178,47 @@ describe("probe", function()
       assert.is_not_nil(rec, report)
     end)
   end)
+
+  it("placer over belt replaces belt", function()
+    -- FND-0009 (E-9): placer in fast_replaceable_group "transport-belt"; variants stay "sushi-packer".
+    local player = game.players[1]
+    local p0 = player.position
+    local pos = { math.floor(p0.x) + 2.5, math.floor(p0.y) + 0.5 }
+    local belt = surface.create_entity({ name = "transport-belt", position = pos, direction = defines.direction.east, force = force })
+    belt.get_transport_line(1).insert_at(0.5, { name = "iron-plate", count = 1 })
+    player.get_main_inventory().clear()
+    player.cursor_stack.set_stack({ name = N.item("yellow"), count = 1 })
+    local can = player.can_build_from_cursor({ position = pos, direction = defines.direction.east })
+    player.build_from_cursor({ position = pos, direction = defines.direction.east })
+    local boxes = surface.find_entities_filtered({ position = pos, radius = 0.4, name = N.variant("yellow", "east") })
+    local belts = surface.find_entities_filtered({ position = pos, radius = 0.4, type = "transport-belt" })
+    local report = "can=" .. tostring(can) .. " boxes=" .. #boxes .. " belts=" .. #belts ..
+      " inv_belt=" .. player.get_main_inventory().get_item_count("transport-belt") ..
+      " inv_iron=" .. player.get_main_inventory().get_item_count("iron-plate")
+    print("FND-0009 " .. report)
+    assert.is_true(can, report)
+    assert.are_equal(1, #boxes, report)
+    assert.are_equal(0, #belts, report)
+    assert.are_equal(1, player.get_main_inventory().get_item_count("transport-belt"), report)
+    assert.are_equal(1, player.get_main_inventory().get_item_count("iron-plate"), report)
+    player.cursor_stack.clear()
+  end)
+
+  it("belt over placed box refused", function()
+    local player = game.players[1]
+    local p0 = player.position
+    local pos = { math.floor(p0.x) + 2.5, math.floor(p0.y) + 0.5 }
+    surface.create_entity({ name = N.variant("yellow", "east"), position = pos, force = force, raise_built = true })
+    player.cursor_stack.set_stack({ name = "transport-belt", count = 1 })
+    local can = player.can_build_from_cursor({ position = pos, direction = defines.direction.east })
+    player.build_from_cursor({ position = pos, direction = defines.direction.east })
+    local boxes = surface.find_entities_filtered({ position = pos, radius = 0.4, name = N.variant("yellow", "east") })
+    local belts = surface.find_entities_filtered({ position = pos, radius = 0.4, type = "transport-belt" })
+    local report = "can=" .. tostring(can) .. " boxes=" .. #boxes .. " belts=" .. #belts
+    print("FND-0009 " .. report)
+    assert.is_false(can, report)
+    assert.are_equal(1, #boxes, report)
+    assert.are_equal(0, #belts, report)
+    player.cursor_stack.clear()
+  end)
 end)

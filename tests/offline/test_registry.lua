@@ -16,7 +16,7 @@ local function setup()
   led.set = function() end
   local registry = require("scripts.registry")
   local function entity(unit, name, force_index)
-    local e = { valid = true, name = name or "sushi-packer-yellow-east", unit_number = unit,
+    local e = { valid = true, name = name or "sushi-packer-east", unit_number = unit,
       position = { x = 10.5, y = 18.5 }, surface = { index = 1 }, force = { index = force_index or 1 },
       to_be_upgraded = function() return true end }
     local connections = {}
@@ -51,7 +51,7 @@ describe("registry", function()
   end)
   it("upgraded rec gets tier and dir from new entity", function()
     local r, _, entity = setup(); local old = entity(11); local rec = r.new_rec(old)
-    r.stash(rec); local new = entity(22, "sushi-packer-blue-south"); r.on_built({ entity = new })
+    r.stash(rec); local new = entity(22, "express-sushi-packer-south"); r.on_built({ entity = new })
     eq(rec.tier, "blue"); eq(rec.dir, "south"); eq(rec.entity, new); eq(rec.unit_number, 22)
   end)
   it("stash from older tick ignored and pruned", function()

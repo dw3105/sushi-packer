@@ -24,12 +24,20 @@ N.RECIPE_BASE = "steel-chest"       -- yellow base; later tiers use previous tie
 N.TECH_COST_FACTOR = 1.5            -- U-1: count = belt tech count x 1.5 (Deadlock pattern)
 N.ITEM_WEIGHT = 20000               -- U-4: 20 kg, 50 per rocket
 N.TIPS = "sushi-packer-tips"        -- U-5: tips-and-tricks-item
+N.SUBGROUP = "sushi-packer"         -- U-7: own item-subgroup row after belts (group logistics)
+N.SIM_INTERFACE = "sushi-packer"    -- U-8: remote interface simulations call (scene)
+N.BELT_GROUP = "transport-belt"     -- E-9: placer fast_replaceable_group (FND-0009)
 
-function N.item(tier) return "sushi-packer-" .. tier end
-function N.placer(tier) return "sushi-packer-" .. tier .. "-placer" end
-function N.variant(tier, dir) return "sushi-packer-" .. tier .. "-" .. dir end
-function N.remnant(tier) return "sushi-packer-" .. tier .. "-remnants" end
-function N.tech(tier) return "sushi-packer-" .. tier end
+-- U-7 (v6, author 2026-09-26): vanilla belt-series names. yellow "sushi-packer", red "fast-sushi-packer",
+-- blue "express-sushi-packer", turbo "turbo-sushi-packer". Tier keys (yellow..turbo) stay internal (storage, graphics).
+N.PREFIX = { yellow = "", red = "fast-", blue = "express-", turbo = "turbo-" }
+function N.item(tier) return N.PREFIX[tier] .. "sushi-packer" end
+function N.placer(tier) return N.item(tier) .. "-placer" end
+function N.variant(tier, dir) return N.item(tier) .. "-" .. dir end
+function N.remnant(tier) return N.item(tier) .. "-remnants" end
+function N.tech(tier) return N.item(tier) end
+-- v1.1 names, only for migrations/*.json and their test.
+function N.old_item(tier) return "sushi-packer-" .. tier end
 function N.led(state, dir) return "sushi-packer-led-" .. state .. "-" .. dir end
 
 N.SETTING_TIMEOUT = "sushi-packer-flush-timeout"

@@ -55,9 +55,9 @@ describe("data", function()
     local raw = load()
     local expected = {
       { "logistics", "steel-processing", "electronics" },
-      { "logistics-2", "sushi-packer-yellow", "fast-inserter", "advanced-circuit" },
-      { "logistics-3", "sushi-packer-red", "bulk-inserter", "processing-unit" },
-      { "turbo-transport-belt", "sushi-packer-blue", "stack-inserter", "quantum-processor" },
+      { "logistics-2", "sushi-packer", "fast-inserter", "advanced-circuit" },
+      { "logistics-3", "fast-sushi-packer", "bulk-inserter", "processing-unit" },
+      { "turbo-transport-belt", "express-sushi-packer", "stack-inserter", "quantum-processor" },
     }
     for i, tier in ipairs(N.TIERS) do eq(raw.technology[N.tech(tier)].prerequisites, expected[i], tier) end
   end)

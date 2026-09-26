@@ -25,7 +25,7 @@ rec = {
   settings = {
     timeout_mode = "global"|"custom",            -- S-2
     timeout_s = 0,                               -- used when custom; 0 = off
-    filters = { {name = "iron-plate", quality = "normal"|nil}, ... },  -- S-3, P-1 (nil quality = any)
+    filters = { {name = "iron-plate", quality = "normal"|nil, comparator = "="|"≠"|">"|"<"|"≥"|"≤"|nil}, ... },  -- S-3, P-1 v6 (nil quality = any, nil comparator = "="); array index = GUI slot 1..10, empty slot = false
     circuit = {
       enable = false,                            -- N-3 condition on/off
       cond = { first_signal = SignalID|nil, comparator = ">"|"<"|"="|"≥"|"≤"|"≠", constant = 0 },
@@ -36,6 +36,7 @@ rec = {
   circuit_state = { last_flush = false },        -- owned by scripts/circuit.lua
   led = { sprite = LuaRenderObject, light = LuaRenderObject, state = "green", visible = true },  -- owned by scripts/led.lua
   enabled = true,                                -- last circuit verdict, written by scripts/tick.lua
+  decon = false,                                 -- E-8: marked for deconstruction, written by tick.on_decon
   out_credit = { 0, 0 },                         -- belt-items allowed per lane, owned by scripts/tick.lua
   in_credit = { 0, 0 },
   next_poll = 0,                                 -- idle skip (R-2), owned by scripts/tick.lua
@@ -146,3 +147,16 @@ N-2 read contents = container's native circuit output (items live in inventory, 
 | `tick.on_tick(e)` | per box: circuit → pull → core → push → LED; idle skip; reconcile every 60 ticks |
 | `tick.on_research(e)` | refresh `storage.belt_stack[force.index]` |
 | `tick.timeout_ticks(rec) -> n` | global setting or custom × 60 |
+| `tick.on_decon(e, marked)` | E-8: rec of `e.entity` → `rec.decon = marked`; while true visit skips pull + push, LED hidden |
+
+## scripts/filter.lua — pass-through rule (lane 015, v6)
+
+| Signature | Does |
+|---|---|
+| `filter.match(filters, name, quality, levels) -> bool` | pure; skips entries that are not tables (`false` = empty slot); true when any filter has same `name` and quality rule holds: `quality == nil` → any; else compare `levels[quality]` to `levels[filter.quality]` with `comparator` (nil = `"="`) |
+
+## scripts/sim.lua — simulation scene (lane 018, v6)
+
+| Signature | Does |
+|---|---|
+| `sim.scene(kind)` | `kind = "factoriopedia"\|"tips"`: on `game.surfaces[1]` set bonus 3, build infinity chest → `loader-1x1` → 4 belts → box east (placer, `raise_built`) → 4 belts → `loader-1x1` → void infinity chest; camera on box. Called by simulation init via `remote.call(N.SIM_INTERFACE, "scene", kind)` |

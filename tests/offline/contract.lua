@@ -17,5 +17,7 @@ return {
   },
   gui = { on_opened = 1, on_closed = 1, on_event = 1 },
   circuit = { compare = 3, evaluate = 1 },
-  tick = { on_tick = 1, on_research = 1, timeout_ticks = 1 },
+  tick = { on_tick = 1, on_research = 1, timeout_ticks = 1, on_decon = 2 },
+  filter = { match = 4 },
+  sim = { scene = 1 },
 }

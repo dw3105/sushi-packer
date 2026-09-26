@@ -142,4 +142,7 @@ function M.on_tick(e)
   end
 end
 
+-- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off. Lane 015 (task 015) fills.
+function M.on_decon(e, marked) error("stub: task 015") end
+
 return M
