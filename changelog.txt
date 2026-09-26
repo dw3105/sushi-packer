@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.3
+Date: 2026-09-27
+  Changes:
+    - Factoriopedia and tip scene rebuilt: four chests, yellow inserters feed both belt lanes, box packs 4-stacks.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.2
 Date: 2026-09-26
   Changes:
@@ -24,6 +30,12 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.3
+Date: 2026-09-27
+  Changes:
+    - Factoriopedia and tip scene rebuilt: four chests, yellow inserters feed both belt lanes, box packs 4-stacks.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.2
