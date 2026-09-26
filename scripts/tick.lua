@@ -3,9 +3,19 @@ local core = require("scripts.core")
 local belt_io = require("scripts.belt_io")
 local circuit = require("scripts.circuit")
 local led = require("scripts.led")
+local filter = require("scripts.filter")
 local M = {}
 local INTERVAL = { yellow = 8, red = 4, blue = 2, turbo = 2 }
 local stack_sizes = {}
+local quality_levels
+
+local function levels()
+  if quality_levels == nil then
+    quality_levels = {}
+    for name, prototype in pairs(prototypes.quality) do quality_levels[name] = prototype.level end
+  end
+  return quality_levels
+end
 
 local function stack_size(name)
   local size = stack_sizes[name]
@@ -26,14 +36,7 @@ function M.on_research(e)
   storage.belt_stack[force.index] = belt_io.belt_stack_size(force)
 end
 
-local function has_filter(filters, name, quality)
-  for _, f in ipairs(filters or {}) do
-    if f.name == name and (f.quality == nil or f.quality == quality) then return true end
-  end
-  return false
-end
-
-local function reconcile(rec, tick, inv)
+local function reconcile(rec, tick, inv, bss)
   inv = inv or rec.entity.get_inventory(defines.inventory.chest)
   local chest, totals = {}, core.totals(rec.box)
   for _, x in ipairs(inv.get_contents()) do
@@ -59,7 +62,7 @@ local function reconcile(rec, tick, inv)
     local inv_count = chest[k] or 0
     if inv_count < core_count then core.remove_external(rec.box, name, quality, core_count - inv_count)
     elseif inv_count > core_count then
-      core.adopt_external(rec.box, name, quality, inv_count - core_count, stack_size(name), tick)
+      core.adopt_external(rec.box, name, quality, inv_count - core_count, math.min(bss, stack_size(name)), tick)
     end
   end
 end
@@ -74,13 +77,16 @@ function M.on_tick(e)
     if not rec.entity.valid then
       storage.boxes[rec.unit_number] = nil
     else
+      local force = rec.entity.force
+      local bss = storage.belt_stack[force.index]
+      if bss == nil then bss = belt_io.belt_stack_size(force); storage.belt_stack[force.index] = bss end
       local inv
-      if opened[rec.unit_number] or (e.tick + rec.unit_number) % 60 == 0 then
+      if not rec.decon and (opened[rec.unit_number] or (e.tick + rec.unit_number) % 60 == 0) then
         inv = rec.entity.get_inventory(defines.inventory.chest)
-        reconcile(rec, e.tick, inv)
+        reconcile(rec, e.tick, inv, bss)
       end
       local interval = INTERVAL[rec.tier] or 1
-      if (e.tick + rec.unit_number) % interval == 0 and e.tick >= (rec.next_poll or 0) then
+      if not rec.decon and (e.tick + rec.unit_number) % interval == 0 and e.tick >= (rec.next_poll or 0) then
         local enabled, flush_now = circuit.evaluate(rec)
         rec.enabled = enabled
         if enabled then
@@ -98,10 +104,11 @@ function M.on_tick(e)
             budget[lane] = math.floor(rec.in_credit[lane])
           end
           local function sink(name, quality, input_lane, count)
-            if has_filter(rec.settings.filters, name, quality) then
-              return core.accept(rec.box, name, quality, input_lane, count, 1, e.tick, true)
+            local release_size = math.min(bss, stack_size(name))
+            if filter.match(rec.settings.filters, name, quality, levels()) then
+              return core.accept(rec.box, name, quality, input_lane, count, release_size, e.tick, true)
             end
-            local stack = stack_size(name)
+            local stack = release_size
             local accepted = core.accept(rec.box, name, quality, input_lane, count, stack, e.tick, false)
             if accepted <= 0 then return 0 end
             local inserted = inventory().insert({name=name, count=accepted, quality=quality})
@@ -114,9 +121,6 @@ function M.on_tick(e)
             rec.in_credit[lane] = rec.in_credit[lane] - n
             if n > 0 then taken_any = true end
           end
-          local force = rec.entity.force
-          local bss = storage.belt_stack[force.index]
-          if bss == nil then bss = belt_io.belt_stack_size(force); storage.belt_stack[force.index] = bss end
           for lane = 1, 2 do
             rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * interval, 2)
             while rec.out_credit[lane] >= 1 do
@@ -134,7 +138,7 @@ function M.on_tick(e)
           if core.is_idle(rec.box) and not taken_any then rec.next_poll = e.tick + 30 else rec.next_poll = 0 end
         end
       end
-      local state, visible = core.led_state(rec.box), rec.enabled ~= false
+      local state, visible = core.led_state(rec.box), rec.enabled ~= false and not rec.decon
       if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then
         led.set(rec, state, visible)
       end
@@ -142,7 +146,11 @@ function M.on_tick(e)
   end
 end
 
--- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off. Lane 015 (task 015) fills.
-function M.on_decon(e, marked) error("stub: task 015") end
+-- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off.
+function M.on_decon(e, marked)
+  local entity = e and e.entity
+  local rec = entity and entity.unit_number and storage.boxes[entity.unit_number]
+  if rec then rec.decon = marked; rec.next_poll = 0 end
+end
 
 return M
