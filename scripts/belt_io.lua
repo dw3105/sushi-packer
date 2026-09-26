@@ -41,9 +41,30 @@ function M.front(entity, dir)
   return find_belt(entity, dir, 1)
 end
 
+local function matches(belt, dir, sign)
+  if not belt or not belt.valid or belt.direction ~= direction_value(dir) then return false end
+  if belt.type == "transport-belt" then return true end
+  return belt.type == "underground-belt" and belt.belt_to_ground_type == (sign == -1 and "output" or "input")
+end
+
+local function cached(rec, field, sign)
+  local b = rec.belt
+  if not b then b = { behind = nil, front = nil, scan = -60 }; rec.belt = b end
+  local belt = b[field]
+  if matches(belt, rec.dir, sign) then return belt end
+  b[field] = nil
+  local tick = game.tick or 0
+  if tick < (b.scan or -60) + 60 then return nil end
+  b.scan = tick
+  belt = find_belt(rec.entity, rec.dir, sign)
+  b[field] = belt
+  return belt
+end
+
 function M.pull(rec, budget, sink)
   local taken = { 0, 0 }
-  local belt = M.behind(rec.entity, rec.dir)
+  if budget[1] < 1 and budget[2] < 1 then return taken end
+  local belt = cached(rec, "behind", -1)
   if not belt then return taken end
   for lane = 1, 2 do
     local line = belt.get_transport_line(lane)
@@ -70,7 +91,7 @@ function M.pull(rec, budget, sink)
 end
 
 function M.push(rec, lane, item, belt_stack_size)
-  local belt = M.front(rec.entity, rec.dir)
+  local belt = cached(rec, "front", 1)
   if not belt then return 0 end
   local line = belt.get_transport_line(lane)
   if not line.can_insert_at_back() then return 0 end
