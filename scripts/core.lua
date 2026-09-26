@@ -2,6 +2,18 @@ local N = require("scripts.names")
 local M = {}
 
 local function keyeq(x, name, quality) return x.name == name and x.quality == quality end
+local function partial_key(name, quality, lane)
+  return name .. "\0" .. quality .. "\0" .. lane
+end
+local function ensure_partial_index(box)
+  if box.partial_by_key then return end
+  local index = {}
+  for i = 1, #box.partials do
+    local p = box.partials[i]
+    index[partial_key(p.name, p.quality, p.lane)] = p
+  end
+  box.partial_by_key = index
+end
 local function ready_add(box, p)
   box.sequence = box.sequence + 1
   p.started = false
@@ -10,7 +22,10 @@ local function ready_add(box, p)
   q[#q + 1] = p
 end
 local function remove_partial(box, i)
+  ensure_partial_index(box)
   local p = table.remove(box.partials, i)
+  local key = partial_key(p.name, p.quality, p.lane)
+  if box.partial_by_key[key] == p then box.partial_by_key[key] = nil end
   return p
 end
 local function oldest_partial(box)
@@ -23,21 +38,20 @@ local function oldest_partial(box)
   return best
 end
 local function find_partial(box, name, quality, lane)
-  for i = 1, #box.partials do
-    local p = box.partials[i]
-    if p.name == name and p.quality == quality and p.lane == lane then return i end
-  end
+  ensure_partial_index(box)
+  return box.partial_by_key[partial_key(name, quality, lane)]
 end
 local function add(box, name, quality, lane, count, stack_size, tick, limited)
   local accepted = 0
   while count > 0 do
-    local idx = find_partial(box, name, quality, lane)
-    if idx then
-      local p = box.partials[idx]
+    local p = find_partial(box, name, quality, lane)
+    if p then
       local n = math.min(count, p.stack_size - p.count)
       p.count = p.count + n; box.stored_count = box.stored_count + n
       count = count - n; accepted = accepted + n
       if p.count == p.stack_size then
+        local idx
+        for i = 1, #box.partials do if box.partials[i] == p then idx = i; break end end
         remove_partial(box, idx); ready_add(box, p)
       end
     else
@@ -60,6 +74,7 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited)
           if tick < old.first_tick or (tick == old.first_tick and p.sequence < old.sequence) then insert=i; break end
         end
         table.insert(box.partials, insert, p)
+        box.partial_by_key[partial_key(name, quality, lane)] = p
       end
       box.used_slots = box.used_slots + 1
       box.stored_count = box.stored_count + n
@@ -70,7 +85,7 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited)
 end
 
 function M.new_box()
-  return {partials={}, ready={{},{}}, hold={nil,nil}, used_slots=0, stored_count=0, sequence=0}
+  return {partials={}, partial_by_key={}, ready={{},{}}, hold={nil,nil}, used_slots=0, stored_count=0, sequence=0}
 end
 function M.accept(box, name, quality, lane, count, stack_size, tick, passthrough)
   if passthrough then
@@ -127,7 +142,7 @@ function M.remove_external(box, name, quality, n)
     if not best then break end
     local p=box.partials[best]; local take=math.min(n-removed,p.count)
     p.count=p.count-take; box.stored_count=box.stored_count-take; removed=removed+take
-    if p.count==0 then table.remove(box.partials,best); box.used_slots=box.used_slots-1 end
+    if p.count==0 then remove_partial(box,best); box.used_slots=box.used_slots-1 end
   end
   while removed<n do
     local lane,idx,seq
