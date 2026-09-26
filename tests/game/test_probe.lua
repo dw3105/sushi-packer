@@ -221,4 +221,21 @@ describe("probe", function()
     assert.are_equal(0, #belts, report)
     player.cursor_stack.clear()
   end)
+
+  it("inserter direction picks from chest drops on belt", function()
+    -- FND-0012 (U-8 scene): which direction makes an inserter at y=-1 take from chest y=-2 and drop on belt y=0?
+    local report = {}
+    for _, d in ipairs({ "north", "south" }) do
+      local ins = surface.create_entity({ name = "inserter", position = { 10.5, -0.5 }, direction = defines.direction[d], force = force })
+      report[#report + 1] = d .. ": pickup=" .. ins.pickup_position.y .. " drop=" .. ins.drop_position.y
+      ins.destroy()
+    end
+    local text = table.concat(report, " | ")
+    print("FND-0012 " .. text)
+    -- Measured 2026-09-26 (2.0.77): direction = pickup side. north -> pickup -1.5, drop 0.699 (far half of belt tile).
+    local ins = surface.create_entity({ name = "inserter", position = { 10.5, -0.5 }, direction = defines.direction.north, force = force })
+    assert.is_true(ins.pickup_position.y < -1, text)
+    assert.is_true(ins.drop_position.y > 0.5, text)
+  end)
 end)
+

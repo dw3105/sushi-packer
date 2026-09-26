@@ -68,3 +68,9 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > placer 
 Found 2026-09-26 on `legalcopilot-dev`, integrator review of lane 016 + real-API game tests. `frame.tags.selected_slot = n` changes a copy (write back `el.tags = t`); `choose-elem-button` `elem_type = "item"` value is a plain string, not `{name}` (writing a table raised at `gui.lua:74`); picking item straight in grid slot did not save filter; nil holes in filters array stop `ipairs` in `filter.match`. What it looks like: 4 reds in `tests/game/test_gui.lua` (`item picked in slot saved as filter`, `editor sets comparator and quality on selected slot`, `editor item change writes selected slot`, `clearing slot writes false`). Closed: `set_tag`, string values, slot pick saves, `pad` empty slots with `false`.
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_gui.lua::gui > editor sets comparator and quality on selected slot'`
+
+## FND-0012 - Inserter `direction` is its pickup side
+
+Found 2026-09-26 on `legalcopilot-dev`, S1 probe v1.3 (scene redo). Inserter at y=-0.5: `direction = north` → `pickup_position.y = -1.5`, `drop_position.y = 0.699` (far half of belt tile south of it); `direction = south` → pickup 0.5, drop -1.699. Both 2.0.77 and 2.1.20. Scene inserters above belt use `north`, below use `south`.
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > inserter direction picks from chest drops on belt'`

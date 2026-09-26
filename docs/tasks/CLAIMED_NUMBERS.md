@@ -20,3 +20,4 @@
 | `016` | `sushi-packer/agent` | gui | 2026-09-26 |
 | `017` | `sushi-packer/agent` | data names sim migration | 2026-09-26 |
 | `018` | `sushi-packer/agent` | sim scene | 2026-09-26 |
+| `019` | `sushi-packer/agent` | sim scene redo | 2026-09-26 |
