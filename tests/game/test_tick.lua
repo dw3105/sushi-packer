@@ -198,7 +198,7 @@ describe("tick", function()
     after_ticks(5, function()
       assert.are_equal("green", rec.led.state)
       feed.get_transport_line(1).insert_at_back({ name = "iron-ore", count = 1 })
-      after_ticks(120, function()
+      after_ticks(240, function() -- 3 belt tiles ~96 ticks + idle nap up to 30
         assert.are_equal("yellow", rec.led.state)
         assert.is_true(rec.led.visible)
       end)
@@ -209,7 +209,9 @@ describe("tick", function()
     local box, rec, feed = build(surface, force, {})
     run_until(feeder(feed, { rep("iron-ore", 10), {} }),
       function() return box.get_inventory(defines.inventory.chest).get_item_count("iron-ore") >= 10 end, 1200, function()
+      game.players[1].teleport({ 2.5, 0.5 }) -- within reach, or opening is refused
       game.players[1].opened = box
+      assert.are_equal(box, game.players[1].opened, "player has box open")
       box.get_inventory(defines.inventory.chest).remove({ name = "iron-ore", count = 4 })
       after_ticks(2, function()
         assert.are.same({ { name = "iron-ore", quality = "normal", count = 6 } }, core.totals(rec.box))
@@ -221,7 +223,8 @@ describe("tick", function()
   it("blocked left lane does not stall right", function()
     local _, _, feed, front = build(surface, force, { front = 1 })
     local l1 = front[1].get_transport_line(1)
-    while l1.can_insert_at_back() do l1.insert_at_back({ name = "stone", count = 1 }) end
+    for _, pos in ipairs({ 0, 0.25, 0.5, 0.75 }) do assert.is_true(l1.insert_at(pos, { name = "stone", count = 1 })) end
+    assert.is_false(l1.can_insert_at_back(), "left front lane full")
     run_until(feeder(feed, { rep("iron-ore", 50), rep("copper-ore", 50) }),
       function() return front[1].get_transport_line(2).get_item_count("copper-ore") > 0 end, 2400, function()
       assert.is_true(front[1].get_transport_line(2).get_item_count("copper-ore") > 0)

@@ -32,7 +32,6 @@ describe("lifecycle", function()
     game.players[1].get_main_inventory().clear()
     old_new_box = core.new_box
     saved_core = {}
-    fake("new_box", function() return { buffers = {}, ready = {}, hold = {} } end)
   end)
   after_each(function()
     core.new_box = old_new_box

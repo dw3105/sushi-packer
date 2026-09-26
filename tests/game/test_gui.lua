@@ -1,5 +1,6 @@
 local N = require("scripts.names")
 local gui = require("scripts.gui")
+local registry = require("scripts.registry")
 
 local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -30, -30 }, { 30, 30 } } })) do
@@ -23,11 +24,13 @@ describe("gui", function()
     player.opened = nil
     local force = game.forces.player
     box = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force })
-    rec = { entity = box, unit_number = box.unit_number, tier = "yellow", dir = "north", settings = {
+    -- Real rec (live tick glue reads it every tick); settings set to known defaults.
+    storage.boxes = {}
+    rec = registry.new_rec(box)
+    rec.settings = {
       timeout_mode = "global", timeout_s = 0, filters = {},
       circuit = { enable = false, cond = { first_signal = nil, comparator = ">", constant = 0 }, flush = false, flush_signal = nil },
-    } }
-    storage.boxes = { [box.unit_number] = rec }
+    }
   end)
   after_each(function() player.opened = nil end)
 
