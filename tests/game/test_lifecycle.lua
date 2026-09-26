@@ -217,4 +217,40 @@ describe("lifecycle", function()
     local rec = registry.new_rec(e); e.destroy(); registry.on_configuration_changed({})
     assert.is_nil(storage.boxes[rec.unit_number])
   end)
+
+  it("upgrade keeps state", function()
+    -- U-3 end to end: robots upgrade yellow east -> red east (FND-0006 path).
+    local sink = surface.create_entity({ name = "electric-energy-interface", position = { 20, 20 }, force = force })
+    sink.power_production = 1e9; sink.electric_buffer_size = 1e9; sink.energy = 1e9
+    surface.create_entity({ name = "medium-electric-pole", position = { 18, 20 }, force = force })
+    local port = surface.create_entity({ name = "roboport", position = { 16, 22 }, force = force })
+    port.insert({ name = "construction-robot", count = 4 })
+    surface.create_entity({ name = "storage-chest", position = { 13, 20 }, force = force }).insert({ name = N.item("red"), count = 1 })
+    local chest = surface.create_entity({ name = "steel-chest", position = { 12.5, 16.5 }, force = force })
+    local old = surface.create_entity({ name = N.variant("yellow", "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
+    local rec = registry.get(old)
+    rec.settings.timeout_s = 33
+    rec.box.hold[1] = { name = "copper-plate", quality = "normal", count = 1 }
+    old.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 7 })
+    old.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+      .connect_to(chest.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+    assert.is_true(old.order_upgrade({ target = N.variant("red", "east"), force = force }))
+    after_ticks(1200, function()
+      local new = surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.variant("red", "east") })[1]
+      assert.is_not_nil(new, "upgraded")
+      local nr = registry.get(new)
+      assert.is_not_nil(nr, "rec carried")
+      assert.are_equal(33, nr.settings.timeout_s)
+      assert.are_equal("red", nr.tier); assert.are_equal("east", nr.dir)
+      assert.are_equal(1, nr.box.hold[1] and nr.box.hold[1].count)
+      assert.are_equal(7, new.get_inventory(defines.inventory.chest).get_item_count("iron-plate"))
+      local c = new.get_wire_connector(defines.wire_connector_id.circuit_red, false)
+      assert.are_equal(1, c and #c.connections or 0)
+      assert.is_true(nr.led and nr.led.sprite.valid)
+      local n = 0
+      for _ in pairs(storage.boxes) do n = n + 1 end
+      assert.are_equal(1, n, "old rec gone")
+    end)
+  end)
 end)
+

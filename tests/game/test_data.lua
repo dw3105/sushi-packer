@@ -40,45 +40,84 @@ describe("data", function()
     end
   end)
 
-  it("recipe is steel chest belt and circuits", function()
+  it("recipes match table", function()
+    -- U-2 v5 (author 2026-09-26), exact order and amounts, both builds.
+    local want = {
+      yellow = { { "steel-chest", 1 }, { "splitter", 1 }, { "inserter", 2 }, { "electronic-circuit", 5 }, craft = 30 },
+      red = { { "sushi-packer-yellow", 1 }, { "fast-splitter", 1 }, { "fast-inserter", 2 }, { "advanced-circuit", 5 }, craft = 45 },
+      blue = { { "sushi-packer-red", 1 }, { "express-splitter", 1 }, { "bulk-inserter", 2 }, { "processing-unit", 5 }, craft = 60 },
+      turbo = { { "sushi-packer-blue", 1 }, { "turbo-splitter", 1 }, { "stack-inserter", 2 }, { "quantum-processor", 2 }, craft = 120 },
+    }
     for _, tier in ipairs(N.TIERS) do
-      local ingredients = prototypes.recipe[N.item(tier)].ingredients
-      local expected = {
-        { name = "steel-chest", amount = 1 },
-        { name = N.TIER[tier].belt, amount = 4 },
-        { name = N.TIER[tier].circuit, amount = 5 },
-      }
-      assert.are_equal(#expected, #ingredients)
-      for _, ingredient in ipairs(expected) do
-        local found
-        for _, actual in ipairs(ingredients) do
-          if actual.name == ingredient.name then found = actual end
+      local r = prototypes.recipe[N.item(tier)]
+      assert.are_equal(want[tier].craft, r.energy, tier)
+      assert.are_equal(4, #r.ingredients, tier)
+      for i, w in ipairs(want[tier]) do
+        assert.are_equal(w[1], r.ingredients[i].name, tier .. " #" .. i)
+        assert.are_equal(w[2], r.ingredients[i].amount, tier .. " #" .. i)
+      end
+      assert.are_equal("crafting", r.category)
+    end
+  end)
+
+  it("every ingredient unlocked by prereq closure", function()
+    -- U-1: no box recipe craftable before its ingredients (researching the box tech implies them).
+    local function closure(name, seen)
+      seen = seen or {}
+      if seen[name] then return seen end
+      seen[name] = true
+      for pre in pairs(prototypes.technology[name].prerequisites) do closure(pre, seen) end
+      return seen
+    end
+    local unlocked_by = {}
+    for tname, t in pairs(prototypes.technology) do
+      for _, e in ipairs(t.effects) do
+        if e.type == "unlock-recipe" then
+          unlocked_by[e.recipe] = unlocked_by[e.recipe] or {}
+          unlocked_by[e.recipe][#unlocked_by[e.recipe] + 1] = tname
         end
-        assert.is_not_nil(found)
-        assert.are_equal(ingredient.amount, found.amount)
+      end
+    end
+    for _, tier in ipairs(N.TIERS) do
+      local seen = closure(N.tech(tier))
+      for _, ing in ipairs(prototypes.recipe[N.item(tier)].ingredients) do
+        local r = prototypes.recipe[ing.name]
+        if r and not r.enabled then
+          local ok = false
+          for _, tname in ipairs(unlocked_by[ing.name] or {}) do if seen[tname] then ok = true end end
+          assert.is_true(ok, tier .. " needs tech unlocking " .. ing.name)
+        end
       end
     end
   end)
 
-  it("tech requires matching belt tech", function()
+  it("tech cost is belt tech x 1.5", function()
+    local want = { yellow = 30, red = 300, blue = 450, turbo = 750 }
+    for _, tier in ipairs(N.TIERS) do
+      local tech = prototypes.technology[N.tech(tier)]
+      local belt_tech = prototypes.technology[N.TIER[tier].tech]
+      assert.are_equal(want[tier], tech.research_unit_count, tier)
+      assert.are_equal(belt_tech.research_unit_energy, tech.research_unit_energy, tier)
+    end
+    local packs = {}
+    for _, i in ipairs(prototypes.technology[N.tech("turbo")].research_unit_ingredients) do packs[i.name] = true end
+    assert.is_true(packs["cryogenic-science-pack"])
+  end)
+
+  it("recycling recipe exists", function()
+    for _, tier in ipairs(N.TIERS) do assert.is_not_nil(prototypes.recipe[N.item(tier) .. "-recycling"], tier) end
+  end)
+
+  it("upgrade chain weight and no surface limit", function()
     for i, tier in ipairs(N.TIERS) do
-      local prerequisites = prototypes.technology[N.tech(tier)].prerequisites
-      local expected = { N.TIER[tier].tech }
-      if i == 1 then
-        expected[#expected + 1] = "steel-processing"
-      else
-        expected[#expected + 1] = N.tech(N.TIERS[i - 1])
+      assert.are_equal(N.ITEM_WEIGHT, prototypes.item[N.item(tier)].weight, tier)
+      for _, dir in ipairs(N.DIRS) do
+        local p = prototypes.entity[N.variant(tier, dir)]
+        local nxt = N.TIERS[i + 1]
+        if nxt then assert.are_equal(N.variant(nxt, dir), p.next_upgrade and p.next_upgrade.name)
+        else assert.is_nil(p.next_upgrade) end
+        assert.is_nil(p.surface_conditions)
       end
-      local found = {}
-      local count = 0
-      for key, value in pairs(prerequisites) do
-        count = count + 1
-        local name = type(value) == "string" and value or value.name
-        if name then found[name] = true end
-        if type(key) == "string" and value then found[key] = true end
-      end
-      assert.are_equal(#expected, count)
-      for _, name in ipairs(expected) do assert.is_true(found[name]) end
     end
   end)
 
@@ -90,19 +129,6 @@ describe("data", function()
         if effect.type == "unlock-recipe" and effect.recipe == N.item(tier) then found = true end
       end
       assert.is_true(found)
-    end
-  end)
-
-  it("tech cost copies matching belt tech", function()
-    for _, tier in ipairs(N.TIERS) do
-      local tech = prototypes.technology[N.tech(tier)]
-      local belt_tech = prototypes.technology[N.TIER[tier].tech]
-      assert.are_equal(belt_tech.research_unit_count, tech.research_unit_count)
-      assert.are_equal(#belt_tech.research_unit_ingredients, #tech.research_unit_ingredients)
-      for i, ingredient in ipairs(belt_tech.research_unit_ingredients) do
-        assert.are_equal(ingredient.name, tech.research_unit_ingredients[i].name)
-        assert.are_equal(ingredient.amount, tech.research_unit_ingredients[i].amount)
-      end
     end
   end)
 
