@@ -7,15 +7,14 @@ local function setup()
   local surface = {}
   function surface.create_entity(spec)
     created[#created + 1] = spec
-    local entity
-    entity = {
+    local entity = {
       valid = true,
       name = spec.name,
       set_infinity_container_filter = function(i, filter)
-        filters[#filters + 1] = { index = i, filter = filter }
+        filters[#filters + 1] = { entity = spec, index = i, filter = filter }
       end,
     }
-    spec.entity = entity  -- properties set after create (remove_unfiltered_items) land here
+    spec.entity = entity
     return entity
   end
   game = { surfaces = { [1] = surface }, forces = { player = force }, simulation = {} }
@@ -23,94 +22,99 @@ local function setup()
   return require("scripts.sim"), created, filters, force, game
 end
 
-local function count_name(created, name)
-  local n = 0
-  for _, spec in ipairs(created) do if spec.name == name then n = n + 1 end end
-  return n
+local function find(created, name, position)
+  for _, spec in ipairs(created) do
+    if spec.name == name and (not position or
+      (spec.position[1] == position[1] and spec.position[2] == position[2])) then return spec end
+  end
 end
 
 describe("sim", function()
-  it("builds belts box and feed", function()
-    local sim, created = setup()
-    sim.scene("factoriopedia")
-    eq(count_name(created, "loader-1x1"), 2, "loaders")
-    eq(count_name(created, "transport-belt"), 6, "belts")
-    eq(count_name(created, N.placer("yellow")), 1, "box")
-    local by_x = {}
-    for _, spec in ipairs(created) do by_x[spec.position[1]] = spec end
-    eq(by_x[-4.5].name, "infinity-chest", "source")
-    eq(by_x[-3.5].type, "output", "source loader")
-    eq(by_x[4.5].type, "input", "sink loader")
-    eq(by_x[5.5].name, "infinity-chest", "sink")
-    for x = -5, 5 do eq(by_x[x + 0.5].position, { x + 0.5, 0.5 }, "position x=" .. x) end
-  end)
-
-  it("sets belt stack bonus", function()
-    local sim, _, _, force = setup()
-    sim.scene("factoriopedia")
-    eq(force.belt_stack_size_bonus, 3)
-  end)
-
-  it("source chest holds four item kinds", function()
+  it("four infinity chests two above two below", function()
     local sim, created, filters = setup()
     sim.scene("factoriopedia")
-    eq(created[1].name, "infinity-chest")
+    local expected = {
+      { "iron-plate", { -3.5, -1.5 } }, { "copper-plate", { -1.5, -1.5 } },
+      { "coal", { -3.5, 2.5 } }, { "electronic-circuit", { -1.5, 2.5 } },
+    }
+    local sources = {}
+    for _, item in ipairs(expected) do
+      local chest = find(created, "infinity-chest", item[2])
+      ok(chest ~= nil, "missing chest " .. item[1])
+      sources[chest] = true
+      local filter
+      for _, call in ipairs(filters) do if call.entity == chest and call.index == 1 then filter = call.filter end end
+      eq(filter, { name = item[1], count = 50, mode = "exactly" })
+    end
+    local source_count = 0
+    for _ in pairs(sources) do source_count = source_count + 1 end
+    eq(source_count, 4)
+  end)
+
+  it("inserters between chests and belt", function()
+    local sim, created = setup()
+    sim.scene("factoriopedia")
+    local expected = {
+      { { -3.5, -0.5 }, defines.direction.north }, { { -1.5, -0.5 }, defines.direction.north },
+      { { -3.5, 1.5 }, defines.direction.south }, { { -1.5, 1.5 }, defines.direction.south },
+    }
     local got = {}
-    for _, call in ipairs(filters) do
-      got[call.index] = call.filter
-    end
-    eq(got, {
-      [1] = { name = "iron-plate", count = 50, mode = "exactly" },
-      [2] = { name = "copper-plate", count = 50, mode = "exactly" },
-      [3] = { name = "iron-gear-wheel", count = 50, mode = "exactly" },
-      [4] = { name = "electronic-circuit", count = 50, mode = "exactly" },
-    })
+    for _, spec in ipairs(created) do if spec.name == "inserter" then got[#got + 1] = { spec.position, spec.direction } end end
+    eq(got, expected)
   end)
 
-  it("sink chest removes everything", function()
-    local sim, created = setup()
-    sim.scene("tips")
-    local sink = created[#created]
-    eq(sink.name, "infinity-chest")
-    eq(sink.entity.remove_unfiltered_items, true, "property on entity, not create param")
-  end)
-
-  it("box built through placer with raise_built", function()
+  it("visible pole and hidden power", function()
     local sim, created = setup()
     sim.scene("factoriopedia")
-    local box
-    for _, spec in ipairs(created) do if spec.name == N.placer("yellow") then box = spec end end
-    ok(box ~= nil, "yellow placer missing")
-    eq(box.direction, defines.direction.east)
+    local poles = {}
+    for _, spec in ipairs(created) do if spec.name == "medium-electric-pole" then poles[#poles + 1] = spec end end
+    eq(#poles, 2)
+    eq(poles[1].position, { -2.5, -0.5 })
+    eq(poles[2].position, { -2.5, -8.5 })
+    local eei = find(created, "electric-energy-interface", { -2.5, -9.5 })
+    ok(eei ~= nil, "missing hidden power interface")
+    eq(eei.entity.power_production, 1e9)
+    eq(eei.entity.electric_buffer_size, 1e9)
+    eq(eei.entity.energy, 1e9)
+  end)
+
+  it("inserter hand size one", function()
+    local sim, _, _, force = setup()
+    sim.scene("factoriopedia")
+    eq(force.inserter_stack_size_bonus, 0)
+  end)
+
+  it("belt box and sink", function()
+    local sim, created = setup()
+    sim.scene("factoriopedia")
+    eq(find(created, N.placer("yellow"), { 0.5, 0.5 }).direction, defines.direction.east)
+    local box = find(created, N.placer("yellow"), { 0.5, 0.5 })
     eq(box.raise_built, true)
-    eq(box.position, { 0.5, 0.5 })
+    local loader = find(created, "loader-1x1", { 4.5, 0.5 })
+    eq(loader.direction, defines.direction.east)
+    eq(loader.type, "input")
+    local sink = find(created, "infinity-chest", { 5.5, 0.5 })
+    eq(sink.entity.remove_unfiltered_items, true)
+    for x = -5, -1 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
+    for x = 1, 3 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
   end)
 
-  it("factoriopedia and tips differ only in camera", function()
-    local sim, created, _, _, g = setup()
+  it("camera constants per kind", function()
+    local sim = setup()
+    eq(sim.CAMERA, {
+      factoriopedia = { position = { -0.5, 0.5 }, zoom = 2.0 },
+      tips = { position = { -0.5, 0.5 }, zoom = 2.4 },
+    })
     sim.scene("factoriopedia")
-    eq(g.simulation.camera_position, { 0.5, 0.5 })
-    eq(g.simulation.camera_zoom, 1.8)
-    local first = created
-    sim, created, _, _, g = setup()
+    eq(game.simulation.camera_position, { -0.5, 0.5 })
+    eq(game.simulation.camera_zoom, 2.0)
     sim.scene("tips")
-    eq(g.simulation.camera_position, { 0.5, 0.5 })
-    eq(g.simulation.camera_zoom, 1.4)
-    local function specs(list)
-      local out = {}
-      for i, spec in ipairs(list) do
-        local c = {}
-        for k, v in pairs(spec) do if k ~= "entity" and k ~= "force" then c[k] = v end end
-        out[i] = c
-      end
-      return out
-    end
-    eq(specs(created), specs(first), "scene entity specs")
+    eq(game.simulation.camera_position, { -0.5, 0.5 })
+    eq(game.simulation.camera_zoom, 2.4)
   end)
 
   it("unknown kind errors", function()
     local sim = setup()
-    local success = pcall(function() sim.scene("other") end)
-    eq(success, false)
+    eq(pcall(function() sim.scene("other") end), false)
   end)
 end)
