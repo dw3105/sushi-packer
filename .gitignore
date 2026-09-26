@@ -1,0 +1,11 @@
+node_modules/
+tools/ft-*/node_modules/
+factorio-test-data-dir/
+.factorio-test/
+build/
+dist/
+*.zip
+.env
+.env.*
+.claude/settings.local.json
+__pycache__/

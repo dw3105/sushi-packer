@@ -1,0 +1,26 @@
+[estate]
+release = "9d4a672771790e431ae50dcf297d91f5357ac223"
+template = "ae2a0aa00ebacea759031b83f6a38c870da04821350cef61a2d64a32cf4d234a"
+
+[lane]
+task_dir = "docs/tasks"
+claimed_numbers = "docs/tasks/CLAIMED_NUMBERS.md"
+prefix = ""
+audit_dir = ""
+engine = "codex exec"
+label = "sushi-packer/agent"
+weight_mib = 1024
+weight_cores = 0.5
+suite_label = "sushi-packer/heavy"
+
+[verify]
+# lane merge runs this in lane worktree. Guard tests only: full suite belongs to integrator (SP-02).
+# `{tests}` is never substituted by ~/skills/tools (FND-0002 in local-transcriber), so no placeholder.
+# Direct runner, not make: verify already holds sushi-packer/heavy; make would queue a second lease.
+default = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard contract frozen' && tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard names frozen' && tools/run_tests.sh 2.0 'tests/game/test_guard.lua::guard prototypes exist' && tools/run_tests.sh 2.1 'tests/game/test_guard.lua::guard prototypes exist'"
+scaffold = "tools/run_tests.sh 2.0 'tests/offline/test_guard.lua::guard contract frozen'"
+ci_collect = "make ci-collect"
+
+[records]
+findings = "docs/FINDINGS.md"
+friction = "docs/FRICTION.md"

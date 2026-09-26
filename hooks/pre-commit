@@ -1,0 +1,3 @@
+#!/bin/sh
+# Managed by lane hooks-install; the hook body lives in the release.
+exec /var/lib/agent-skills/9d4a672771790e431ae50dcf297d91f5357ac223/hooks/repo/pre-commit "$@"
