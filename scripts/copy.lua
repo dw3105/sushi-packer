@@ -79,6 +79,7 @@ function M.on_cloned(e)
     local o = {}; for k, v in pairs(t) do o[clone_box(k)] = clone_box(v) end; return o
   end
   rec.box = clone_box(src.box)
+  rec.box.partial_by_key = nil -- deep copy split shared partial tables; core rebuilds its key index (PERF-2)
   led.create(rec)
 end
 
