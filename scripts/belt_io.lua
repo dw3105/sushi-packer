@@ -24,7 +24,7 @@ local function find_belt(entity, dir, sign)
       if sign == -1 and belt.direction == direction_value(dir) then
         if belt.type == "transport-belt" then return belt end
         if belt.type == "underground-belt" and belt.belt_to_ground_type == "output" then return belt end
-      elseif sign == 1 and belt.direction ~= direction_value(opposite[dir]) then
+      elseif sign == 1 and belt.direction == direction_value(dir) then
         if belt.type == "transport-belt" then return belt end
         if belt.type == "underground-belt" and belt.belt_to_ground_type == "input" then return belt end
       end
