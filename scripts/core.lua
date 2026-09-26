@@ -5,6 +5,15 @@ local function keyeq(x, name, quality) return x.name == name and x.quality == qu
 local function partial_key(name, quality, lane)
   return name .. "\0" .. quality .. "\0" .. lane
 end
+local function ensure_partial_index(box)
+  if box.partial_by_key then return end
+  local index = {}
+  for i = 1, #box.partials do
+    local p = box.partials[i]
+    index[partial_key(p.name, p.quality, p.lane)] = p
+  end
+  box.partial_by_key = index
+end
 local function ready_add(box, p)
   box.sequence = box.sequence + 1
   p.started = false
@@ -13,6 +22,7 @@ local function ready_add(box, p)
   q[#q + 1] = p
 end
 local function remove_partial(box, i)
+  ensure_partial_index(box)
   local p = table.remove(box.partials, i)
   local key = partial_key(p.name, p.quality, p.lane)
   if box.partial_by_key[key] == p then box.partial_by_key[key] = nil end
@@ -28,6 +38,7 @@ local function oldest_partial(box)
   return best
 end
 local function find_partial(box, name, quality, lane)
+  ensure_partial_index(box)
   return box.partial_by_key[partial_key(name, quality, lane)]
 end
 local function add(box, name, quality, lane, count, stack_size, tick, limited)
