@@ -1,1 +1,7 @@
--- U-5 tips-and-tricks entry (lane K, task 014). Stub: adds nothing yet.
+-- U-5: explain lane sorting and stacked output in Tips and Tricks.
+local N = require("scripts.names")
+data:extend({
+  { type = "tips-and-tricks-item-category", name = "sushi-packer", order = "z[sushi-packer]" },
+  { type = "tips-and-tricks-item", name = N.TIPS, category = "sushi-packer", order = "a[sushi-packer]",
+    trigger = { type = "research", technology = N.tech("yellow") } },
+})
