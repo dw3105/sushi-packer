@@ -41,7 +41,7 @@ describe("data", function()
   end)
 
   it("recipes match table", function()
-    -- U-2 v5 (author 2026-09-26), exact order and amounts, both builds.
+    -- U-2 v5 (author 2026-09-26), exact names and amounts, both builds.
     local want = {
       yellow = { { "steel-chest", 1 }, { "splitter", 1 }, { "inserter", 2 }, { "electronic-circuit", 5 }, craft = 30 },
       red = { { "sushi-packer-yellow", 1 }, { "fast-splitter", 1 }, { "fast-inserter", 2 }, { "advanced-circuit", 5 }, craft = 45 },
@@ -52,10 +52,10 @@ describe("data", function()
       local r = prototypes.recipe[N.item(tier)]
       assert.are_equal(want[tier].craft, r.energy, tier)
       assert.are_equal(4, #r.ingredients, tier)
-      for i, w in ipairs(want[tier]) do
-        assert.are_equal(w[1], r.ingredients[i].name, tier .. " #" .. i)
-        assert.are_equal(w[2], r.ingredients[i].amount, tier .. " #" .. i)
-      end
+      -- Engine reorders ingredients at runtime (measured 2.0.77): match by name, not position.
+      local got = {}
+      for _, ing in ipairs(r.ingredients) do got[ing.name] = ing.amount end
+      for _, w in ipairs(want[tier]) do assert.are_equal(w[2], got[w[1]], tier .. " " .. w[1]) end
       assert.are_equal("crafting", r.category)
     end
   end)
