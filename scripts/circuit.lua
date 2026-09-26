@@ -12,6 +12,7 @@ end
 
 function M.evaluate(rec)
   local circuit = rec.settings.circuit
+  local cond = circuit.cond or {}
   local entity = rec.entity
   local red = defines.wire_connector_id.circuit_red
   local green = defines.wire_connector_id.circuit_green
@@ -23,8 +24,8 @@ function M.evaluate(rec)
   end
 
   local enabled = true
-  if circuit.enable ~= false and circuit.cond.first_signal then
-    enabled = M.compare(signal_value(circuit.cond.first_signal), circuit.cond.comparator, circuit.cond.constant)
+  if circuit.enable ~= false and cond.first_signal then
+    enabled = M.compare(signal_value(cond.first_signal), cond.comparator, cond.constant)
   end
 
   rec.circuit_state = rec.circuit_state or { last_flush = false }
