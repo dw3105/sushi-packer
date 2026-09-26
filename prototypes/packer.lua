@@ -23,6 +23,10 @@ local function icon(tier) return G .. "icons/sushi-packer-" .. tier .. ".png" en
 local function make_tier(tier)
   local T = N.TIER[tier]
   local protos = {}
+  local previous_tier
+  for i, built_tier in ipairs(N.TIERS) do
+    if built_tier == tier and i > 1 then previous_tier = N.TIERS[i - 1] end
+  end
 
   protos[#protos + 1] = {
     type = "item",
@@ -32,17 +36,19 @@ local function make_tier(tier)
     order = "z[sushi-packer]-" .. tier,
     place_result = N.placer(tier),
     stack_size = 50,
+    weight = N.ITEM_WEIGHT,
   }
 
   protos[#protos + 1] = {
     type = "recipe",
     name = N.item(tier),
     enabled = false,
-    energy_required = 1,
+    energy_required = T.craft_s,
     ingredients = {
-      { type = "item", name = "steel-chest", amount = 1 },
-      { type = "item", name = T.belt, amount = 4 },
-      { type = "item", name = T.circuit, amount = 5 },
+      { type = "item", name = previous_tier and N.item(previous_tier) or N.RECIPE_BASE, amount = 1 },
+      { type = "item", name = T.splitter, amount = 1 },
+      { type = "item", name = T.inserter, amount = 2 },
+      { type = "item", name = T.circuit, amount = T.circuits },
     },
     results = { { type = "item", name = N.item(tier), amount = 1 } },
   }
@@ -51,15 +57,50 @@ local function make_tier(tier)
   if not belt_tech or not belt_tech.unit then
     error("sushi-packer: matching belt technology has no research unit: " .. T.tech)
   end
-  local previous_tier
-  for i, built_tier in ipairs(N.TIERS) do
-    if built_tier == tier and i > 1 then previous_tier = N.TIERS[i - 1] end
-  end
   local prerequisites = { T.tech }
+  local prerequisite_set = { [T.tech] = true }
+  local function add_prerequisite(name)
+    if not prerequisite_set[name] then
+      prerequisite_set[name] = true
+      prerequisites[#prerequisites + 1] = name
+    end
+  end
   if previous_tier then
-    prerequisites[#prerequisites + 1] = N.tech(previous_tier)
+    add_prerequisite(N.tech(previous_tier))
   else
-    prerequisites[#prerequisites + 1] = "steel-processing"
+    add_prerequisite("steel-processing")
+  end
+
+  local recipe_ingredients = protos[2].ingredients
+  local technology_names = {}
+  for name in pairs(data.raw.technology) do technology_names[#technology_names + 1] = name end
+  table.sort(technology_names)
+  for _, ingredient in ipairs(recipe_ingredients) do
+    for _, technology_name in ipairs(technology_names) do
+      if technology_name ~= N.tech(tier) then
+        local technology = data.raw.technology[technology_name]
+        for _, effect in ipairs(technology.effects or {}) do
+          if effect.type == "unlock-recipe" and effect.recipe == ingredient.name then
+            add_prerequisite(technology_name)
+            break
+          end
+        end
+      end
+    end
+  end
+
+  local research_ingredients, research_ingredient_set = {}, {}
+  for _, prerequisite in ipairs(prerequisites) do
+    local technology = data.raw.technology[prerequisite]
+    if technology and technology.unit then
+      for _, ingredient in ipairs(technology.unit.ingredients or {}) do
+        local name = ingredient[1]
+        if not research_ingredient_set[name] then
+          research_ingredient_set[name] = true
+          research_ingredients[#research_ingredients + 1] = { name, ingredient[2] }
+        end
+      end
+    end
   end
   protos[#protos + 1] = {
     type = "technology",
@@ -67,7 +108,11 @@ local function make_tier(tier)
     icon = icon(tier), icon_size = 64,
     prerequisites = prerequisites,
     effects = { { type = "unlock-recipe", recipe = N.item(tier) } },
-    unit = table.deepcopy(belt_tech.unit),
+    unit = {
+      count = belt_tech.unit.count * N.TECH_COST_FACTOR,
+      time = belt_tech.unit.time,
+      ingredients = research_ingredients,
+    },
   }
 
   local common = {
