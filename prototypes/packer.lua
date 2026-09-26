@@ -109,7 +109,7 @@ local function make_tier(tier)
     prerequisites = prerequisites,
     effects = { { type = "unlock-recipe", recipe = N.item(tier) } },
     unit = {
-      count = belt_tech.unit.count * N.TECH_COST_FACTOR,
+      count = math.ceil(belt_tech.unit.count * N.TECH_COST_FACTOR),  -- uint even for odd belt counts
       time = belt_tech.unit.time,
       ingredients = research_ingredients,
     },
