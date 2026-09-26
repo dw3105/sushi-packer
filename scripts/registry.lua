@@ -44,7 +44,7 @@ function M.new_rec(entity)
   if not v then return nil end
   local rec = { entity = entity, unit_number = entity.unit_number, tier = v.tier, dir = v.dir,
     box = core.new_box(), settings = copy.default_settings(), enabled = true,
-    out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
+    circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
   boxes()[entity.unit_number] = rec
   return rec
 end
@@ -63,9 +63,11 @@ function M.on_built(e)
     entity.last_user = last_user
   end
   if not N.VARIANTS[entity.name] then return end
-  local rec = M.get(entity) or M.new_rec(entity)
+  local rec = M.get(entity)
+  local created = rec == nil
+  rec = rec or M.new_rec(entity)
   if e.tags and e.tags.sushi_packer then copy.import(rec, e.tags.sushi_packer) end
-  led.create(rec)
+  if created then led.create(rec) else led.ensure(rec) end
 end
 
 function M.on_removed(e)

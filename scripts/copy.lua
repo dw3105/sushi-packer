@@ -71,7 +71,7 @@ function M.on_cloned(e)
   local variant = N.VARIANTS[dst.name]
   local rec = { entity = dst, unit_number = dst.unit_number, tier = variant.tier, dir = variant.dir,
     box = core.new_box(), settings = M.default_settings(), enabled = true,
-    out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
+    circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
   storage.boxes[dst.unit_number] = rec
   M.import(rec, M.export(src))
   local function clone_box(t)
