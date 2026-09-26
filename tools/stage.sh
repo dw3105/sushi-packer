@@ -7,8 +7,8 @@ FV=${1:?usage: tools/stage.sh <2.0|2.1> [test|release]}
 MODE=${2:-test}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "$FV" in
-  2.0) VER=0.1.0 ;;
-  2.1) VER=0.2.0 ;;
+  2.0) VER=0.1.1 ;;
+  2.1) VER=0.2.1 ;;
   *) echo "stage: FV must be 2.0 or 2.1" >&2; exit 2 ;;
 esac
 OUT=${STAGE_DIR:-$ROOT/build/$FV}
@@ -22,10 +22,12 @@ for f in info.json data.lua settings.lua control.lua changelog.txt thumbnail.png
 done
 for d in scripts prototypes locale graphics; do cp -r "$ROOT/$d" "$MOD/"; done
 if [ "$MODE" = test ]; then mkdir -p "$MOD/tests"; cp -r "$ROOT/tests/game" "$MOD/tests/"; fi
-python3 - "$MOD/info.json" "$FV" "$VER" <<'PY'
+python3 - "$MOD/info.json" "$FV" "$VER" "$MODE" <<'PY'
 import json, sys
-p, fv, ver = sys.argv[1:]
+p, fv, ver, mode = sys.argv[1:]
 d = json.load(open(p)); d["factorio_version"] = fv; d["version"] = ver
+if mode == "release":
+    d["dependencies"] = [dep for dep in d.get("dependencies", []) if "factorio-test" not in dep]
 json.dump(d, open(p, "w"), indent=2)
 PY
 # Enable every bundled data mod present in this build (2.1 adds recycler) plus ours and any extra zips in mods/.

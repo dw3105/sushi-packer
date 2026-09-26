@@ -1,0 +1,27 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.2.1
+Date: 2026-09-26
+  Features:
+    - Added chained tier recipes and technology unlock rules.
+    - Added upgrade planner support and 20 kg item weight.
+    - Added English descriptions, a sorting tip, and a portal thumbnail.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+Date: 2026-09-26
+  Features:
+    - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.1
+Date: 2026-09-26
+  Features:
+    - Added chained tier recipes and technology unlock rules.
+    - Added upgrade planner support and 20 kg item weight.
+    - Added English descriptions, a sorting tip, and a portal thumbnail.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.0
+Date: 2026-09-26
+  Features:
+    - First release for Factorio 2.0.
