@@ -128,7 +128,7 @@ describe("circuit", function()
     local box = box_at(surface, force, 0.5)
     local enabled, flush_now = circuit.evaluate(rec(box, {
       enable = true,
-      cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 0 },
+      cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = "=", constant = 0 },
       flush = true,
       flush_signal = { type = "virtual", name = "signal-F" },
     }))
