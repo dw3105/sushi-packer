@@ -35,12 +35,6 @@ local function fixture()
   return player, storage.boxes[7]
 end
 
-local function names(parent)
-  local out = {}
-  for _, el in ipairs(parent.children or {}) do out[#out + 1] = el.name or el.caption end
-  return out
-end
-
 local function click(player, el, name)
   gui.on_event({ name = name or 1, element = el, player_index = 1 })
 end
@@ -124,8 +118,12 @@ describe("gui", function()
     local p = fixture(); local f = p.gui.relative.sushi_packer_frame
     for _, section in ipairs(f.children) do
       if section.type == "frame" then
+        eq(section.style, "inside_shallow_frame_with_padding")
+        eq(section.children[1].style, "bold_label")
         for _, row in ipairs(section.children) do if row.type == "flow" then eq(row.style, "player_input_horizontal_flow") end end
       end
     end
+    eq(f.filters_section.filter_editor.filter_comparator.style, "circuit_condition_comparator_dropdown")
+    eq(f.circuit_section.circuit_condition_row.circuit_comparator.style, "circuit_condition_comparator_dropdown")
   end)
 end)
