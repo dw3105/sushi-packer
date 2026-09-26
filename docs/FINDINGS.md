@@ -32,3 +32,9 @@ Verified-by: `grep -n BUILTIN_MODS tools/ft/node_modules/factorio-test-cli/mod-s
 Found 2026-09-26 on `legalcopilot-dev`, S0 probe. Research summary said front-most item = highest `position`. Measured on 2.0.77 and 2.1.20: iron inserted at 0.1, copper at 0.6 on a lone north belt; after 120 ticks `line_length=1 iron-plate@0 copper-plate@0.25`. Front-most (next to leave) = lowest `position`; items stop at 0 on belt end. Code taking highest position would pull the item farthest from box. Closed by probe `probe > front-most item has lowest position` and `docs/CONTRACT.md` Lanes section.
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > front-most item has lowest position'`
+
+## FND-0005 - FactorioTest CLI aborts when a test run has not started within 10 s
+
+Found 2026-09-26 on `legalcopilot-dev`, lane 006 checks (verdict FAIL, reason `check-exit-mismatch`). `factorio-process.js:171-176` kills Factorio if no `testRunStarted` event arrives within hard-coded `10_000` ms; several headless loads sharing 4 vCPUs start slower. What it looks like: `Error: Factorio unresponsive: no test run started within 10 seconds`, code correct, lane FAIL. Closed by `tools/ft/patch-cli.sh` (120 s), run by `tools/run_tests.sh` before every game run; lane 006 relaunched.
+
+Verified-by: `grep -n '120_000' tools/ft/node_modules/factorio-test-cli/factorio-process.js`

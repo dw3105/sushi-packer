@@ -25,6 +25,7 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   mkdir -p "$data/mods"
   test -f "$data/mods/factorio-test_$FT_VER.zip" || cp "$FT_ZIP_DIR/factorio-test_$FT_VER.zip" "$data/mods/"
   test -x "$CLI" || { echo "run_tests: FactorioTest CLI missing: (cd $FT && npm ci)" >&2; exit 2; }
+  FT_DIR="$FT" "$ROOT/tools/ft/patch-cli.sh" >/dev/null  # FND-0005: 10 s startup watchdog -> 120 s
   mods="space-age quality elevated-rails"
   test -d "$FACTORIO/data/recycler" && mods="$mods recycler"
   rm -f "$ROOT/build/$FV/results.json"
