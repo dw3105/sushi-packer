@@ -76,7 +76,8 @@ function M.on_removed(e)
   local entity = e and e.entity
   local rec = M.get(entity)
   if not rec then return end
-  if entity.to_be_upgraded and entity.to_be_upgraded() then
+  -- Upgrade = robot/platform mine of marked box (FND-0006). Hand mine of marked box returns hold as usual.
+  if (e.robot or e.platform) and entity.to_be_upgraded and entity.to_be_upgraded() then
     M.stash(rec)
     return
   end

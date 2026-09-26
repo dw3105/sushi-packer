@@ -35,7 +35,7 @@ describe("registry", function()
   it("upgrade mine stashes rec", function()
     local r, led, entity = setup(); local old = entity(11); local rec = r.new_rec(old)
     rec.settings.rate = 7; local hold = require("scripts.core").hold_items
-    r.on_removed({ entity = old, buffer = { insert = function() error("hold sent to buffer") end } })
+    r.on_removed({ entity = old, robot = {}, buffer = { insert = function() error("hold sent to buffer") end } })
     eq(storage.boxes[11], nil); eq(#led.destroyed, 1); eq(storage.upgrade_stash["1:10.5:18.5"].rec, rec)
   end)
   it("upgrade build takes stash", function()
@@ -80,5 +80,13 @@ describe("registry", function()
     end
     r.stash(rec); eq(#storage.upgrade_stash["1:10.5:18.5"].wires, 1)
     eq(r.take_stash(new), rec); eq(new_connections[defines.wire_connector_id.circuit_red].connected, 1)
+  end)
+  it("player mine of marked box returns hold", function()
+    -- Integrator review: box marked for upgrade but mined by hand must not park hold in stash.
+    local r, _, entity = setup(); local old = entity(11); local rec = r.new_rec(old)
+    rec.box.hold[1] = { name = "fish", count = 2 }
+    local got = {}
+    r.on_removed({ entity = old, player_index = 1, buffer = { insert = function(s) got[#got + 1] = s end } })
+    eq(#got, 1); eq(got[1].name, "fish"); eq(storage.upgrade_stash, nil); eq(storage.boxes[11], nil)
   end)
 end)
