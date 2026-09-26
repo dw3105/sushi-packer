@@ -153,24 +153,25 @@ describe("tick", function()
   end)
 
   it("lanes kept end to end", function()
+    -- v6: 50 per lane -> 12 belt items of 4 leave, 2 stay as partial (no timeout).
     local _, _, feed, front = build(surface, force, {})
     run_until(feeder(feed, { rep("iron-ore", 50), rep("copper-ore", 50) }),
-      function() return total(output(front, 1)) >= 50 and total(output(front, 2)) >= 50 end, 3400, function()
-      assert.are_equal(50, total(output(front, 1), "iron-ore")); assert.are_equal(0, total(output(front, 1), "copper-ore"))
-      assert.are_equal(50, total(output(front, 2), "copper-ore")); assert.are_equal(0, total(output(front, 2), "iron-ore"))
+      function() return total(output(front, 1)) >= 48 and total(output(front, 2)) >= 48 end, 3400, function()
+      assert.are_equal(48, total(output(front, 1), "iron-ore")); assert.are_equal(0, total(output(front, 1), "copper-ore"))
+      assert.are_equal(48, total(output(front, 2), "copper-ore")); assert.are_equal(0, total(output(front, 2), "iron-ore"))
     end)
   end)
-
   it("output stacked to research size", function()
-    local _, _, feed, front = build(surface, force, {})
-    run_until(feeder(feed, { rep("iron-ore", 50), {} }), function() return total(output(front, 1)) >= 50 end, 3400, function()
+    -- v6: belt stack 4 -> 50 ore = 12 belt items of 4 out, 2 held as partial.
+    local _, rec, feed, front = build(surface, force, {})
+    run_until(feeder(feed, { rep("iron-ore", 50), {} }),
+      function() return total(output(front, 1)) >= 48 and rec.box.stored_count == 2 end, 3400, function()
       local counts = {}
       for _, s in ipairs(output(front, 1)) do counts[#counts + 1] = s.count end
-      local expected = rep(4, 12); expected[13] = 2
-      assert.are.same(expected, counts)
+      assert.are.same(rep(4, 12), counts)
+      assert.are_equal(2, rec.box.stored_count)
     end)
   end)
-
   it("full box flushes oldest partial and loses nothing", function()
     -- no front belt: nothing leaves; 48 distinct partials fill every slot, the 49th item must wait on the belt
     local box, rec, feed = build(surface, force, { front = 0 })
@@ -205,15 +206,19 @@ describe("tick", function()
   end)
 
   it("filtered item passes between stacks", function()
+    -- P-3 + v6: coal passes through, never stored; iron leaves only as full 4-stacks, coal between them.
     local box, rec, feed, front = build(surface, force, {})
     rec.settings.filters = { { name = "coal" } }
     local q = rep("iron-ore", 10); q[#q + 1] = "coal"; for i = 1, 40 do q[#q + 1] = "iron-ore" end
-    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 51 end, 3400, function()
-      assert.are.same({ { name = "coal", count = 1 }, { name = "iron-ore", count = 50 } }, runs(output(front, 1)))
+    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 49 end, 3400, function()
+      local seq = output(front, 1)
+      assert.are_equal(1, total(seq, "coal")); assert.are_equal(48, total(seq, "iron-ore"))
+      for _, s in ipairs(seq) do
+        if s.name == "iron-ore" then assert.are_equal(4, s.count, "iron only in full stacks") end
+      end
       assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count("coal"))
     end)
   end)
-
   it("custom timeout flushes partial", function()
     local _, rec, feed, front = build(surface, force, {})
     rec.settings.timeout_mode, rec.settings.timeout_s = "custom", 2
@@ -248,7 +253,7 @@ describe("tick", function()
   end)
 
   it("player removal reconciles next tick", function()
-    local box, rec, feed = build(surface, force, {})
+    local box, rec, feed = build(surface, force, { front = 0 })  -- v6: no front belt so all 10 stay in chest
     run_until(feeder(feed, { rep("iron-ore", 10), {} }),
       function() return box.get_inventory(defines.inventory.chest).get_item_count("iron-ore") >= 10 end, 1200, function()
       game.players[1].teleport({ 2.5, 0.5 }) -- within reach, or opening is refused
