@@ -7,13 +7,16 @@ local function setup()
   local surface = {}
   function surface.create_entity(spec)
     created[#created + 1] = spec
-    return {
+    local entity
+    entity = {
       valid = true,
       name = spec.name,
       set_infinity_container_filter = function(i, filter)
         filters[#filters + 1] = { index = i, filter = filter }
       end,
     }
+    spec.entity = entity  -- properties set after create (remove_unfiltered_items) land here
+    return entity
   end
   game = { surfaces = { [1] = surface }, forces = { player = force }, simulation = {} }
   defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
@@ -36,8 +39,8 @@ describe("sim", function()
     local by_x = {}
     for _, spec in ipairs(created) do by_x[spec.position[1]] = spec end
     eq(by_x[-4.5].name, "infinity-chest", "source")
-    eq(by_x[-3.5].loader_type, "output", "source loader")
-    eq(by_x[4.5].loader_type, "input", "sink loader")
+    eq(by_x[-3.5].type, "output", "source loader")
+    eq(by_x[4.5].type, "input", "sink loader")
     eq(by_x[5.5].name, "infinity-chest", "sink")
     for x = -5, 5 do eq(by_x[x + 0.5].position, { x + 0.5, 0.5 }, "position x=" .. x) end
   end)
@@ -69,7 +72,7 @@ describe("sim", function()
     sim.scene("tips")
     local sink = created[#created]
     eq(sink.name, "infinity-chest")
-    eq(sink.remove_unfiltered_items, true)
+    eq(sink.entity.remove_unfiltered_items, true, "property on entity, not create param")
   end)
 
   it("box built through placer with raise_built", function()

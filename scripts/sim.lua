@@ -30,15 +30,18 @@ function M.scene(kind)
   for i, name in ipairs({ "iron-plate", "copper-plate", "iron-gear-wheel", "electronic-circuit" }) do
     source.set_infinity_container_filter(i, { name = name, count = 50, mode = "exactly" })
   end
-  create("loader-1x1", -4, { direction = east, loader_type = "output" })
+  create("loader-1x1", -4, { direction = east, type = "output" })  -- create_entity loader param is `type`
   for x = -3, -1 do create("transport-belt", x, { direction = east }) end
   create(N.placer("yellow"), 0, { direction = east, raise_built = true })
   for x = 1, 3 do create("transport-belt", x, { direction = east }) end
-  create("loader-1x1", 4, { direction = east, loader_type = "input" })
-  create("infinity-chest", 5, { remove_unfiltered_items = true })
+  create("loader-1x1", 4, { direction = east, type = "input" })
+  local sink = create("infinity-chest", 5)
+  sink.remove_unfiltered_items = true  -- entity property, not a create_entity param
 
-  game.simulation.camera_position = { 0.5, 0.5 }
-  game.simulation.camera_zoom = zoom
+  if game.simulation then  -- nil outside a simulation (in-game test world)
+    game.simulation.camera_position = { 0.5, 0.5 }
+    game.simulation.camera_zoom = zoom
+  end
 end
 
 return M
