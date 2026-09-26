@@ -310,4 +310,69 @@ describe("tick", function()
       assert.is_true(r >= 1.6 * y, "yellow " .. y .. " red " .. r)
     end)
   end)
+
+  -- FND-0011 repro matrix (author 2026-09-26: turbo box facing north, only left lane works).
+  local function feed_stacked(feed, kinds, stack)
+    return function()
+      for lane = 1, 2 do
+        local line = feed.get_transport_line(lane)
+        if line.can_insert_at_back() then
+          local k = kinds[lane][(game.tick % #kinds[lane]) + 1]
+          line.insert_at_back({ name = k, count = stack }, stack)
+        end
+      end
+      return 1
+    end
+  end
+  local function lanes_report(front)
+    return "left=" .. total(output(front, 1)) .. " right=" .. total(output(front, 2))
+  end
+  local KINDS = { { "iron-plate", "copper-plate" }, { "coal", "stone" } }
+
+  it("north turbo box moves both lanes", function()
+    local _, _, feed, front = build(surface, force, { tier = "turbo", belt = "turbo-transport-belt" })
+    run_until(feed_stacked(feed, KINDS, 1), function() return false end, 1200, function()
+      local r = lanes_report(front)
+      assert.is_true(total(output(front, 1)) > 0 and total(output(front, 2)) > 0, r)
+    end)
+  end)
+
+  it("north turbo box moves both lanes with stacked input", function()
+    local _, _, feed, front = build(surface, force, { tier = "turbo", belt = "turbo-transport-belt" })
+    run_until(feed_stacked(feed, KINDS, 4), function() return false end, 1200, function()
+      local r = lanes_report(front)
+      assert.is_true(total(output(front, 1)) > 0 and total(output(front, 2)) > 0, r)
+    end)
+  end)
+
+  it("north turbo box moves both lanes with curve behind", function()
+    -- belt from east turning north into box: tile south of box is a curve (east feed at y=2.5 going west, then north)
+    local x = 0
+    surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, 1.5 }, direction = NORTH, force = force })
+    local feed = surface.create_entity({ name = "turbo-transport-belt", position = { x + 1.5, 1.5 }, direction = defines.direction.west, force = force })
+    local front = front_belts(surface, force, x, 20, "turbo-transport-belt")
+    surface.create_entity({ name = N.placer("turbo"), position = { x + 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
+    run_until(feed_stacked(feed, KINDS, 4), function() return false end, 1200, function()
+      local r = lanes_report(front)
+      assert.is_true(total(output(front, 1)) > 0 and total(output(front, 2)) > 0, r)
+    end)
+  end)
+
+  it("north turbo box moves both lanes with curve in front", function()
+    local x = 0
+    for i = 1, 3 do surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, 0.5 + i }, direction = NORTH, force = force }) end
+    local feed = surface.find_entities_filtered({ position = { x + 0.5, 3.5 }, type = "transport-belt" })[1]
+    local front = { surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, -0.5 }, direction = NORTH, force = force }) }
+    front[1] = front[1]
+    local turn = surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, -1.5 }, direction = defines.direction.east, force = force })
+    for i = 1, 10 do front[#front + 1] = surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5 + i, -1.5 }, direction = defines.direction.east, force = force }) end
+    surface.create_entity({ name = N.placer("turbo"), position = { x + 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
+    run_until(feed_stacked(feed, KINDS, 4), function() return false end, 1200, function()
+      local l, r = 0, 0
+      for _, b in ipairs(front) do l = l + #b.get_transport_line(1); r = r + #b.get_transport_line(2) end
+      l = l + #turn.get_transport_line(1); r = r + #turn.get_transport_line(2)
+      assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r)
+    end)
+  end)
 end)
+
