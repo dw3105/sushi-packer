@@ -51,7 +51,7 @@ describe("perf2", function()
     belt_io.push=function(_,_,item) return item.count end; belt_io.belt_stack_size=function() return 1 end
     circuit.evaluate=function() return true,false end; led.set=function() end
     storage={boxes={[7]=rec},belt_stack={[1]=1}}; game={connected_players={}}
-    tick.on_tick({tick=7}); eq(lookups,1)
+    tick.on_tick({tick=1}); eq(lookups,1)
     belt_io.pull=old.pull; belt_io.push=old.push; belt_io.belt_stack_size=old.bss; circuit.evaluate=old.evaluate; led.set=old.set
   end)
 
