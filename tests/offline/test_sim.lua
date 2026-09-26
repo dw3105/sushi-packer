@@ -110,7 +110,7 @@ describe("sim", function()
 
   it("camera constants per kind", function()
     local sim = setup()
-    eq(sim.CAMERA, {
+    eq(sim._CAMERA, {
       factoriopedia = { position = { -0.5, 0.5 }, zoom = 2.0 },
       tips = { position = { -0.5, 0.5 }, zoom = 2.4 },
     })

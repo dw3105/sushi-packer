@@ -2,7 +2,7 @@
 local M = {}
 local N = require("scripts.names")
 
-M.CAMERA = {
+M._CAMERA = {
   factoriopedia = { position = { -0.5, 0.5 }, zoom = 2.0 },
   tips = { position = { -0.5, 0.5 }, zoom = 2.4 },
 }
@@ -10,7 +10,7 @@ M.CAMERA = {
 -- kind: "factoriopedia" | "tips". Builds scene on game.surfaces[1]; called from simulation init via
 -- remote.call(N.SIM_INTERFACE, "scene", kind).
 function M.scene(kind)
-  local camera = M.CAMERA[kind]
+  local camera = M._CAMERA[kind]
   if not camera then error("unknown simulation scene: " .. tostring(kind)) end
 
   local surface = game.surfaces[1]
