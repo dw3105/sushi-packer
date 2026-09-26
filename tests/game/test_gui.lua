@@ -45,11 +45,21 @@ describe("gui", function()
   it("frame reflects current settings", function()
     rec.settings.timeout_mode, rec.settings.timeout_s = "custom", 42
     rec.settings.filters = { { name = "iron-plate", quality = "normal" } }
+    rec.settings.circuit.enable = true
+    rec.settings.circuit.cond = { first_signal = { type = "item", name = "copper-plate" }, comparator = "≥", constant = 19 }
+    rec.settings.circuit.flush = true
+    rec.settings.circuit.flush_signal = { type = "virtual", name = "signal-A" }
     gui.on_opened({ player_index = player.index, entity = box, gui_type = defines.gui_type.entity })
     local f = player.gui.relative.sushi_packer_frame
     assert.are_equal("custom", element(f, "timeout_mode").switch_state and "custom" or "global")
     assert.are_equal("42", element(f, "timeout_s").text)
     assert.are_equal("iron-plate", element(f, "filter_item_1").elem_value.name)
+    assert.is_true(element(f, "circuit_enable").state)
+    assert.are_equal("copper-plate", element(f, "circuit_signal").elem_value.name)
+    assert.are_equal(4, element(f, "circuit_comparator").selected_index)
+    assert.are_equal("19", element(f, "circuit_constant").text)
+    assert.is_true(element(f, "circuit_flush").state)
+    assert.are_equal("signal-A", element(f, "flush_signal").elem_value.name)
   end)
 
   it("custom timeout written to settings", function()
