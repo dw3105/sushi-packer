@@ -14,8 +14,37 @@ local function has(section, key)
   end
   return false
 end
+local function value(section, key)
+  local current
+  for line in locale:gmatch("[^\r\n]+") do
+    local name = line:match("^%[(.-)%]$")
+    if name then current = name
+    elseif current == section then
+      local k, v = line:match("^([^=]+)=(.*)$")
+      if k == key then return v end
+    end
+  end
+end
 
 describe("locale", function()
+  it("vanilla style names", function()
+    local expected = { "Sushi packer", "Fast sushi packer", "Express sushi packer", "Turbo sushi packer" }
+    for i, tier in ipairs(N.TIERS) do
+      local name = expected[i]
+      for _, section in ipairs({ "item-name", "recipe-name", "technology-name" }) do
+        assert(value(section, N.item(tier)) == name, section .. ": " .. tier)
+      end
+      for _, key in ipairs({ N.placer(tier), N.variant(tier, "north"), N.variant(tier, "east"), N.variant(tier, "south"), N.variant(tier, "west") }) do
+        assert(has("entity-name", key), key)
+      end
+      assert(has("entity-name", N.remnant(tier)), N.remnant(tier))
+      for _, key in ipairs({ N.placer(tier), N.variant(tier, "north"), N.variant(tier, "east"), N.variant(tier, "south"), N.variant(tier, "west") }) do
+        assert(value("entity-name", key) == name, key)
+      end
+      assert(value("entity-name", N.remnant(tier)) == name .. " remnants", N.remnant(tier))
+    end
+  end)
+
   it("every prototype has name and description", function()
     for _, tier in ipairs(N.TIERS) do
       assert(has("item-name", N.item(tier)) and has("item-description", N.item(tier)), "item locale: " .. tier)
@@ -26,9 +55,9 @@ describe("locale", function()
       end
       assert(has("entity-name", N.remnant(tier)) and has("entity-description", N.remnant(tier)), "remnant locale")
     end
-    local expected = "sorts mixed belt items per lane into full stacks"
-    assert(locale:lower():find(expected, 1, true), "item/tech locale must explain sorting into full stacks")
-    assert(locale:lower():find("belt capacity research", 1, true), "locale must explain stacked output unlock")
+    local expected = "collects items per lane until one kind fills a belt stack"
+    assert(locale:lower():find(expected, 1, true), "item/tech locale must explain lane collection")
+    assert(locale:lower():find("up to 4 with research", 1, true), "locale must explain research stack capacity")
   end)
   it("recipes and setting described", function()
     assert(has("recipe-name", N.item("yellow"))); assert(has("recipe-description", N.item("yellow")))
