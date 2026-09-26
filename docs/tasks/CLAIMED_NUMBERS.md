@@ -13,3 +13,6 @@
 | `009` | `sushi-packer/agent` | review hardening | 2026-09-26 |
 | `010` | `sushi-packer/agent` | perf r1 | 2026-09-26 |
 | `011` | `sushi-packer/agent` | perf r1 round2 | 2026-09-26 |
+| `012` | `sushi-packer/agent` | data recipes tech | 2026-09-26 |
+| `013` | `sushi-packer/agent` | upgrade state | 2026-09-26 |
+| `014` | `sushi-packer/agent` | polish release | 2026-09-26 |

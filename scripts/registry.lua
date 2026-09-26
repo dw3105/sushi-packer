@@ -142,6 +142,10 @@ function M.on_rotate_input(e, reverse)
   M.swap(rec, N.DIRS[index])
 end
 
+-- U-3 upgrade (FND-0006). Stubs until lane J (task 013).
+function M.stash(rec) error("stub: task 013") end
+function M.take_stash(entity) error("stub: task 013") end
+
 function M.on_configuration_changed(data)
   local remove = {}
   for _, rec in pairs(boxes()) do

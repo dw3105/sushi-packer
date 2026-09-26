@@ -9,7 +9,7 @@ return {
   led = { create = 1, set = 3, destroy = 1, ensure = 1 },
   registry = {
     on_built = 1, on_removed = 1, on_died = 1, on_rotate_input = 2, swap = 2, get = 1,
-    new_rec = 1, on_configuration_changed = 1,
+    new_rec = 1, on_configuration_changed = 1, stash = 1, take_stash = 1,
   },
   copy = {
     default_settings = 0, export = 1, import = 2, on_setup_blueprint = 1,

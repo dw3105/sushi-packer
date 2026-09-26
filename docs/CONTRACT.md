@@ -15,6 +15,7 @@ Changes only by integrator decision recorded in `docs/DECISIONS.md`. Guard tests
 ```lua
 storage.boxes = { [unit_number] = rec }        -- one rec per placed box
 storage.belt_stack = { [force_index] = n }      -- cached 1 + belt_stack_size_bonus, max 4 (O-3)
+storage.upgrade_stash = { [key] = { rec = rec, tick = uint, force = uint } }  -- U-3, key = surface_index..":"..x..":"..y, owned by scripts/registry.lua
 rec = {
   entity = LuaEntity,                            -- container variant
   unit_number = uint,
@@ -107,6 +108,8 @@ Item key = (name, quality, lane). `quality` is a string (`"normal"`, ...).
 | `registry.get(entity) -> rec\|nil` | lookup by `unit_number` |
 | `registry.new_rec(entity) -> rec` | rec with `core.new_box()` and `copy.default_settings()` (used by on_built and swap) |
 | `registry.on_configuration_changed(data)` | `led.ensure` every rec; drop recs with invalid entity |
+| `registry.stash(rec)` | U-3: keep rec (settings, box, hold) in `storage.upgrade_stash` at entity key, current tick; LED destroyed; rec dropped from `storage.boxes` |
+| `registry.take_stash(entity) -> rec\|nil` | U-3: stash at entity key with same tick + force → rec rebound to entity (tier/dir from name, rekeyed); removes entry; prunes entries of older ticks |
 
 ## scripts/copy.lua — settings copy (lane C)
 

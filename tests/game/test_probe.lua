@@ -103,4 +103,79 @@ describe("probe", function()
       assert.is_false(line.can_insert_at(0), "item resting at exit")
     end)
   end)
+  it("upgrade events", function()
+    -- FND-0006: which events fire when construction robots upgrade a box one tier (U-3)?
+    -- Records mod handler calls in order; state carried decides registry design.
+    local log = {}
+    local wrapped = {}
+    local evs = {
+      on_robot_built_entity = defines.events.on_robot_built_entity,
+      on_robot_mined_entity = defines.events.on_robot_mined_entity,
+      on_robot_pre_mined = defines.events.on_robot_pre_mined,
+      on_marked_for_upgrade = defines.events.on_marked_for_upgrade,
+      script_raised_destroy = defines.events.script_raised_destroy,
+      on_entity_died = defines.events.on_entity_died,
+    }
+    for label, id in pairs(evs) do
+      local original = script.get_event_handler(id)
+      wrapped[id] = original or false
+      script.on_event(id, function(e)
+        local entity = e.entity
+        local buffer = e.buffer and e.buffer.valid and e.buffer.get_item_count("iron-plate") or nil
+        log[#log + 1] = { ev = label, upgrading = entity and entity.valid and entity.to_be_upgraded(), tick = game.tick, name = entity and entity.valid and entity.name,
+          unit = entity and entity.valid and entity.unit_number, buffer_iron = buffer,
+          inv_iron = entity and entity.valid and entity.get_inventory(defines.inventory.chest)
+            and entity.get_inventory(defines.inventory.chest).get_item_count("iron-plate") }
+        if original then original(e) end
+      end)
+    end
+    local function restore()
+      for id, original in pairs(wrapped) do script.on_event(id, original or nil) end
+    end
+    local sink = surface.create_entity({ name = "electric-energy-interface", position = { 20, 20 }, force = force })
+    sink.power_production = 1e9; sink.electric_buffer_size = 1e9; sink.energy = 1e9
+    surface.create_entity({ name = "medium-electric-pole", position = { 18, 20 }, force = force })
+    local port = surface.create_entity({ name = "roboport", position = { 16, 22 }, force = force })
+    port.insert({ name = "construction-robot", count = 4 })
+    local store = surface.create_entity({ name = "storage-chest", position = { 13, 20 }, force = force })
+    store.insert({ name = N.item("red"), count = 1 })
+    local old = surface.create_entity({ name = N.variant("yellow", "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
+    old.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 7 })
+    local old_unit = old.unit_number
+    storage.boxes[old_unit].settings.timeout_s = 33
+    assert.is_true(old.order_upgrade({ target = N.variant("red", "east"), force = force }))
+    after_ticks(1200, function()
+      restore()
+      local found = surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4 })
+      local names = {}
+      for _, e in ipairs(found) do names[#names + 1] = e.name end
+      local lines = {}
+      for _, l in ipairs(log) do
+        lines[#lines + 1] = string.format("%s upgrading=%s tick=%s name=%s unit=%s buffer_iron=%s inv_iron=%s",
+          l.ev, tostring(l.upgrading), l.tick, tostring(l.name), tostring(l.unit), tostring(l.buffer_iron), tostring(l.inv_iron))
+      end
+      local new = surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.variant("red", "east") })[1]
+      local rec = new and storage.boxes[new.unit_number]
+      local report = "FND-0006 " .. script.active_mods["base"] .. "\n" .. table.concat(lines, "\n") ..
+        "\nat position: " .. table.concat(names, ",") ..
+        "\nnew inv iron=" .. tostring(new and new.get_inventory(defines.inventory.chest).get_item_count("iron-plate")) ..
+        " rec=" .. tostring(rec ~= nil) .. " rec.timeout_s=" .. tostring(rec and rec.settings.timeout_s) ..
+        " old rec left=" .. tostring(storage.boxes[old_unit] ~= nil)
+      print(report)
+      assert.is_not_nil(new, report)
+      assert.are_equal(7, new.get_inventory(defines.inventory.chest).get_item_count("iron-plate"), report)
+      -- Measured facts (2.0.77, 2.1.20): mined(old, to_be_upgraded, inventory already moved) then
+      -- built(new, inventory carried) in SAME tick; old rec gone before new built.
+      local seq = {}
+      for _, l in ipairs(log) do
+        if l.ev ~= "on_marked_for_upgrade" then seq[#seq + 1] = l.ev end
+      end
+      assert.are_same({ "on_robot_mined_entity", "on_robot_built_entity" }, seq, report)
+      local mined, built = log[#log - 1], log[#log]
+      assert.are_equal(mined.tick, built.tick, report)
+      assert.is_true(mined.upgrading, report)
+      assert.are_equal(0, mined.inv_iron, report)
+      assert.is_not_nil(rec, report)
+    end)
+  end)
 end)

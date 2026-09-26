@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `legalcopilot-dev`; Q-6 answered.
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `legalcopilot-dev`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged).
 
 ## 1. Target
 
@@ -90,8 +90,12 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 
 | ID | Requirement |
 |----|-------------|
-| U-1 | One tech per tier, prerequisite = matching belt tech. |
-| U-2 | Recipe per tier: steel chest + matching belt + circuits. Exact costs TBD (Q-1). |
+| U-1 | One tech per tier `sushi-packer-<tier>`. Prerequisites: matching belt tech + previous tier tech + every tech whose effects unlock an ingredient recipe (scanned from `data.raw.technology` at data stage). Cost: `count` = belt tech count × 1.5, `time` = belt tech time, `ingredients` = union of science packs over direct prerequisites. |
+| U-2 | Recipe per tier, chained, crafted in `crafting` category (hand + assembler). yellow 30 s: 1 `steel-chest`, 1 `splitter`, 2 `inserter`, 5 `electronic-circuit`. red 45 s: 1 yellow box, 1 `fast-splitter`, 2 `fast-inserter`, 5 `advanced-circuit`. blue 60 s: 1 red box, 1 `express-splitter`, 2 `bulk-inserter`, 5 `processing-unit`. turbo 120 s: 1 blue box, 1 `turbo-splitter`, 2 `stack-inserter`, 2 `quantum-processor`. |
+| U-3 | Upgrade planner: yellow → red → blue → turbo, same direction. Upgraded box keeps settings, stored items, pass-through hold, circuit wires. |
+| U-4 | Item weight 20 kg (50 per rocket). No surface conditions (works on space platforms). Space Age recycler recipes exist per tier (auto-generated). |
+| U-5 | Every item, entity, technology, recipe and setting has locale name + description. One tips-and-tricks entry explains lanes and stacks. |
+| U-6 | Release zip ships `thumbnail.png` (144×144), `changelog.txt`; repo has `README.md`. Release `info.json` has no test-only dependency. |
 
 ## 11. Performance
 
@@ -137,7 +141,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 
 | ID | Question |
 |----|----------|
-| Q-1 | Recipe costs per tier. |
+| Q-1 | ANSWERED 2026-09-26: chained recipes, own tech per tier (U-1, U-2). |
 | Q-2 | Tier differences besides speed: health, inventory size (all 48 now)? |
 | Q-3 | Timeout clock: from first item arrival (proposed) or from last item arrival? |
 | Q-4 | Enabled=false: should input still fill storage (only output stops)? Current spec: both stop. |

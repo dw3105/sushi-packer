@@ -1,6 +1,7 @@
 local N = require("scripts.names")
 
 require("prototypes.packer")
+require("prototypes.tips")
 
 local leds = {}
 for _, state in ipairs(N.LED_STATES) do

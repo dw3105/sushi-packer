@@ -92,6 +92,10 @@ local function make_tier(tier)
   for k, v in pairs(common) do placer[k] = v end
   protos[#protos + 1] = placer
 
+  local next_tier
+  for i, built_tier in ipairs(N.TIERS) do
+    if built_tier == tier then next_tier = N.TIERS[i + 1] end
+  end
   for _, dir in ipairs(N.DIRS) do
     local box = {
       type = "container",
@@ -104,6 +108,7 @@ local function make_tier(tier)
       circuit_connector = circuit_connector_definitions["chest"],
       circuit_wire_max_distance = default_circuit_wire_max_distance,
       hidden_in_factoriopedia = dir ~= "north",
+      next_upgrade = next_tier and N.variant(next_tier, dir) or nil,  -- U-3 upgrade planner, same dir
     }
     for k, v in pairs(common) do box[k] = v end
     protos[#protos + 1] = box

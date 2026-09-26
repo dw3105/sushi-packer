@@ -38,3 +38,15 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > front-m
 Found 2026-09-26 on `legalcopilot-dev`, lane 006 checks (verdict FAIL, reason `check-exit-mismatch`). `factorio-process.js:171-176` kills Factorio if no `testRunStarted` event arrives within hard-coded `10_000` ms; several headless loads sharing 4 vCPUs start slower. What it looks like: `Error: Factorio unresponsive: no test run started within 10 seconds`, code correct, lane FAIL. Closed by `tools/ft/patch-cli.sh` (120 s), run by `tools/run_tests.sh` before every game run; lane 006 relaunched.
 
 Verified-by: `grep -n '120_000' tools/ft/node_modules/factorio-test-cli/factorio-process.js`
+
+## FND-0006 - Robot upgrade = mined(old) then built(new) in same tick; engine moves inventory, script state lost
+
+Found 2026-09-26 on `legalcopilot-dev`, S1 probe (v1.1). Yellow east box with 7 iron + `timeout_s = 33`, `order_upgrade` to red east, roboport + 4 construction robots. Event order on 2.0.77 and 2.1.20: `on_marked_for_upgrade` (old), then `on_robot_mined_entity` (old, `to_be_upgraded() = true`, chest already empty, buffer 0 iron) and `on_robot_built_entity` (new, 7 iron) in same tick. What it looks like without fix: new box has items but default settings (`timeout_s = 0`), core counters reset. Closed by decision UPG (stash on upgrade-mine, take on build).
+
+Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > upgrade events'`
+
+## FND-0007 - Ingredient unlock techs and belt tech costs identical on 2.0.77 and 2.1.20
+
+Found 2026-09-26 on `legalcopilot-dev`, `factorio --dump-data` of both builds with space-age. Every U-2 ingredient recipe starts disabled; unlock techs: `steel-chest` steel-processing, `splitter` logistics, `fast-splitter` logistics-2, `express-splitter` logistics-3, `turbo-splitter` turbo-transport-belt, `inserter` + `electronic-circuit` electronics (research trigger, no unit), `fast-inserter` fast-inserter, `bulk-inserter` bulk-inserter, `stack-inserter` stack-inserter, `advanced-circuit` advanced-circuit, `processing-unit` processing-unit, `quantum-processor` quantum-processor. Space Age already makes `sushi-packer-<tier>-recycling`. Offline fixture `tests/offline/fake_data.lua` carries these values; a tech with `research_trigger` has no `unit` (skip it in ingredient union).
+
+Verified-by: `python3 -c "import json;d=json.load(open('build/2.1/write/script-output/data-raw-dump.json'));print(d['technology']['bulk-inserter']['unit']['count'])"`

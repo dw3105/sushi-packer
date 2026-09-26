@@ -8,13 +8,22 @@ N.LED_STATES = { "green", "yellow", "red" }
 N.SLOTS = 48
 N.MAX_BELT_STACK = 4
 
--- Per tier: matching vanilla belt, its tech, circuit for recipe, belt-items per lane per tick (O-4, E-4).
+-- Per tier: matching vanilla belt, its tech, belt-items per lane per tick (O-4, E-4).
+-- Recipe (U-2, author 2026-09-26): base (steel-chest or previous tier box) + 1 splitter + 2 inserter + circuits.
 N.TIER = {
-  yellow = { belt = "transport-belt",       tech = "logistics",            circuit = "electronic-circuit", lane_rate = 0.125 },
-  red    = { belt = "fast-transport-belt",  tech = "logistics-2",          circuit = "advanced-circuit",   lane_rate = 0.25 },
-  blue   = { belt = "express-transport-belt", tech = "logistics-3",        circuit = "processing-unit",    lane_rate = 0.375 },
-  turbo  = { belt = "turbo-transport-belt", tech = "turbo-transport-belt", circuit = "processing-unit",    lane_rate = 0.5 },
+  yellow = { belt = "transport-belt",         tech = "logistics",            lane_rate = 0.125,
+             splitter = "splitter",         inserter = "inserter",      circuit = "electronic-circuit", circuits = 5, craft_s = 30 },
+  red    = { belt = "fast-transport-belt",    tech = "logistics-2",          lane_rate = 0.25,
+             splitter = "fast-splitter",    inserter = "fast-inserter",  circuit = "advanced-circuit",  circuits = 5, craft_s = 45 },
+  blue   = { belt = "express-transport-belt", tech = "logistics-3",          lane_rate = 0.375,
+             splitter = "express-splitter", inserter = "bulk-inserter",  circuit = "processing-unit",   circuits = 5, craft_s = 60 },
+  turbo  = { belt = "turbo-transport-belt",   tech = "turbo-transport-belt", lane_rate = 0.5,
+             splitter = "turbo-splitter",   inserter = "stack-inserter", circuit = "quantum-processor", circuits = 2, craft_s = 120 },
 }
+N.RECIPE_BASE = "steel-chest"       -- yellow base; later tiers use previous tier item
+N.TECH_COST_FACTOR = 1.5            -- U-1: count = belt tech count x 1.5 (Deadlock pattern)
+N.ITEM_WEIGHT = 20000               -- U-4: 20 kg, 50 per rocket
+N.TIPS = "sushi-packer-tips"        -- U-5: tips-and-tricks-item
 
 function N.item(tier) return "sushi-packer-" .. tier end
 function N.placer(tier) return "sushi-packer-" .. tier .. "-placer" end
