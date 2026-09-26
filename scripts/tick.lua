@@ -79,7 +79,10 @@ function M.on_tick(e)
         else
           if flush_now then core.flush_partials(rec.box, e.tick) end
           core.on_tick(rec.box, e.tick, M.timeout_ticks(rec))
-          inv = inv or rec.entity.get_inventory(defines.inventory.chest)
+          local function inventory()
+            inv = inv or rec.entity.get_inventory(defines.inventory.chest)
+            return inv
+          end
           local rate = N.TIER[rec.tier].lane_rate
           local taken_any = false
           local budget = {0, 0}
@@ -94,7 +97,7 @@ function M.on_tick(e)
             local stack = prototypes.item[name].stack_size
             local accepted = core.accept(rec.box, name, quality, input_lane, count, stack, e.tick, false)
             if accepted <= 0 then return 0 end
-            local inserted = inv.insert({name=name, count=accepted, quality=quality})
+            local inserted = inventory().insert({name=name, count=accepted, quality=quality})
             if inserted < accepted then core.remove_external(rec.box, name, quality, accepted - inserted) end
             return inserted
           end
@@ -115,7 +118,7 @@ function M.on_tick(e)
               local piece = {name=item.name, quality=item.quality, count=math.min(item.count, bss)}
               local pushed = belt_io.push(rec, lane, piece, bss)
               if pushed == 0 then break end
-              if not item.passthrough then inv.remove({name=item.name, count=pushed, quality=item.quality}) end
+              if not item.passthrough then inventory().remove({name=item.name, count=pushed, quality=item.quality}) end
               core.take_out(rec.box, lane, pushed)
               rec.out_credit[lane] = rec.out_credit[lane] - 1
               taken_any = true

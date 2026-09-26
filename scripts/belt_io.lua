@@ -41,8 +41,13 @@ function M.front(entity, dir)
   return find_belt(entity, dir, 1)
 end
 
-local function matches(belt, dir, sign)
+local function matches(belt, entity, dir, sign)
   if not belt or not belt.valid or belt.direction ~= direction_value(dir) then return false end
+  local offset = offsets[dir]
+  if not offset then return false end
+  local expected_x = entity.position.x + offset[1] * sign
+  local expected_y = entity.position.y + offset[2] * sign
+  if belt.position and (belt.position.x ~= expected_x or belt.position.y ~= expected_y) then return false end
   if belt.type == "transport-belt" then return true end
   return belt.type == "underground-belt" and belt.belt_to_ground_type == (sign == -1 and "output" or "input")
 end
@@ -51,7 +56,7 @@ local function cached(rec, field, sign)
   local b = rec.belt
   if not b then b = { behind = nil, front = nil, scan = -60 }; rec.belt = b end
   local belt = b[field]
-  if matches(belt, rec.dir, sign) then return belt end
+  if matches(belt, rec.entity, rec.dir, sign) then return belt end
   b[field] = nil
   local tick = game.tick or 0
   if tick < (b.scan or -60) + 60 then return nil end
