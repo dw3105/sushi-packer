@@ -1,9 +1,9 @@
 -- Data stage: one tier = item, recipe, tech, placer, 4 container variants, remnant.
--- S0 builds yellow only; lane B extends BUILT_TIERS to all of N.TIERS and owns this file after S0.
+-- One generator builds the complete belt-tier family.
 local N = require("scripts.names")
 
 local G = "__sushi-packer__/graphics/"
-local BUILT_TIERS = { "yellow" }
+local BUILT_TIERS = N.TIERS
 
 local function layers(base)
   return {
@@ -47,13 +47,27 @@ local function make_tier(tier)
     results = { { type = "item", name = N.item(tier), amount = 1 } },
   }
 
+  local belt_tech = data.raw.technology[T.tech]
+  if not belt_tech or not belt_tech.unit then
+    error("sushi-packer: matching belt technology has no research unit: " .. T.tech)
+  end
+  local previous_tier
+  for i, built_tier in ipairs(N.TIERS) do
+    if built_tier == tier and i > 1 then previous_tier = N.TIERS[i - 1] end
+  end
+  local prerequisites = { T.tech }
+  if previous_tier then
+    prerequisites[#prerequisites + 1] = N.tech(previous_tier)
+  else
+    prerequisites[#prerequisites + 1] = "steel-processing"
+  end
   protos[#protos + 1] = {
     type = "technology",
     name = N.tech(tier),
     icon = icon(tier), icon_size = 64,
-    prerequisites = { T.tech, "steel-processing" },
+    prerequisites = prerequisites,
     effects = { { type = "unlock-recipe", recipe = N.item(tier) } },
-    unit = { count = 50, ingredients = { { "automation-science-pack", 1 }, { "logistic-science-pack", 1 } }, time = 15 },
+    unit = table.deepcopy(belt_tech.unit),
   }
 
   local common = {
