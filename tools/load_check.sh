@@ -5,6 +5,11 @@ FV=${1:?usage: tools/load_check.sh <2.0|2.1>}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$ROOT/build/load-$FV
 STAGE_DIR=$OUT "$ROOT/tools/stage.sh" "$FV" release >/dev/null
+# Release zip present (make zip) -> load the zip itself, not the staged folder.
+case "$FV" in 2.0) VER=0.1.0 ;; 2.1) VER=0.2.0 ;; esac
+if [ -f "$ROOT/build/sushi-packer_$VER.zip" ]; then
+  rm -rf "$OUT/mods/sushi-packer_$VER"; cp "$ROOT/build/sushi-packer_$VER.zip" "$OUT/mods/"; echo "load-check: using build/sushi-packer_$VER.zip"
+fi
 FACTORIO=${FACTORIO_ROOT:-$HOME/factorio-$FV/factorio}
 rm -f "$OUT/check.zip"
 if "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$OUT/check.zip" > "$OUT/load.log" 2>&1 \
