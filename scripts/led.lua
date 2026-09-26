@@ -1,6 +1,6 @@
 local M = {}
 local N = require("scripts.names")
-local GREEN = { r = 0.2, g = 1, b = 0.2 }
+local GREEN = { r = 0, g = 1, b = 0 }
 local COLORS = {
   green = GREEN,
   yellow = { r = 1, g = 0.85, b = 0.1 },
@@ -33,9 +33,9 @@ end
 
 function M.destroy(rec)
   if not rec or not rec.led then return end
-  for _, obj in ipairs({ rec.led.sprite, rec.led.light }) do
-    if obj and obj.valid then obj.destroy() end
-  end
+  local sprite, light = rec.led.sprite, rec.led.light
+  if sprite and sprite.valid then sprite.destroy() end
+  if light and light.valid then light.destroy() end
   rec.led = nil
 end
 
@@ -44,6 +44,7 @@ function M.ensure(rec)
   if not l or not l.sprite or not l.sprite.valid or not l.light or not l.light.valid then
     local state, visible = l and l.state or "green", l and l.visible
     if visible == nil then visible = true end
+    M.destroy(rec)
     M.create(rec)
     M.set(rec, state, visible)
   end

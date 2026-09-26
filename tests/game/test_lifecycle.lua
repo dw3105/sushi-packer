@@ -10,6 +10,14 @@ local function clear(surface)
   end
 end
 
+local function dropped_count(surface, name)
+  local count = 0
+  for _, item in ipairs(surface.find_entities_filtered({ type = "item-entity" })) do
+    if item.stack.valid_for_read and item.stack.name == name then count = count + item.stack.count end
+  end
+  return count
+end
+
 describe("lifecycle", function()
   local surface, force, old_new_box
   local saved_core = {}
@@ -21,6 +29,7 @@ describe("lifecycle", function()
     surface, force = game.surfaces[1], game.forces.player
     clear(surface)
     storage.boxes = {}
+    game.players[1].get_main_inventory().clear()
     old_new_box = core.new_box
     saved_core = {}
     fake("new_box", function() return { buffers = {}, ready = {}, hold = {} } end)
@@ -97,8 +106,8 @@ describe("lifecycle", function()
     e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 4 })
     local player = game.players[1]
     player.mine_entity(e, true)
-    assert.is_true(player.get_main_inventory().get_item_count("iron-plate") >= 4)
-    assert.is_true(player.get_main_inventory().get_item_count("copper-plate") >= 3)
+    assert.are_equal(4, player.get_main_inventory().get_item_count("iron-plate"))
+    assert.are_equal(3, player.get_main_inventory().get_item_count("copper-plate"))
   end)
 
   it("mining with full inventory spills rest", function()
@@ -109,7 +118,7 @@ describe("lifecycle", function()
     inv.insert({ name = "iron-plate", count = 50000 })
     local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
     registry.new_rec(e); player.mine_entity(e, true)
-    assert.is_true(surface.get_item_count("copper-plate") > 0)
+    assert.are_equal(10, dropped_count(surface, "copper-plate"))
   end)
 
   it("died box spills contents and hold", function()
@@ -118,8 +127,8 @@ describe("lifecycle", function()
     local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
     registry.new_rec(e); e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 4 })
     e.die()
-    assert.is_true(surface.get_item_count("iron-plate") >= 4)
-    assert.is_true(surface.get_item_count("copper-plate") >= 3)
+    assert.are_equal(4, dropped_count(surface, "iron-plate"))
+    assert.are_equal(3, dropped_count(surface, "copper-plate"))
   end)
 
   it("led set writes only on change", function()
@@ -128,7 +137,9 @@ describe("lifecycle", function()
     local sprite, light = rec.led.sprite, rec.led.light
     local old_sprite, old_color = sprite.sprite, light.color
     led.set(rec, "green", true)
-    assert.are_equal(old_sprite, sprite.sprite); assert.are_equal(old_color, light.color)
+    assert.are_equal(old_sprite, sprite.sprite)
+    assert.are_equal(old_color.r, light.color.r); assert.are_equal(old_color.g, light.color.g)
+    assert.are_equal(old_color.b, light.color.b); assert.are_equal(old_color.a, light.color.a)
     led.set(rec, "red", false)
     assert.are_equal(N.led("red", "north"), sprite.sprite)
     assert.is_true(not sprite.visible); assert.is_true(not light.visible)
@@ -193,9 +204,10 @@ describe("lifecycle", function()
   it("clone copies settings and box state", function()
     local src = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
     local sr = registry.new_rec(src); sr.settings.timeout_s = 7; sr.box.nested = { count = 8 }
-    local clones = surface.clone_entities({ { source = src, destination = { 3, 0 } } })
-    local dst = clones[1]
-    copy.on_cloned({ source = src, destination = dst })
+    surface.clone_entities({ entities = { src }, destination_offset = { 3, 0 } })
+    local found = surface.find_entities_filtered({ name = N.variant("yellow", "north"), area = { { 2, -1 }, { 4, 1 } } })
+    assert.are_equal(1, #found)
+    local dst = found[1]
     local dr = registry.get(dst)
     assert.are_equal(7, dr.settings.timeout_s); assert.are_equal(8, dr.box.nested.count)
     dr.box.nested.count = 9; assert.are_equal(8, sr.box.nested.count)

@@ -1,5 +1,12 @@
 local M = {}
 local N = require("scripts.names")
+local core = require("scripts.core")
+local led = require("scripts.led")
+
+local function get_rec(entity)
+  if not entity or not entity.valid or not entity.unit_number then return nil end
+  return storage.boxes and storage.boxes[entity.unit_number]
+end
 
 local function clone(value)
   if type(value) ~= "table" then return value end
@@ -35,12 +42,11 @@ function M.on_setup_blueprint(e)
   local entities = bp.get_blueprint_entities()
   if not entities then return end
   local mapping = e.mapping and e.mapping.get and e.mapping.get() or {}
-  local registry = require("scripts.registry")
   for _, ent in ipairs(entities) do
     local v = N and N.VARIANTS[ent.name]
     if v then
       local index = ent.entity_number
-      local rec = mapping[index] and registry.get(mapping[index])
+      local rec = mapping[index] and get_rec(mapping[index])
       if rec then
         ent.name = N.placer(v.tier)
         ent.direction = defines.direction[v.dir]
@@ -53,23 +59,27 @@ function M.on_setup_blueprint(e)
 end
 
 function M.on_settings_pasted(e)
-  local registry = require("scripts.registry")
-  local src, dst = registry.get(e.source), registry.get(e.destination)
+  local src, dst = get_rec(e.source), get_rec(e.destination)
   if src and dst then M.import(dst, M.export(src)) end
 end
 
 function M.on_cloned(e)
-  local registry = require("scripts.registry")
-  local src, dst = registry.get(e.source), e.destination
+  local src, dst = get_rec(e.source), e.destination
   if not src or not dst then return end
-  local rec = registry.new_rec(dst)
+  if not dst or not dst.valid or not N.VARIANTS[dst.name] then return end
+  storage.boxes = storage.boxes or {}
+  local variant = N.VARIANTS[dst.name]
+  local rec = { entity = dst, unit_number = dst.unit_number, tier = variant.tier, dir = variant.dir,
+    box = core.new_box(), settings = M.default_settings(), enabled = true,
+    out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
+  storage.boxes[dst.unit_number] = rec
   M.import(rec, M.export(src))
   local function clone_box(t)
     if type(t) ~= "table" then return t end
     local o = {}; for k, v in pairs(t) do o[clone_box(k)] = clone_box(v) end; return o
   end
   rec.box = clone_box(src.box)
-  require("scripts.led").create(rec)
+  led.create(rec)
 end
 
 return M
