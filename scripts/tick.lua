@@ -86,7 +86,9 @@ function M.on_tick(e)
         reconcile(rec, e.tick, inv, bss)
       end
       local interval = INTERVAL[rec.tier] or 1
-      if not rec.decon and (e.tick + rec.unit_number) % interval == 0 and e.tick >= (rec.next_poll or 0) then
+      local first_visit = (rec.next_poll == nil or rec.next_poll == 0) and rec.last_poll == nil
+      if not rec.decon and e.tick >= (rec.next_poll or 0)
+        and (not first_visit or (e.tick + rec.unit_number) % interval == 0) then
         local enabled, flush_now = circuit.evaluate(rec)
         rec.enabled = enabled
         if enabled then
@@ -97,10 +99,11 @@ function M.on_tick(e)
             return inv
           end
           local rate = N.TIER[rec.tier].lane_rate
+          local elapsed = e.tick - (rec.last_poll or (e.tick - interval))
           local taken_any = false
           local budget = {0, 0}
           for lane = 1, 2 do
-            rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate * interval, 2)
+            rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate * elapsed, 2)
             budget[lane] = math.floor(rec.in_credit[lane])
           end
           local function sink(name, quality, input_lane, count)
@@ -116,14 +119,15 @@ function M.on_tick(e)
             if inserted < accepted then core.remove_external(rec.box, name, quality, accepted - inserted) end
             return inserted
           end
-          local got = belt_io.pull(rec, budget, sink) or {0, 0}
+          local got, eta = belt_io.pull(rec, budget, sink)
+          got = got or {0, 0}
           for lane = 1, 2 do
             local n = got[lane] or 0
             rec.in_credit[lane] = rec.in_credit[lane] - n
             if n > 0 then taken_any = true end
           end
           for lane = 1, 2 do
-            rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * interval, 2)
+            rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * elapsed, 2)
             while rec.out_credit[lane] >= 1 do
               local item = core.peek_out(rec.box, lane)
               if not item then break end
@@ -136,8 +140,23 @@ function M.on_tick(e)
               taken_any = true
             end
           end
-          if core.is_idle(rec.box) and not taken_any then rec.next_poll = e.tick + 30 else rec.next_poll = 0 end
+          local gap = interval
+          if eta then
+            for lane = 1, 2 do
+              local value = eta[lane]
+              if value and value > 0 and value < gap then gap = value end
+            end
+          end
+          if core.is_idle(rec.box) and not taken_any then
+            local speed = belt_io.speed and belt_io.speed(rec)
+            local idle_gap = speed and math.floor(1 / speed) - 1 or 30
+            rec.next_poll = e.tick + math.min(30, idle_gap)
+          else
+            rec.next_poll = e.tick + gap
+          end
         end
+        rec.last_poll = e.tick
+        if not enabled then rec.next_poll = e.tick + interval end
       end
       local state, visible = core.led_state(rec.box), rec.enabled ~= false and not rec.decon
       if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then

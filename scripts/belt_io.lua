@@ -1,5 +1,9 @@
 -- Belt access for the packer. All coordinates are tile centres.
 local M = {}
+local belt_speeds = {}
+setmetatable(M, { __index = function(t, key)
+  if key == "speed" or key == "eta" then return rawget(t, "_" .. key) end
+end })
 
 local offsets = {
   north = { 0, -1 }, east = { 1, 0 }, south = { 0, 1 }, west = { -1, 0 },
@@ -67,16 +71,39 @@ local function cached(rec, field, sign)
   return belt
 end
 
+function M._eta(position, speed)
+  if not speed or speed <= 0 then return nil end
+  return math.max(0, math.ceil(position / speed))
+end
+
+local function belt_speed(belt)
+  if not belt then return nil end
+  local name = belt.name or (belt.prototype and belt.prototype.name)
+  if not name then return belt.prototype and belt.prototype.belt_speed end
+  if belt_speeds[name] == nil then
+    local prototype = belt.prototype or (prototypes and prototypes.entity and prototypes.entity[name])
+    belt_speeds[name] = prototype and prototype.belt_speed or false
+  end
+  return belt_speeds[name] or nil
+end
+
+function M._speed(rec)
+  if not rec or not rec.entity or not rec.entity.surface
+    or type(rec.entity.surface.find_entities_filtered) ~= "function" then return nil end
+  return belt_speed(cached(rec, "behind", -1))
+end
+
 function M.pull(rec, budget, sink)
   local taken = { 0, 0 }
-  if budget[1] < 1 and budget[2] < 1 then return taken end
   local belt = cached(rec, "behind", -1)
-  if not belt then return taken end
+  if not belt then return taken, nil end
+  local eta = { nil, nil }
   for lane = 1, 2 do
     local line = belt.get_transport_line(lane)
+    local count = #line
     local tries = 0
-    while tries < budget[lane] do
-      if #line == 0 or line.can_insert_at(0) then break end
+    while tries < (budget[lane] or 0) do
+      if count == 0 or line.can_insert_at(0) then break end
       local s = line[1]
       local name = s.name
       local quality = s.quality and s.quality.name or "normal"
@@ -86,9 +113,20 @@ function M.pull(rec, budget, sink)
       if accepted <= 0 then break end
       line.remove_item({ name = name, count = accepted, quality = quality })
       taken[lane] = taken[lane] + 1
+      count = #line
     end
   end
-  return taken
+  -- ETA describes the leading item after any removals.
+  for lane = 1, 2 do
+    local line = belt.get_transport_line(lane)
+    if #line == 0 then eta[lane] = nil
+    elseif not line.can_insert_at(0) then eta[lane] = 0
+    else
+      local detailed = line.get_detailed_contents()
+      eta[lane] = M.eta(detailed[1].position, belt_speed(belt))
+    end
+  end
+  return taken, eta
 end
 
 function M.push(rec, lane, item, belt_stack_size)
