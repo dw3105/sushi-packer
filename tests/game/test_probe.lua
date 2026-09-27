@@ -285,5 +285,45 @@ describe("probe", function()
       try()
     end)
   end)
+  it("loader transport line numbering", function()
+    -- FND-0016 probe (author blueprint 2026-09-27: 1x1 loaders around west box).
+    local W = defines.direction.west
+    local out = {}
+    for _, name in ipairs({ "loader-1x1" }) do
+      -- output loader facing west at x=1, chest east of it at x=2: items leave loader toward x=0
+      local chest = surface.create_entity({ name = "infinity-chest", position = { 2.5, 0.5 }, force = force })
+      chest.set_infinity_container_filter(1, { name = "iron-plate", count = 50, mode = "exactly" })
+      local l = surface.create_entity({ name = name, position = { 1.5, 0.5 }, direction = W, type = "output", force = force })
+      out[#out + 1] = name .. " max=" .. l.get_max_transport_line_index() .. " type=" .. l.type .. " ltype=" .. l.loader_type
+      local snaps = {}
+      for t = 10, 40, 30 do after_ticks(t, function()
+        local row = {}
+        for i = 1, l.get_max_transport_line_index() do
+          local line = l.get_transport_line(i)
+          row[#row + 1] = i .. "=" .. #line .. (line.can_insert_at(0) and "" or "@exit") .. string.format("/len%.2f", line.line_length)
+        end
+        snaps[#snaps + 1] = "t" .. t .. " " .. table.concat(row, " ")
+      end) end
+      after_ticks(45, function()
+        l.destroy(); chest.destroy()
+        -- input loader facing west at x=1 into chest at x=0: insert into each line, see which reaches chest
+        local sink = surface.create_entity({ name = "wooden-chest", position = { 0.5, 0.5 }, force = force })
+        local li = surface.create_entity({ name = name, position = { 1.5, 0.5 }, direction = W, type = "input", force = force })
+        local ok = {}
+        for i = 1, li.get_max_transport_line_index() do
+          local r = li.get_transport_line(i).insert_at_back({ name = "copper-plate", count = 1 })
+          ok[#ok + 1] = i .. (r and "+" or "-")
+        end
+        after_ticks(30, function()
+          local got = sink.get_item_count("copper-plate")
+          li.destroy(); sink.destroy()
+          assert.are_equal("loader-1x1 max=2 type=loader-1x1 ltype=output", table.concat(out, " "))
+          assert.is_true(snaps[2]:find("1=2@exit", 1, true) ~= nil and snaps[2]:find("2=2@exit", 1, true) ~= nil, table.concat(snaps, " | "))
+          assert.are_equal("1+,2+", table.concat(ok, ","))
+          assert.are_equal(2, got)
+        end)
+      end)
+    end
+  end)
 end)
 

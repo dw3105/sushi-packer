@@ -184,5 +184,40 @@ describe("repro", function()
       if stacked[1] > 3 and stacked[2] > 3 then return false end
     end)
   end)
+
+  it("author blueprint loaders around west box", function()
+    -- author 2026-09-27 blueprint 2: chest -> output loader -> west turbo box -> input loader -> chest (all facing west).
+    -- Vanilla loader-1x1 stands in for modded early-stack-size-turbo-loader (not on test VM).
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+    local W = D.west
+    local src = surface.create_entity({ name = "infinity-chest", position = { 3.5, 0.5 }, force = force })
+    for i, item in ipairs({ "iron-plate", "copper-plate", "coal", "stone" }) do
+      src.set_infinity_container_filter(i, { name = item, count = 20, mode = "exactly" })
+    end
+    surface.create_entity({ name = "loader-1x1", position = { 2.5, 0.5 }, direction = W, type = "output", force = force })
+    surface.create_entity({ name = N.placer("turbo"), position = { 1.5, 0.5 }, direction = W, force = force, raise_built = true })
+    surface.create_entity({ name = "loader-1x1", position = { 0.5, 0.5 }, direction = W, type = "input", force = force })
+    local sink = surface.create_entity({ name = "infinity-chest", position = { -0.5, 0.5 }, force = force })
+    local box = surface.find_entities_filtered({ name = N.variant("turbo", "west") })[1]
+    assert.is_not_nil(box, "west box built")
+    local real_push, per_lane, stacked = belt_io.push, { 0, 0 }, 0
+    belt_io.push = function(r, lane, item, bss)
+      local n = real_push(r, lane, item, bss)
+      if n > 0 then per_lane[lane] = per_lane[lane] + n; if n > 1 then stacked = stacked + 1 end end
+      return n
+    end
+    after_ticks(1200, function()
+      belt_io.push = real_push
+      local got = 0
+      for _, x in ipairs(sink.get_inventory(defines.inventory.chest).get_contents()) do got = got + x.count end
+      local r = "pushed L=" .. per_lane[1] .. " R=" .. per_lane[2] .. " stacked=" .. stacked .. " sink got=" .. got
+      assert.is_true(per_lane[1] > 0 and per_lane[2] > 0, r)
+      assert.is_true(stacked > 0, r)
+      assert.is_true(got > 0, r)
+    end)
+  end)
 end)
 

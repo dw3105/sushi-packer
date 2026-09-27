@@ -102,3 +102,9 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/offline/test_tick.lua::tick > opened
 Reported 2026-09-27 by author (blueprint, "THIS DOESN'T WORK"): north turbo box between turbo splitters (behind: stone filter, in front: holmium filter, bypass splitter east). Built from author's blueprint string headless on dev-vm 2.0.77: `stored=0` after 80 s. Cause: `belt_io.find_belt` searched only `transport-belt` / `underground-belt`. Probe `probe > splitter transport line numbering` (2.0.77 + 2.1.20, north splitter): input left half = lines 1/2, right half = 3/4; output left half = 5/6, right half = 7/8 (matches `defines.transport_line`). Fix: splitter facing box direction whose half touches box tile; behind → that half's output lines, in front → that half's input lines.
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > author blueprint splitters around turbo box'`
+
+## FND-0016 - Loaders behind or in front: same gap as FND-0015
+
+Reported 2026-09-27 by author (blueprint 2: chest -> modded 1x1 output loader -> west turbo box -> 1x1 input loader -> chest). Headless with vanilla `loader-1x1` stand-in on dev-vm 2.0.77: `pushed L=0 R=0 sink got=0` on old code. Probe `probe > loader transport line numbering` (2.0.77 + 2.1.20): loader-1x1 has 2 lines = lanes, output loader holds items at exit when box does not take, input loader accepts `insert_at_back` on both lines. Fix: loaders (1x1, 2x1 with centre half a tile further) and linked belts facing box direction; behind must be output, front must be input.
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > author blueprint loaders around west box'`

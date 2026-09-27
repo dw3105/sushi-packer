@@ -33,6 +33,27 @@ local function splitter_lines(sp, entity, dir, sign)
   return left and { 1, 2 } or { 3, 4 }
 end
 
+-- FND-0016 (author blueprint 2026-09-27, probe `probe > loader transport line numbering`): loaders (1x1, 2x1) and
+-- linked belts facing box direction: lines 1/2 = lanes like belt. Behind must deliver (output), front must take (input).
+-- 2x1 loader centre sits half a tile further from box than its belt-side tile.
+local ENDPOINT = { ["loader-1x1"] = 0, loader = 0.5, ["linked-belt"] = 0 }
+local function endpoint_lines(ent, entity, dir, sign)
+  local shift = ENDPOINT[ent.type]
+  if not shift or not ent.valid or ent.direction ~= direction_value(dir) then return nil end
+  local kind = ent.type == "linked-belt" and ent.linked_belt_type or ent.loader_type
+  if kind ~= (sign == -1 and "output" or "input") then return nil end
+  local offset = offsets[dir]
+  local cx = entity.position.x + offset[1] * sign * (1 + shift)
+  local cy = entity.position.y + offset[2] * sign * (1 + shift)
+  if math.abs(ent.position.x - cx) > 0.01 or math.abs(ent.position.y - cy) > 0.01 then return nil end
+  return { 1, 2 }
+end
+
+local function neighbour_lines(ent, entity, dir, sign)
+  if ent.type == "splitter" then return splitter_lines(ent, entity, dir, sign) end
+  return endpoint_lines(ent, entity, dir, sign)
+end
+
 local function find_belt(entity, dir, sign)
   local offset = offsets[dir]
   if not offset then return nil end
@@ -54,10 +75,10 @@ local function find_belt(entity, dir, sign)
     end
   end
   local splitters = entity.surface.find_entities_filtered({
-    area = { { tx - 0.1, ty - 0.1 }, { tx + 0.1, ty + 0.1 } }, type = "splitter",
+    area = { { tx - 0.1, ty - 0.1 }, { tx + 0.1, ty + 0.1 } }, type = { "splitter", "loader", "loader-1x1", "linked-belt" },
   })
   for _, sp in ipairs(splitters) do
-    local lines = splitter_lines(sp, entity, dir, sign)
+    local lines = sp.valid and neighbour_lines(sp, entity, dir, sign)
     if lines then return sp, lines end
   end
   return nil
@@ -73,7 +94,7 @@ end
 
 local function matches(belt, entity, dir, sign)
   if not belt or not belt.valid or belt.direction ~= direction_value(dir) then return false end
-  if belt.type == "splitter" then return splitter_lines(belt, entity, dir, sign) ~= nil end
+  if ENDPOINT[belt.type] or belt.type == "splitter" then return neighbour_lines(belt, entity, dir, sign) ~= nil end
   local offset = offsets[dir]
   if not offset then return false end
   local expected_x = entity.position.x + offset[1] * sign

@@ -131,6 +131,24 @@ describe("belt_io", function()
     io.push(splitter_rec({ x = -0.5, y = -1 }, lines), 1, { name = "ice", count = 4 }, 4)
     eq(got, { "2:coal", "3:ice" })
   end)
+  local function area_rec(ent, dir)
+    defines = { direction = { north=0, east=4, south=8, west=12 } }; game = { tick = 1 }
+    local entity = { valid = true, position = { x = 0, y = 0 }, surface = {
+      find_entities_filtered = function(f) if f.area then return { ent } end return {} end } }
+    return { entity = entity, dir = dir or "west" }
+  end
+  it("loaders and linked belts connect like belts", function()
+    -- FND-0016 (author blueprint 2026-09-27): 1x1 loaders around west box; probe: loader lines 1/2 = lanes.
+    local io = require("scripts.belt_io")
+    local W = 12
+    eq(io.behind(area_rec({ valid = true, type = "loader-1x1", loader_type = "output", direction = W, position = { x = 1, y = 0 } }).entity, "west") ~= nil, true, "1x1 output loader behind")
+    eq(io.front(area_rec({ valid = true, type = "loader-1x1", loader_type = "input", direction = W, position = { x = -1, y = 0 } }).entity, "west") ~= nil, true, "1x1 input loader in front")
+    eq(io.behind(area_rec({ valid = true, type = "loader", loader_type = "output", direction = W, position = { x = 1.5, y = 0 } }).entity, "west") ~= nil, true, "2x1 output loader behind")
+    eq(io.front(area_rec({ valid = true, type = "loader", loader_type = "input", direction = W, position = { x = -1.5, y = 0 } }).entity, "west") ~= nil, true, "2x1 input loader in front")
+    eq(io.behind(area_rec({ valid = true, type = "linked-belt", linked_belt_type = "output", direction = W, position = { x = 1, y = 0 } }).entity, "west") ~= nil, true, "linked belt output behind")
+    eq(io.behind(area_rec({ valid = true, type = "loader-1x1", loader_type = "input", direction = W, position = { x = 1, y = 0 } }).entity, "west"), nil, "input loader behind does not feed")
+    eq(io.front(area_rec({ valid = true, type = "loader-1x1", loader_type = "input", direction = 4, position = { x = -1, y = 0 } }).entity, "west"), nil, "loader facing other way")
+  end)
   it("front accepts same direction belt", function()
     ok(find("north", 1, { { valid = true, type = "transport-belt", direction = 0 } }) ~= nil)
   end)

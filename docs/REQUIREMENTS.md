@@ -22,6 +22,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | E-5 | Mining entity returns stored items to player (spill on ground if inventory full). Destroyed entity spills contents on ground. |
 | E-6 | Player GUI shows contents. Player may take items out manually; script state reconciles on next tick. |
 | E-8 | Box marked for deconstruction stops: no input, no output, LED off. Cancel → resumes. |
+| E-10 | Author 2026-09-27: box is functionally equivalent to a belt tile for every input and output (belts, curves, undergrounds, splitters, loaders, linked belts, inserters, miners, machine outputs, player drop; output into belt, underground, splitter, loader, side-load onto belt/underground), lanes exactly as on a belt. ONLY exception: nothing side-loads INTO the box. |
 | E-9 | Box item placed over belt replaces that belt (belt + its items to player), like splitter. One way: belt never replaces placed box. |
 | E-7 | `ContainerPrototype` cannot rotate. Rotation must come from 4 container variants (one per direction, swapped by script on build/rotate) or other rotatable host. Choice = Q-8: 4 container variants + rotatable placer entity (item `place_result`, carries direction in hand and in blueprints). |
 
