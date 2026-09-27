@@ -375,6 +375,73 @@ describe("tick", function()
     end)
   end)
 
+  -- author layout 2026-09-27 (screenshot): turbo belt from WEST turns north on tile behind north turbo box, turbo out.
+  -- Box at (0.5, 0.5) facing box_dir; curve tile behind it; feed belts on `side` of curve move toward it.
+  local function curve_case(box_dir, side, over_belt)
+    local D = defines.direction
+    local vec = { [D.north] = { 0, -1 }, [D.east] = { 1, 0 }, [D.south] = { 0, 1 }, [D.west] = { -1, 0 } }
+    local opposite = { [D.north] = D.south, [D.south] = D.north, [D.east] = D.west, [D.west] = D.east }
+    local f, sv = vec[box_dir], vec[side]
+    local function at(k) return { 0.5 + f[1] * k, 0.5 + f[2] * k } end
+    local curve_pos = at(-1)
+    surface.create_entity({ name = "turbo-transport-belt", position = curve_pos, direction = box_dir, force = force })
+    local feed
+    for k = 3, 1, -1 do
+      feed = feed or surface.create_entity({ name = "turbo-transport-belt", position = { curve_pos[1] + sv[1] * k, curve_pos[2] + sv[2] * k }, direction = opposite[side], force = force })
+      if k < 3 then surface.create_entity({ name = "turbo-transport-belt", position = { curve_pos[1] + sv[1] * k, curve_pos[2] + sv[2] * k }, direction = opposite[side], force = force }) end
+    end
+    local front = {}
+    for k = 1, 12 do front[k] = surface.create_entity({ name = "turbo-transport-belt", position = at(k), direction = box_dir, force = force }) end
+    if over_belt then  -- E-9: player places box over existing belt tile (fast replace)
+      surface.create_entity({ name = "turbo-transport-belt", position = { 0.5, 0.5 }, direction = box_dir, force = force })
+      local player = game.players[1]
+      player.teleport({ 4.5, 4.5 })
+      player.cursor_stack.set_stack({ name = N.item("turbo"), count = 1 })
+      player.build_from_cursor({ position = { 0.5, 0.5 }, direction = box_dir })
+      player.cursor_stack.clear()
+    else
+      surface.create_entity({ name = N.placer("turbo"), position = { 0.5, 0.5 }, direction = box_dir, force = force, raise_built = true })
+    end
+    assert.is_not_nil(surface.find_entities_filtered({ position = { 0.5, 0.5 }, type = "container" })[1], "box built")
+    local curve = surface.find_entities_filtered({ position = curve_pos, type = "transport-belt" })[1]
+    return feed, front, curve
+  end
+  local function lanes_moved(front)
+    local l, r = 0, 0
+    for _, b in ipairs(front) do
+      for _, d in ipairs(b.get_transport_line(1).get_detailed_contents()) do l = l + d.stack.count end
+      for _, d in ipairs(b.get_transport_line(2).get_detailed_contents()) do r = r + d.stack.count end
+    end
+    return l, r
+  end
+
+  it("north turbo box curve from west", function()
+    local feed, front, curve = curve_case(defines.direction.north, defines.direction.west)
+    run_until(feed_stacked(feed, KINDS, 4), function() return false end, 1200, function()
+      local l, r = lanes_moved(front)
+      assert.is_true(curve.belt_shape ~= "straight", "behind tile is curve: " .. tostring(curve.belt_shape))
+      assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r .. " curve lens " .. #curve.get_transport_line(1) .. "/" .. #curve.get_transport_line(2))
+    end)
+  end)
+
+  for _, dname in ipairs({ "north", "east", "south", "west" }) do
+    for _, sname in ipairs({ "left", "right" }) do
+      for _, over in ipairs({ false, true }) do
+        it("curve behind " .. dname .. " box feed from " .. sname .. (over and " placed over belt" or ""), function()
+          local D = defines.direction
+          local box_dir = D[dname]
+          local l = { [D.north] = D.west, [D.west] = D.south, [D.south] = D.east, [D.east] = D.north }
+          local r = { [D.north] = D.east, [D.east] = D.south, [D.south] = D.west, [D.west] = D.north }
+          local feed, front, curve = curve_case(box_dir, sname == "left" and l[box_dir] or r[box_dir], over)
+          run_until(feed_stacked(feed, KINDS, 4), function() return false end, 1200, function()
+            local a, b = lanes_moved(front)
+            assert.is_true(a > 0 and b > 0, "left=" .. a .. " right=" .. b .. " shape=" .. tostring(curve.belt_shape))
+          end)
+        end)
+      end
+    end
+  end
+
   it("north turbo box moves both lanes with curve in front", function()
     local x = 0
     for i = 1, 3 do surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, 0.5 + i }, direction = NORTH, force = force }) end
