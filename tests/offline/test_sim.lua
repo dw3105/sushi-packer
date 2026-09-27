@@ -115,7 +115,7 @@ describe("sim", function()
     for _, spec in ipairs(created) do
       if spec.name == "transport-belt" then belt_count = belt_count + 1; eq(spec.direction, defines.direction.east) end
     end
-    eq(belt_count, 29)
+    eq(belt_count, 28)
     for x = -17, -1 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
     for x = 1, 11 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
   end)

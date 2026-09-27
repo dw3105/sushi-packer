@@ -3,8 +3,8 @@ local M = {}
 local N = require("scripts.names")
 
 M._CAMERA = {
-  factoriopedia = { position = { -0.5, 0.5 }, zoom = 2.0 },
-  tips = { position = { -0.5, 0.5 }, zoom = 2.4 },
+  factoriopedia = { position = { 0.5, 0.5 }, zoom = 2.0 },
+  tips = { position = { 0.5, 0.5 }, zoom = 2.4 },
 }
 
 -- kind: "factoriopedia" | "tips". Builds scene on game.surfaces[1]; called from simulation init via
@@ -27,32 +27,32 @@ function M.scene(kind)
   force.inserter_stack_size_bonus = 0
 
   local sources = {
-    { x = -4, y = -2, item = "iron-plate" },
-    { x = -2, y = -2, item = "copper-plate" },
-    { x = -4, y = 2, item = "coal" },
-    { x = -2, y = 2, item = "electronic-circuit" },
+    { x = -15, y = -2, item = "iron-plate" },
+    { x = -13, y = -2, item = "copper-plate" },
+    { x = -16, y = 2, item = "coal" },
+    { x = -14, y = 2, item = "electronic-circuit" },
   }
   for _, source in ipairs(sources) do
     local chest = create("infinity-chest", source.x, source.y)
     chest.set_infinity_container_filter(1, { name = source.item, count = 50, mode = "exactly" })
   end
 
-  create("inserter", -4, -1, { direction = direction.north })
-  create("inserter", -2, -1, { direction = direction.north })
-  create("inserter", -4, 1, { direction = direction.south })
-  create("inserter", -2, 1, { direction = direction.south })
-  create("medium-electric-pole", -3, -1)
-  create("medium-electric-pole", -3, -9)
-  local power = create("electric-energy-interface", -3, -10)
+  create("inserter", -15, -1, { direction = direction.north })
+  create("inserter", -13, -1, { direction = direction.north })
+  create("inserter", -16, 1, { direction = direction.south })
+  create("inserter", -14, 1, { direction = direction.south })
+  create("medium-electric-pole", -12, -1)
+  create("medium-electric-pole", -12, -9)
+  local power = create("electric-energy-interface", -12, -10)
   power.power_production = 1e9
   power.electric_buffer_size = 1e9
   power.energy = 1e9
 
-  for x = -5, -1 do create("transport-belt", x, 0, { direction = direction.east }) end
+  for x = -17, -1 do create("transport-belt", x, 0, { direction = direction.east }) end
   create(N.placer("yellow"), 0, 0, { direction = direction.east, raise_built = true })
-  for x = 1, 3 do create("transport-belt", x, 0, { direction = direction.east }) end
-  create("loader-1x1", 4, 0, { direction = direction.east, type = "input" })
-  local sink = create("infinity-chest", 5, 0)
+  for x = 1, 11 do create("transport-belt", x, 0, { direction = direction.east }) end
+  create("loader-1x1", 12, 0, { direction = direction.east, type = "input" })
+  local sink = create("infinity-chest", 13, 0)
   sink.remove_unfiltered_items = true
 
   if game.simulation then  -- nil outside a simulation (in-game test world)
