@@ -46,6 +46,13 @@ describe("belt_io", function()
     local _,eta=require("scripts.belt_io").pull(eta_rec({a,eta_line(nil,false)}),{0,0},function() return 0 end)
     eq(eta,{1,nil}); eq(calls,1)
   end)
+  it("no eta read on lane that took an item", function()
+    -- PERF-3 bench: next item sits >= 0.25 tile behind a taken one, so it never beats next tier visit.
+    local calls=0; local a=eta_line({name="iron",count=1},true,0.25,function() calls=calls+1 end)
+    local rm=a.remove_item; function a.remove_item(x) rm(x); a.can_insert_at=function() return true end end
+    local got,eta=require("scripts.belt_io").pull(eta_rec({a,eta_line(nil,false)}),{1,0},function() return 1 end)
+    eq(got,{1,0}); eq(calls,0); eq(eta,{nil,nil})
+  end)
   it("front accepts same direction belt", function()
     ok(find("north", 1, { { valid = true, type = "transport-belt", direction = 0 } }) ~= nil)
   end)

@@ -116,10 +116,11 @@ function M.pull(rec, budget, sink)
       count = #line
     end
   end
-  -- ETA describes the leading item after any removals.
+  -- ETA describes the leading item after any removals. Lane that took an item: next item sits >= 0.25 tile
+  -- (belt item gap) behind, never sooner than next tier visit (PERF-3) -> skip costly detailed read.
   for lane = 1, 2 do
     local line = belt.get_transport_line(lane)
-    if #line == 0 then eta[lane] = nil
+    if taken[lane] > 0 or #line == 0 then eta[lane] = nil
     elseif not line.can_insert_at(0) then eta[lane] = 0
     else
       local detailed = line.get_detailed_contents()
