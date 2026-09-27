@@ -33,6 +33,21 @@ describe("stage", function()
     assert(ok == true or ok == 0, "stage release failed without Factorio")
     assert(info, "release staged mod missing"); info:close()
   end)
+  it("portal logo and description in repo", function()
+    local function size(path)
+      local f = assert(io.open(path, "rb"), path .. " missing"); local b = f:read("*a"); f:close()
+      assert(b:sub(1, 8) == "\137PNG\r\n\026\n", path .. " not png")
+      local function u32(i) local a,c,d,e=b:byte(i,i+3); return ((a*256+c)*256+d)*256+e end
+      return u32(17), u32(21)
+    end
+    local w, h = size("portal/logo-512.png"); assert(w == 512 and h == 512, "logo 512")
+    local d = read("portal/description.md")
+    for _, needle in ipairs({"# Sushi Packer", "0.1.4", "0.2.4", "Space Age", "belt stack"}) do
+      assert(d:find(needle, 1, true), "description lacks " .. needle)
+    end
+    assert(read("README.md"):find("portal/logo-512.png", 1, true), "README shows logo")
+    assert(read("tools/logo.py"):find("thumbnail.png", 1, true), "logo.py writes thumbnail")
+  end)
   it("changelog format valid", function()
     local s = read("changelog.txt")
     local sep = string.rep("-", 99)

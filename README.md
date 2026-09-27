@@ -1,5 +1,7 @@
 # Sushi Packer
 
+![Sushi Packer: mixed items in, stacked items out](portal/logo-512.png)
+
 Sushi Packer is a 1×1 inline belt box for mixed item belts. It keeps the two belt lanes separate, gathers each item type until it fills one belt stack (1 item before belt capacity research, up to 4 after), then sends that stack forward as one stacked belt item. The box preserves the lane each item entered on.
 
 ## Tiers and recipes
@@ -21,4 +23,8 @@ The map setting **Sushi packer flush timeout** sets the default age, in seconds,
 
 ## Factorio versions
 
-The source supports two builds: Factorio 2.0 uses mod version `0.1.3`; Factorio 2.1 uses mod version `0.2.3`. Both builds require the Space Age expansion for belt stacking and quality support.
+The source supports two builds: Factorio 2.0 uses mod version `0.1.4`; Factorio 2.1 uses mod version `0.2.4`. Both builds require the Space Age expansion for belt stacking and quality support.
+
+## Mod portal assets
+
+`portal/description.md` is the mod portal description. `portal/logo-512.png` and `thumbnail.png` (144×144, shipped in the zip) come from `python3 tools/logo.py`, drawn only from this mod's own box sprite.
