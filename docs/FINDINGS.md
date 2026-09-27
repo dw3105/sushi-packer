@@ -75,14 +75,15 @@ Found 2026-09-26 on `dev-vm`, S1 probe v1.3 (scene redo). Inserter at y=-0.5: `d
 
 Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > inserter direction picks from chest drops on belt'`
 
-## FND-0011 - OPEN: author sees only left lane working on north turbo box (not reproduced)
+## FND-0011 - CLOSED: one output lane dies when overloaded belt brings stacks (cap 4 + full-box lane starvation)
 
-Reported 2026-09-26 by author (play-test v1.2, screenshot): turbo box facing north, input from south, output north, only left lane works. Repro on `dev-vm` 2.0.77, north turbo box, both lanes fed: straight belts single items, straight belts stacked 4, curve behind, curve in front — all four move both lanes. Suspect (unconfirmed): side-load into belt behind box puts every item on one lane (vanilla). Next: author save `~/share/sushi-packer/one-lane.zip` → headless load → check lanes behind box.
+Reported 2026-09-26 by author: north turbo box, only left lane works. Author save: belt stack 20 (modded), 16 epic recyclers on scrap, belts overloaded so recyclers drop stacks. Reproduced 2026-09-27 on dev-vm 2.0.77 by `repro > sixteen scrap recyclers feed north turbo box` (speed modules overload turbo belt, belt stack 20 via test-env mod): 0.1.5 last 2 min out L=1002 R=0.
+Two faults, both measured:
+1. Release capped at literal 4 while research allows 20: arrivals of 10-20 split into many small stacks, 48 slots fill (log t=3600: used=48, readyL=48 all 1-item stacks, readyR=0).
+2. Full box: `belt_io.pull` always asked lane 1 first; each slot freed by output went to lane 1; lane 2 offered its 10-stack 300 times per 10 s, refused 300 times, forever. First fix (refused lane first, flip on all-refused) parity-locked with output cadence (slot freed every 4th poll): cap 4 run gave L=0 R=993.
+Fix: cap = engine `max_belt_stack_size` (O-3 v7); lane that took an item last asks second next visit. Cap-4 run with lane rule alone passes; full fix passes 2.0.77 + 2.1.20.
 
-Update 2026-09-27: author screenshot layout (turbo belt from west, curve north behind north turbo box, turbo out) + 16-case matrix (4 box directions x curve from left/right x placed fresh / placed over belt by player) all move both lanes on 2.0.77, dev-vm. Still not reproduced. Next: author blueprint string after 0.1.5 crash fix.
-
-Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north turbo box curve from west'`
-
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > sixteen scrap recyclers feed north turbo box'`
 
 ## FND-0013 - Box makes items rest at belt end: tier cadence + 30-tick idle sleep (stutter)
 

@@ -98,22 +98,24 @@ function M.pull(rec, budget, sink)
   local belt = cached(rec, "behind", -1)
   if not belt then return taken, nil end
   local eta = { nil, nil }
-  for lane = 1, 2 do
+  -- FND-0011: lane that took an item last asks second next time, so a full box hands freed slots to lanes in turn
+  -- (no starving lane). All-refused visits keep order (no parity lock with output cadence).
+  local first = rec.pull_first == 2 and 2 or 1
+  for i = 0, 1 do
+    local lane = i == 0 and first or 3 - first
     local line = belt.get_transport_line(lane)
-    local count = #line
     local tries = 0
     while tries < (budget[lane] or 0) do
-      if count == 0 or line.can_insert_at(0) then break end
+      if #line == 0 or line.can_insert_at(0) then break end
       local s = line[1]
       local name = s.name
       local quality = s.quality and s.quality.name or "normal"
-      local count = s.count
-      local accepted = sink(name, quality, lane, count)
+      local accepted = sink(name, quality, lane, s.count)
       tries = tries + 1
       if accepted <= 0 then break end
       line.remove_item({ name = name, count = accepted, quality = quality })
       taken[lane] = taken[lane] + 1
-      count = #line
+      rec.pull_first = 3 - lane
     end
   end
   -- ETA describes the leading item after any removals. Lane that took an item: next item sits >= 0.25 tile

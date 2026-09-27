@@ -64,6 +64,36 @@ describe("belt_io", function()
     eq(io.belt_stack_size({ belt_stack_size_bonus = 12 }), 8)
     prototypes = saved; package.loaded["scripts.belt_io"] = nil; belt_io = require("scripts.belt_io")
   end)
+  it("full box shares freed slot between lanes", function()
+    -- FND-0011 (author 2026-09-27, repro 16 epic recyclers overloaded): full box freed one slot per poll, lane 1
+    -- always asked first and took it; lane 2 (10-stack) refused forever -> right output lane dead.
+    local a, b = eta_line({ name = "coal", count = 1 }, true), eta_line({ name = "ice", count = 10 }, true)
+    local rec = eta_rec({ a, b })
+    local got = { 0, 0 }
+    for poll = 1, 10 do
+      local free = 1  -- one slot freed by output each poll
+      require("scripts.belt_io").pull(rec, { 1, 1 }, function(_, _, lane, count)
+        if free < 1 then return 0 end
+        free = free - 1; got[lane] = got[lane] + 1; return count
+      end)
+    end
+    ok(got[1] >= 4 and got[2] >= 4, "lane1=" .. got[1] .. " lane2=" .. got[2])
+  end)
+  it("full box shares slot freed every fourth poll", function()
+    -- FND-0011 repro cap 4 + first fix: slot freed every 8 ticks (4 polls); flipping order on all-refused polls
+    -- gave the slot to the same lane every time (parity lock).
+    local a, b = eta_line({ name = "coal", count = 1 }, true), eta_line({ name = "ice", count = 1 }, true)
+    local rec = eta_rec({ a, b })
+    local got, free = { 0, 0 }, 0
+    for poll = 1, 40 do
+      if poll % 4 == 0 then free = free + 1 end
+      require("scripts.belt_io").pull(rec, { 1, 1 }, function(_, _, lane, count)
+        if free < 1 then return 0 end
+        free = free - 1; got[lane] = got[lane] + 1; return count
+      end)
+    end
+    ok(got[1] >= 4 and got[2] >= 4, "lane1=" .. got[1] .. " lane2=" .. got[2])
+  end)
   it("front accepts same direction belt", function()
     ok(find("north", 1, { { valid = true, type = "transport-belt", direction = 0 } }) ~= nil)
   end)

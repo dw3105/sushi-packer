@@ -2,6 +2,8 @@
 -- turbo splitters (no side-load) onto one turbo belt, which curves north on the tile behind a north turbo box.
 -- Recyclers above belt row 0 face south (drop 0.2 north of centre -> left lane), below row 1 face north (-> right lane).
 local N = require("scripts.names")
+local belt_io = require("scripts.belt_io")
+local core = require("scripts.core")
 local D = defines.direction
 
 local function clear(surface)
@@ -46,13 +48,30 @@ describe("repro", function()
       local eei = surface.create_entity({ name = "electric-energy-interface", position = { 2, y }, force = force })
       eei.power_production = 1e9; eei.electric_buffer_size = 1e9; eei.energy = 1e9
     end
-    for i, r in ipairs(recyclers) do assert.is_true(r and r.valid, "recycler " .. i) end
+    for i, r in ipairs(recyclers) do
+      assert.is_true(r and r.valid, "recycler " .. i)
+      -- author 2026-09-27: belts overloaded -> recyclers drop stacks. Speed modules push supply over turbo 60/s.
+      r.get_module_inventory().insert({ name = "speed-module-3", count = 4 })
+    end
     local function feed()
       for _, r in ipairs(recyclers) do
         if r.get_item_count("scrap") < 20 then r.insert({ name = "scrap", count = 50 }) end
       end
     end
     local rec = storage.boxes[box.unit_number]
+    local real_push, pushes = belt_io.push, { calls = { 0, 0 }, ok = { 0, 0 }, items = { 0, 0 } }
+    belt_io.push = function(r, lane, item, bss)
+      local n = real_push(r, lane, item, bss)
+      pushes.calls[lane] = pushes.calls[lane] + 1
+      if n > 0 then pushes.ok[lane] = pushes.ok[lane] + 1; pushes.items[lane] = pushes.items[lane] + n end
+      return n
+    end
+    local real_accept, accepts = core.accept, { calls = { 0, 0 }, sizes = {} }
+    core.accept = function(b, name, q, lane, count, stack, tick, hold)
+      accepts.calls[lane] = accepts.calls[lane] + 1
+      accepts.sizes[count] = (accepts.sizes[count] or 0) + 1
+      return real_accept(b, name, q, lane, count, stack, tick, hold)
+    end
     local watch = front[#front - 1]  -- tile before loader: count items leaving per lane by unique_id
     local seen, out = { {}, {} }, { 0, 0 }
     local windows, last, start = {}, { 0, 0 }, game.tick
@@ -79,6 +98,15 @@ describe("repro", function()
           t, out[1] - last[1], out[2] - last[2], b.used_slots, pl[1], pl[2], #b.ready[1], #b.ready[2],
           tostring(b.hold[1] and b.hold[1].name), tostring(b.hold[2] and b.hold[2].name), behind_lanes[1], behind_lanes[2],
           tostring(rec.next_poll), table.concat(kinds, ","))
+        local rs = {}
+        for _, q in ipairs(b.ready[1]) do rs[#rs + 1] = q.count end
+        local sz = {}
+        for c, n in pairs(accepts.sizes) do sz[#sz + 1] = c .. "x" .. n end
+        table.sort(sz)
+        line = line .. string.format(" | push calls %d/%d ok %d/%d items %d/%d | accept calls %d/%d sizes %s | readyL counts %s",
+          pushes.calls[1], pushes.calls[2], pushes.ok[1], pushes.ok[2], pushes.items[1], pushes.items[2],
+          accepts.calls[1], accepts.calls[2], table.concat(sz, ","), table.concat(rs, ",", 1, math.min(#rs, 12)))
+        pushes = { calls = { 0, 0 }, ok = { 0, 0 }, items = { 0, 0 } }; accepts = { calls = { 0, 0 }, sizes = {} }
         print(line)
         if t == 600 then
           local r1 = recyclers[1]
@@ -93,6 +121,7 @@ describe("repro", function()
       if t >= LIMIT then
         local l, r = 0, 0
         for i = #windows - 11, #windows do l = l + windows[i][1]; r = r + windows[i][2] end
+        belt_io.push = real_push; core.accept = real_accept
         force.belt_stack_size_bonus = 3; storage.belt_stack = {}
         assert.is_true(l > 0 and r > 0, "last 2 min out L=" .. l .. " R=" .. r)
         done()
