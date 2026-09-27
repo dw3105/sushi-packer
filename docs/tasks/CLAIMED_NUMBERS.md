@@ -21,3 +21,5 @@
 | `017` | `sushi-packer/agent` | data names sim migration | 2026-09-26 |
 | `018` | `sushi-packer/agent` | sim scene | 2026-09-26 |
 | `019` | `sushi-packer/agent` | sim scene redo | 2026-09-26 |
+| `020` | `sushi-packer/agent` | smooth pull eta wake | 2026-09-27 |
+| `021` | `sushi-packer/agent` | scene v3 off-frame | 2026-09-27 |
