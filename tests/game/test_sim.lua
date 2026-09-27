@@ -10,7 +10,7 @@ end
 
 describe("sim", function()
   it("scene feeds both lanes with four kinds", function()
-    -- U-8 v1.3 (author layout): inserters drop coal + circuit on left lane, iron + copper on right; box packs 4-stacks.
+    -- U-8 v1.4 (author layout: box centered, machinery off frame): inserters drop coal + circuit on left lane, iron + copper on right; box packs 4-stacks.
     local surface, force = game.surfaces[1], game.forces.player
     clear(surface)
     storage.boxes = {}
@@ -21,13 +21,13 @@ describe("sim", function()
     after_ticks(1500, function()
       local inkinds, outstacks = { {}, {} }, { 0, 0 }
       local outkinds = { {}, {} }
-      for x = -5, -1 do
+      for x = -11, -1 do
         local belt = surface.find_entity("transport-belt", { x + 0.5, 0.5 })
         for lane = 1, 2 do
           for _, d in ipairs(belt.get_transport_line(lane).get_detailed_contents()) do inkinds[lane][d.stack.name] = true end
         end
       end
-      for x = 1, 3 do
+      for x = 1, 11 do
         local belt = surface.find_entity("transport-belt", { x + 0.5, 0.5 })
         for lane = 1, 2 do
           for _, d in ipairs(belt.get_transport_line(lane).get_detailed_contents()) do
@@ -43,6 +43,33 @@ describe("sim", function()
       for n in pairs(inkinds[1]) do assert.is_true(n == "coal" or n == "electronic-circuit", r) end
       for n in pairs(inkinds[2]) do assert.is_true(n == "iron-plate" or n == "copper-plate", r) end
       assert.is_true(outstacks[1] > 0 and outstacks[2] > 0, r)
+    end)
+  end)
+  it("scene never stalls", function()
+    -- FND-0013: author 2026-09-27 saw yellow box stutter in scene; item must never rest at belt end behind box.
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    sim.scene("tips")
+    local behind = surface.find_entity("transport-belt", { -0.5, 0.5 })
+    local run, max, seen, start = { 0, 0 }, 0, 0, game.tick
+    on_tick(function()
+      for lane = 1, 2 do
+        local line = behind.get_transport_line(lane)
+        if #line > 0 then seen = seen + 1 end
+        if #line > 0 and not line.can_insert_at(0) then
+          run[lane] = run[lane] + 1
+          if run[lane] > max then max = run[lane] end
+        else
+          run[lane] = 0
+        end
+      end
+      if game.tick - start >= 1500 then
+        force.belt_stack_size_bonus = 0
+        assert.is_true(seen > 0, "items reached box")
+        assert.is_true(max <= 2, "item rested at exit " .. max .. " ticks")
+        return false
+      end
     end)
   end)
 end)

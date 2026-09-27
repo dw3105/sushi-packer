@@ -88,6 +88,23 @@ local function run_until(step, pred, limit, check)
   end)
 end
 
+-- FND-0013 (author 2026-09-27: yellow box stutters): longest run of ticks an item rests at belt end behind box.
+local function rest_meter(belt)
+  local run, max = { 0, 0 }, 0
+  return function()
+    for lane = 1, 2 do
+      local line = belt.get_transport_line(lane)
+      if #line > 0 and not line.can_insert_at(0) then
+        run[lane] = run[lane] + 1
+        if run[lane] > max then max = run[lane] end
+      else
+        run[lane] = 0
+      end
+    end
+    return max
+  end
+end
+
 describe("tick", function()
   local surface, force
   before_each(function()
@@ -374,5 +391,28 @@ describe("tick", function()
       assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r)
     end)
   end)
-end)
+  local function never_rests(tier, belt, every)
+    local _, rec, feed, front = build(surface, force, { tier = tier, belt = belt, behind = 3, front = 12 })
+    local behind = surface.find_entities_filtered({ position = { 0.5, 1.5 }, type = "transport-belt" })[1]
+    local meter, max, fed = rest_meter(behind), 0, 0
+    local kinds = { { "iron-plate", "copper-plate" }, { "coal", "stone" } }
+    run_until(function()
+      if game.tick % every == 0 then
+        for lane = 1, 2 do
+          local line = feed.get_transport_line(lane)
+          if line.can_insert_at_back() then
+            line.insert_at_back({ name = kinds[lane][(fed % 2) + 1], count = 1 }); fed = fed + 1
+          end
+        end
+      end
+      for lane = 1, 2 do front[#front].get_transport_line(lane).clear() end
+      max = meter()
+    end, function() return false end, 1200, function()
+      assert.is_true(fed > 20, "fed " .. fed)
+      assert.is_true(max <= 2, tier .. " item rested at exit " .. max .. " ticks")
+    end)
+  end
 
+  it("front item never rests at exit", function() never_rests("yellow", "transport-belt", 37) end)
+  it("front item never rests at exit on turbo", function() never_rests("turbo", "turbo-transport-belt", 11) end)
+end)
