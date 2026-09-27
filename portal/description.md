@@ -9,7 +9,7 @@ Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind rid
 ## How it works
 
 - **Lanes kept.** Left lane stays left, right lane stays right. Nothing crosses over.
-- **Release at belt stack.** A stack leaves as soon as one item kind fills a belt stack: 1 item before belt capacity research (pass-through), up to 4 after. Never more than the item's own stack size.
+- **Release at belt stack.** A stack leaves as soon as one item kind fills a belt stack: 1 item before belt stacking research (pass-through), then whatever research sets — 4 in vanilla Space Age, more when a mod raises it. Never more than the item's own stack size.
 - **Flush timeout.** Partial stacks older than the timeout leave anyway (map default, or per box). `0` = never.
 - **Nothing lost.** When all 48 slots are used, the box flushes its oldest partial stack to make room. If the belt in front is blocked, the box fills up and the belt behind it backs up — no item is ever dropped.
 - **Keeps up with its belt.** Each tier moves exactly its belt's throughput, and items never stop at the belt end in front of the box.

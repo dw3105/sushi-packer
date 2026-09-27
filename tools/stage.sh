@@ -24,7 +24,13 @@ for f in info.json data.lua settings.lua control.lua changelog.txt thumbnail.png
   test -e "$ROOT/$f" && cp "$ROOT/$f" "$MOD/"
 done
 for d in scripts prototypes locale graphics; do cp -r "$ROOT/$d" "$MOD/"; done
-if [ "$MODE" = test ]; then mkdir -p "$MOD/tests"; cp -r "$ROOT/tests/game" "$MOD/tests/"; fi
+rm -rf "$OUT/mods/sushi-packer-test-env_"*
+if [ "$MODE" = test ]; then
+  mkdir -p "$MOD/tests"; cp -r "$ROOT/tests/game" "$MOD/tests/"
+  # test-only helper mod: engine max belt stack 8 (proves research-set release beyond vanilla 4)
+  ENV="$OUT/mods/sushi-packer-test-env_0.0.1"; cp -r "$ROOT/tests/env/sushi-packer-test-env" "$ENV"
+  python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d['factorio_version']=sys.argv[2]; json.dump(d,open(p,'w'),indent=2)" "$ENV/info.json" "$FV"
+fi
 python3 - "$MOD/info.json" "$FV" "$VER" "$MODE" <<'PY'
 import json, sys
 p, fv, ver, mode = sys.argv[1:]
@@ -42,6 +48,7 @@ names = [n for n in ("base", "elevated-rails", "quality", "recycler", "space-age
 names += ["sushi-packer"]
 for f in os.listdir(mods):
     if f.startswith("factorio-test_"): names.append("factorio-test")
+    if f.startswith("sushi-packer-test-env_"): names.append("sushi-packer-test-env")
 json.dump({"mods": [{"name": n, "enabled": True} for n in dict.fromkeys(names)]}, open(os.path.join(mods, "mod-list.json"), "w"), indent=2)
 PY
 cat > "$OUT/config.ini" <<CFG

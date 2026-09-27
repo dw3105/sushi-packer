@@ -16,7 +16,7 @@ describe("repro", function()
     local surface, force = game.surfaces[1], game.forces.player
     clear(surface)
     storage.boxes = {}
-    force.belt_stack_size_bonus = 3
+    force.belt_stack_size_bonus = 19  -- author save: belt stack 20 (test env mod raises engine max to 20)
     force.recipes["scrap-recycling"].enabled = true  -- test world has no research; author map has it
     storage.belt_stack = {}
     local function belt(x, y, dir) return surface.create_entity({ name = "turbo-transport-belt", position = { x + 0.5, y + 0.5 }, direction = dir, force = force }) end
@@ -93,6 +93,7 @@ describe("repro", function()
       if t >= LIMIT then
         local l, r = 0, 0
         for i = #windows - 11, #windows do l = l + windows[i][1]; r = r + windows[i][2] end
+        force.belt_stack_size_bonus = 3; storage.belt_stack = {}
         assert.is_true(l > 0 and r > 0, "last 2 min out L=" .. l .. " R=" .. r)
         done()
         return false

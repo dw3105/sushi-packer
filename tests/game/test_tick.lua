@@ -127,6 +127,22 @@ describe("tick", function()
     end)
   end)
 
+  it("releases at modded belt stack 20", function()
+    -- author 2026-09-27: release whatever research sets, modded or not. Test env mod raises engine max to 20 (author save).
+    assert.are_equal(20, prototypes.utility_constants.max_belt_stack_size, "test env mod loaded")
+    force.belt_stack_size_bonus = 19
+    storage.belt_stack = {}
+    local _, _, feed, front = build(surface, force, {})
+    local q = {}
+    for i = 1, 40 do q[#q + 1] = "iron-ore"; q[#q + 1] = "copper-ore" end
+    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 80 end, 3500, function()
+      local seq = output(front, 1)
+      force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+      assert.are_equal(80, total(seq))
+      for _, s in ipairs(seq) do assert.are_equal(20, s.count, "every belt item is a full 20-stack of one kind") end
+    end)
+  end)
+
   it("belt stack 1 passes through", function()
     -- C-2 v6 + author: no belt capacity research -> every item leaves at once, lane and order kept.
     force.belt_stack_size_bonus = 0
@@ -414,6 +430,20 @@ describe("tick", function()
     end
     return l, r
   end
+
+  it("north turbo box stacked 20 input both lanes", function()
+    -- author save 2026-09-27: belt stack 20, input belt carries 20-stacks.
+    force.belt_stack_size_bonus = 19; storage.belt_stack = {}
+    local feed, front, curve = curve_case(defines.direction.north, defines.direction.west)
+    run_until(feed_stacked(feed, KINDS, 20), function() return false end, 2400, function()
+      local l, r = lanes_moved(front)
+      local box = surface.find_entities_filtered({ position = { 0.5, 0.5 }, type = "container" })[1]
+      local stored = {}
+      for _, x in ipairs(box.get_inventory(defines.inventory.chest).get_contents()) do stored[#stored + 1] = x.name .. "=" .. x.count end
+      force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+      assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r .. " stored " .. table.concat(stored, ","))
+    end)
+  end)
 
   it("north turbo box curve from west", function()
     local feed, front, curve = curve_case(defines.direction.north, defines.direction.west)

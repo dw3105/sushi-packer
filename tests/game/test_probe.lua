@@ -237,5 +237,12 @@ describe("probe", function()
     assert.is_true(ins.pickup_position.y < -1, text)
     assert.is_true(ins.drop_position.y > 0.5, text)
   end)
+  it("max belt stack size readable at runtime", function()
+    -- author 2026-09-27: release at research-set belt stack, modded or not; cap = utility constant, not literal 4.
+    local ok, value = pcall(function() return prototypes.utility_constants.max_belt_stack_size end)
+    print("PROBE max_belt_stack_size ok=" .. tostring(ok) .. " value=" .. tostring(value))
+    assert.is_true(ok, tostring(value))
+    assert.are_equal(20, value, "test env mod raises engine max 4 -> 20 (author save)")
+  end)
 end)
 

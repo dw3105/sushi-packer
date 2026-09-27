@@ -14,6 +14,7 @@ end
 script.on_init(init_storage)
 script.on_configuration_changed(function(data)
   init_storage()
+  storage.belt_stack = {}  -- mods may change research or engine max belt stack: recompute per force
   registry.on_configuration_changed(data)
 end)
 

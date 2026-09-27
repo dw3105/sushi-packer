@@ -53,6 +53,17 @@ describe("belt_io", function()
     local got,eta=require("scripts.belt_io").pull(eta_rec({a,eta_line(nil,false)}),{1,0},function() return 1 end)
     eq(got,{1,0}); eq(calls,0); eq(eta,{nil,nil})
   end)
+  it("belt stack follows research up to engine max", function()
+    -- author 2026-09-27: release at research-set belt stack, modded or not (no literal 4).
+    local saved = prototypes
+    prototypes = { utility_constants = { max_belt_stack_size = 8 } }
+    package.loaded["scripts.belt_io"] = nil
+    local io = require("scripts.belt_io")
+    eq(io.belt_stack_size({ belt_stack_size_bonus = 0 }), 1)
+    eq(io.belt_stack_size({ belt_stack_size_bonus = 7 }), 8)
+    eq(io.belt_stack_size({ belt_stack_size_bonus = 12 }), 8)
+    prototypes = saved; package.loaded["scripts.belt_io"] = nil; belt_io = require("scripts.belt_io")
+  end)
   it("front accepts same direction belt", function()
     ok(find("north", 1, { { valid = true, type = "transport-belt", direction = 0 } }) ~= nil)
   end)

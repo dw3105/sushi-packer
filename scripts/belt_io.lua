@@ -141,8 +141,10 @@ function M.push(rec, lane, item, belt_stack_size)
   return 0
 end
 
+-- Research-set belt stack (O-3 v7, author 2026-09-27): 1 + bonus, capped by engine max (utility constant,
+-- 4 in vanilla, raised by mods). Never a literal cap.
 function M.belt_stack_size(force)
-  return math.min(4, 1 + force.belt_stack_size_bonus)
+  return math.min(prototypes.utility_constants.max_belt_stack_size, 1 + force.belt_stack_size_bonus)
 end
 
 return M

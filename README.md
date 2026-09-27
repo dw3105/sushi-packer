@@ -2,7 +2,7 @@
 
 ![Sushi Packer: mixed items in, stacked items out](portal/logo-512.png)
 
-Sushi Packer is a 1×1 inline belt box for mixed item belts. It keeps the two belt lanes separate, gathers each item type until it fills one belt stack (1 item before belt capacity research, up to 4 after), then sends that stack forward as one stacked belt item. The box preserves the lane each item entered on.
+Sushi Packer is a 1×1 inline belt box for mixed item belts. It keeps the two belt lanes separate, gathers each item type until it fills one belt stack (1 item before belt stacking research, then whatever research sets: 4 in vanilla Space Age, more when a mod raises it), then sends that stack forward as one stacked belt item. The box preserves the lane each item entered on.
 
 ## Tiers and recipes
 

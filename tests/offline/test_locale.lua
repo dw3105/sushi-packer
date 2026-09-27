@@ -57,7 +57,8 @@ describe("locale", function()
     end
     local expected = "collects items per lane until one kind fills a belt stack"
     assert(locale:lower():find(expected, 1, true), "item/tech locale must explain lane collection")
-    assert(locale:lower():find("up to 4 with research", 1, true), "locale must explain research stack capacity")
+    assert(locale:lower():find("size set by belt stacking research, modded or not", 1, true), "locale must say stack size follows research, modded or not")
+    assert(not locale:find("up to 4", 1, true), "no literal 4 cap in locale (author 2026-09-27)")
   end)
   it("recipes and setting described", function()
     assert(has("recipe-name", N.item("yellow"))); assert(has("recipe-description", N.item("yellow")))

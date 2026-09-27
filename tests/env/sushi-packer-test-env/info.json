@@ -1,0 +1,9 @@
+{
+  "name": "sushi-packer-test-env",
+  "version": "0.0.1",
+  "title": "Sushi Packer test environment (never shipped)",
+  "author": "dw3105",
+  "factorio_version": "2.0",
+  "description": "Test-only: raises engine max belt stack to 20 (author save) so tests prove release follows research beyond vanilla 4.",
+  "dependencies": ["base"]
+}

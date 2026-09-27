@@ -58,7 +58,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 |----|-------------|
 | O-1 | Output as stacked belt items via `LuaTransportLine.insert_at_back(items, belt_stack_size)` (or equivalent) on matching lane of front belt. |
 | O-2 | One stack leaves fully before next queued stack on same lane starts. No interleave of types inside one lane's stack run (except P-3). |
-| O-3 | Belt stack size = `1 + force.belt_stack_size_bonus`, capped at 4. Follows research live (re-read when research completes). Early game = 1. |
+| O-3 | Belt stack size = `1 + force.belt_stack_size_bonus`, capped only by engine max `max_belt_stack_size` (4 vanilla, raised by mods; author 2026-09-27: "packer must release whatever the research (modded or not) set"). Follows research live (re-read when research completes). Early game = 1. |
 | O-4 | Output rate never exceeds tier belt throughput (E-4). Front belt faster tier → still limited by box tier. |
 | O-5 | Full stack leaves as one belt item of N. Flushed partial (F-1, S-1, N-4) leaves as one smaller belt item. Research raise changes N for stacks started after it. |
 

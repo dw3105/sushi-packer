@@ -24,9 +24,10 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   data="$ROOT/build/$FV/ftdata"
   mkdir -p "$data/mods"
   test -f "$data/mods/factorio-test_$FT_VER.zip" || cp "$FT_ZIP_DIR/factorio-test_$FT_VER.zip" "$data/mods/"
+  rm -rf "$data/mods/sushi-packer-test-env_"*; cp -r "$(dirname "$mod")/sushi-packer-test-env_0.0.1" "$data/mods/"  # test-only env mod (max belt stack 20)
   test -x "$CLI" || { echo "run_tests: FactorioTest CLI missing: (cd $FT && npm ci)" >&2; exit 2; }
   FT_DIR="$FT" "$ROOT/tools/ft/patch-cli.sh" >/dev/null  # FND-0005: 10 s startup watchdog -> 120 s
-  mods="space-age quality elevated-rails"
+  mods="space-age quality elevated-rails sushi-packer-test-env"
   test -d "$FACTORIO/data/recycler" && mods="$mods recycler"
   rm -f "$ROOT/build/$FV/results.json"
   set -- run -p "$mod" --factorio-path "$FACTORIO/bin/x64/factorio" -d "$data" --no-reorder-failed-first \
