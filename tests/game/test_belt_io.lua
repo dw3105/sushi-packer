@@ -152,10 +152,13 @@ describe("belt_io", function()
     initial.destroy()
     assert.are_equal(0, io.push(rec, 1, { name = "iron-plate", quality = "normal", count = 1 }, 1))
   end)
-  it("belt stack size follows research capped at 4", function()
+  it("belt stack size follows research capped at engine max", function()
+    -- O-3 v7 (author 2026-09-27): cap = utility constant max_belt_stack_size (test env mod: 20), never literal 4.
+    local max = prototypes.utility_constants.max_belt_stack_size
     force.belt_stack_size_bonus = 0; assert.are_equal(1, io.belt_stack_size(force))
-    force.belt_stack_size_bonus = 2; assert.are_equal(3, io.belt_stack_size(force))
-    force.belt_stack_size_bonus = 5; assert.are_equal(4, io.belt_stack_size(force))
+    force.belt_stack_size_bonus = 5; assert.are_equal(6, io.belt_stack_size(force))
+    force.belt_stack_size_bonus = max + 5; assert.are_equal(max, io.belt_stack_size(force))
+    force.belt_stack_size_bonus = 3
   end)
   it("works in all four directions", function()
     for _, dir in ipairs(N.DIRS) do
