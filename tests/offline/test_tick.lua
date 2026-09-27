@@ -66,6 +66,13 @@ describe("tick", function()
    tick.on_tick({tick=7}); eq(r.next_poll,11)
    belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
  end)
+ it("idle box wakes on eta", function()
+   -- FND-0013 review: idle box with item on the way must wake on arrival, not after idle sleep.
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); belt_io.speed=function() return 0.03125 end
+   belt_io.pull=function() return {0,0},{nil,20} end
+   tick.on_tick({tick=7}); eq(r.next_poll,27)
+   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
  it("credit accrues by elapsed ticks", function()
    local r,inv,f,p,b,v,l,o=fixture("yellow"); r.last_poll=10; r.next_poll=14
    belt_io.speed=function() return nil end

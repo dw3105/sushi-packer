@@ -140,20 +140,20 @@ function M.on_tick(e)
               taken_any = true
             end
           end
-          local gap = interval
+          local arrive  -- soonest front item arrival (eta 0 = resting item, never wakes early)
           if eta then
             for lane = 1, 2 do
               local value = eta[lane]
-              if value and value > 0 and value < gap then gap = value end
+              if value and value > 0 and (arrive == nil or value < arrive) then arrive = value end
             end
           end
+          local gap = interval
           if core.is_idle(rec.box) and not taken_any then
             local speed = belt_io.speed and belt_io.speed(rec)
-            local idle_gap = speed and math.floor(1 / speed) - 1 or 30
-            rec.next_poll = e.tick + math.min(30, idle_gap)
-          else
-            rec.next_poll = e.tick + gap
+            gap = math.min(30, speed and math.floor(1 / speed) - 1 or 30)
           end
+          if arrive and arrive < gap then gap = arrive end
+          rec.next_poll = e.tick + math.max(1, gap)
         end
         rec.last_poll = e.tick
         if not enabled then rec.next_poll = e.tick + interval end
