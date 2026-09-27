@@ -10,4 +10,5 @@ return {
   "tests.game.test_tick",
   "tests.game.test_bench",
   "tests.game.test_sim",
+  "tests.game.test_repro",
 }
