@@ -79,7 +79,9 @@ Verified-by: `tools/run_tests.sh 2.1 'tests/game/test_probe.lua::probe > inserte
 
 Reported 2026-09-26 by author (play-test v1.2, screenshot): turbo box facing north, input from south, output north, only left lane works. Repro on `dev-vm` 2.0.77, north turbo box, both lanes fed: straight belts single items, straight belts stacked 4, curve behind, curve in front — all four move both lanes. Suspect (unconfirmed): side-load into belt behind box puts every item on one lane (vanilla). Next: author save `~/share/sushi-packer/one-lane.zip` → headless load → check lanes behind box.
 
-Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north turbo box moves both lanes with curve behind'`
+Update 2026-09-27: author screenshot layout (turbo belt from west, curve north behind north turbo box, turbo out) + 16-case matrix (4 box directions x curve from left/right x placed fresh / placed over belt by player) all move both lanes on 2.0.77, dev-vm. Still not reproduced. Next: author blueprint string after 0.1.5 crash fix.
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north turbo box curve from west'`
 
 
 ## FND-0013 - Box makes items rest at belt end: tier cadence + 30-tick idle sleep (stutter)
@@ -87,3 +89,9 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north tur
 Reported 2026-09-27 by author (v1.3 tips scene): yellow box stutters with tiny input. Cause (code read, PERF-1 + PERF-2): box visited only every `INTERVAL[tier]` ticks and takes item only when it already rests at belt end (`not line.can_insert_at(0)`); idle box sleeps 30 ticks. Measured on `dev-vm` 2.0.77 before fix, longest rest of item at belt end: sparse yellow feed 19 ticks, sparse turbo feed 21 ticks, tips scene 13 ticks. Fix: PERF-3 (wake on front item eta, idle sleep < tile crossing).
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > front item never rests at exit'`
+
+## FND-0014 - Open blueprint crashed tick: `player.opened` may be LuaItemStack
+
+Reported 2026-09-27 by author (0.1.4): `Error while running event sushi-packer::on_tick ... LuaItemStack doesn't contain key unit_number` at `scripts/tick.lua:74`. `player.opened` is entity, item stack, GUI element or equipment depending on `opened_gui_type`; reading missing key on item stack raises. Fix: read only when `opened_gui_type == defines.gui_type.entity`. Headless test player is not connected (`opened_gui_type` stays 0, measured dev-vm 2.0.77), so repro is offline fake with erroring `__index`, red on 0.1.4 with author's exact message.
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/offline/test_tick.lua::tick > opened blueprint does not crash'`

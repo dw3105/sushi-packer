@@ -4,7 +4,7 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 
 | ID | 2.0 | 2.1 | Proof |
 |---|---|---|---|
-| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.4 = 2.0, 0.2.4 = 2.1) load headless; full suites green on both |
+| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.5 = 2.0, 0.2.5 = 2.1) load headless; full suites green on both |
 | T-2 | NOT-TESTED | NOT-TESTED |  — NOT-TESTED: no save/load or multiplayer desync run; design: all state in `storage` (`core > box is plain data`), no pairs-order logic |
 | E-1 | PASS | PASS | `belt_io > works in all four directions`, `lifecycle > placer becomes variant facing its direction` |
 | E-2 | PASS | PASS | `data > variants are 48 slot not rotatable containers` |
