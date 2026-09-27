@@ -30,12 +30,12 @@ local function find(created, name, position)
 end
 
 describe("sim", function()
-  it("four infinity chests two above two below", function()
+  it("four infinity chests bottom pair one tile upstream", function()
     local sim, created, filters = setup()
     sim.scene("factoriopedia")
     local expected = {
-      { "iron-plate", { -3.5, -1.5 } }, { "copper-plate", { -1.5, -1.5 } },
-      { "coal", { -3.5, 2.5 } }, { "electronic-circuit", { -1.5, 2.5 } },
+      { "iron-plate", { -14.5, -1.5 } }, { "copper-plate", { -12.5, -1.5 } },
+      { "coal", { -15.5, 2.5 } }, { "electronic-circuit", { -13.5, 2.5 } },
     }
     local sources = {}
     for _, item in ipairs(expected) do
@@ -46,36 +46,48 @@ describe("sim", function()
       for _, call in ipairs(filters) do if call.entity == chest and call.index == 1 then filter = call.filter end end
       eq(filter, { name = item[1], count = 50, mode = "exactly" })
     end
-    local source_count = 0
-    for _ in pairs(sources) do source_count = source_count + 1 end
-    eq(source_count, 4)
+    eq(sources[find(created, "infinity-chest", { -14.5, -1.5 })], true)
+    eq(sources[find(created, "infinity-chest", { -12.5, -1.5 })], true)
+    eq(sources[find(created, "infinity-chest", { -15.5, 2.5 })], true)
+    eq(sources[find(created, "infinity-chest", { -13.5, 2.5 })], true)
+    eq((function() local n = 0; for _ in pairs(sources) do n = n + 1 end; return n end)(), 4)
   end)
 
   it("inserters between chests and belt", function()
     local sim, created = setup()
     sim.scene("factoriopedia")
     local expected = {
-      { { -3.5, -0.5 }, defines.direction.north }, { { -1.5, -0.5 }, defines.direction.north },
-      { { -3.5, 1.5 }, defines.direction.south }, { { -1.5, 1.5 }, defines.direction.south },
+      { { -14.5, -0.5 }, defines.direction.north }, { { -12.5, -0.5 }, defines.direction.north },
+      { { -15.5, 1.5 }, defines.direction.south }, { { -13.5, 1.5 }, defines.direction.south },
     }
     local got = {}
     for _, spec in ipairs(created) do if spec.name == "inserter" then got[#got + 1] = { spec.position, spec.direction } end end
     eq(got, expected)
   end)
 
-  it("visible pole and hidden power", function()
+  it("machinery off frame", function()
     local sim, created = setup()
     sim.scene("factoriopedia")
-    local poles = {}
-    for _, spec in ipairs(created) do if spec.name == "medium-electric-pole" then poles[#poles + 1] = spec end end
-    eq(#poles, 2)
-    eq(poles[1].position, { -2.5, -0.5 })
-    eq(poles[2].position, { -2.5, -8.5 })
-    local eei = find(created, "electric-energy-interface", { -2.5, -9.5 })
-    ok(eei ~= nil, "missing hidden power interface")
-    eq(eei.entity.power_production, 1e9)
-    eq(eei.entity.electric_buffer_size, 1e9)
-    eq(eei.entity.energy, 1e9)
+    local camera = sim._CAMERA.factoriopedia.position
+    for _, spec in ipairs(created) do
+      if spec.name ~= "transport-belt" and spec.name ~= N.placer("yellow") then
+        local dx, dy = math.abs(spec.position[1] - camera[1]), math.abs(spec.position[2] - camera[2])
+        ok(dx >= 12 or dy >= 6, "entity in frame: " .. spec.name)
+      end
+    end
+  end)
+
+  it("power off frame", function()
+    local sim, created = setup()
+    sim.scene("factoriopedia")
+    eq(#(function() local p = {}; for _, s in ipairs(created) do if s.name == "medium-electric-pole" then p[#p + 1] = s end end; return p end)(), 2)
+    ok(find(created, "medium-electric-pole", { -11.5, -0.5 }) ~= nil)
+    ok(find(created, "medium-electric-pole", { -11.5, -8.5 }) ~= nil)
+    local power = find(created, "electric-energy-interface", { -11.5, -9.5 })
+    ok(power ~= nil, "missing power interface")
+    eq(power.entity.power_production, 1e9)
+    eq(power.entity.electric_buffer_size, 1e9)
+    eq(power.entity.energy, 1e9)
   end)
 
   it("inserter hand size one", function()
@@ -88,37 +100,37 @@ describe("sim", function()
     local sim, created, _, force = setup()
     sim.scene("factoriopedia")
     eq(force.belt_stack_size_bonus, 3)
-    eq(find(created, N.placer("yellow"), { 0.5, 0.5 }).direction, defines.direction.east)
     local box = find(created, N.placer("yellow"), { 0.5, 0.5 })
+    ok(box ~= nil, "missing box")
+    eq(box.direction, defines.direction.east)
     eq(box.raise_built, true)
-    local loader = find(created, "loader-1x1", { 4.5, 0.5 })
+    local loader = find(created, "loader-1x1", { 12.5, 0.5 })
+    ok(loader ~= nil, "missing loader")
     eq(loader.direction, defines.direction.east)
     eq(loader.type, "input")
-    local sink = find(created, "infinity-chest", { 5.5, 0.5 })
+    local sink = find(created, "infinity-chest", { 13.5, 0.5 })
+    ok(sink ~= nil, "missing sink")
     eq(sink.entity.remove_unfiltered_items, true)
     local belt_count = 0
     for _, spec in ipairs(created) do
-      if spec.name == "transport-belt" then
-        belt_count = belt_count + 1
-        eq(spec.direction, defines.direction.east)
-      end
+      if spec.name == "transport-belt" then belt_count = belt_count + 1; eq(spec.direction, defines.direction.east) end
     end
-    eq(belt_count, 8)
-    for x = -5, -1 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
-    for x = 1, 3 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
+    eq(belt_count, 29)
+    for x = -17, -1 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
+    for x = 1, 11 do ok(find(created, "transport-belt", { x + 0.5, 0.5 }) ~= nil, "missing belt x=" .. x) end
   end)
 
-  it("camera constants per kind", function()
+  it("camera centered on box", function()
     local sim = setup()
     eq(sim._CAMERA, {
-      factoriopedia = { position = { -0.5, 0.5 }, zoom = 2.0 },
-      tips = { position = { -0.5, 0.5 }, zoom = 2.4 },
+      factoriopedia = { position = { 0.5, 0.5 }, zoom = 2.0 },
+      tips = { position = { 0.5, 0.5 }, zoom = 2.4 },
     })
     sim.scene("factoriopedia")
-    eq(game.simulation.camera_position, { -0.5, 0.5 })
+    eq(game.simulation.camera_position, { 0.5, 0.5 })
     eq(game.simulation.camera_zoom, 2.0)
     sim.scene("tips")
-    eq(game.simulation.camera_position, { -0.5, 0.5 })
+    eq(game.simulation.camera_position, { 0.5, 0.5 })
     eq(game.simulation.camera_zoom, 2.4)
   end)
 
