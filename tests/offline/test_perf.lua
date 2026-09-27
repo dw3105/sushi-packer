@@ -31,14 +31,14 @@ describe("perf", function()
   end)
   it("missing belt rescanned at most every 60 ticks", function()
     defines={direction={north=0,east=4,south=8,west=12}}; game={tick=1}
-    local calls=0; local r=cache_rec({find_entities_filtered=function() calls=calls+1; return {} end})
+    local calls=0; local r=cache_rec({find_entities_filtered=function(f) if f.position then calls=calls+1 end; return {} end})  -- area = splitter probe of same scan
     belt_io.pull(r,{1,0},function() return 0 end); game.tick=59; belt_io.pull(r,{1,0},function() return 0 end)
     eq(calls,1); game.tick=61; belt_io.pull(r,{1,0},function() return 0 end); eq(calls,2)
   end)
   it("rotated cached belt is dropped", function()
     defines={direction={north=0,east=4,south=8,west=12}}; game={tick=1}
     local calls=0; local belt=found_belt()
-    local r=cache_rec({find_entities_filtered=function() calls=calls+1; return {belt} end})
+    local r=cache_rec({find_entities_filtered=function(f) if f.area then return {} end; calls=calls+1; return {belt} end})
     local line={get_detailed_contents=function() return {} end}; function belt.get_transport_line() return line end
     belt_io.pull(r,{1,0},function() return 0 end); belt.direction=4; game.tick=61
     belt_io.pull(r,{1,0},function() return 0 end); eq(calls,2); eq(r.belt.behind,nil)
@@ -125,7 +125,7 @@ describe("perf scan", function()
     local calls = { front = 0 }
     local surface = {}
     function surface.find_entities_filtered(f)
-      if f.position.y < 0 then calls.front = calls.front + 1 end
+      if f.position and f.position.y < 0 then calls.front = calls.front + 1 end
       return {}
     end
     local rec = { entity = { valid = true, position = { x = 0.5, y = 0.5 }, surface = surface }, dir = "north" }

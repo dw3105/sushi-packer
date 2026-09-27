@@ -244,5 +244,46 @@ describe("probe", function()
     assert.is_true(ok, tostring(value))
     assert.are_equal(20, value, "test env mod raises engine max 4 -> 20 (author save)")
   end)
+  it("splitter transport line numbering", function()
+    -- FND-0015 probe (author blueprint 2026-09-27): which splitter line index = which half, input/output, lane.
+    local N_ = defines.direction.north
+    local names = {}
+    for k, v in pairs(defines.transport_line or {}) do names[#names + 1] = k .. "=" .. v end
+    table.sort(names)
+    -- inputs: belt behind LEFT half only (north splitter at x 0..2, left half = x 0..1), items on its left lane only
+    local sp = surface.create_entity({ name = "turbo-splitter", position = { 1, 0.5 }, direction = N_, force = force })
+    local feed = surface.create_entity({ name = "turbo-transport-belt", position = { 0.5, 1.5 }, direction = N_, force = force })
+    feed.get_transport_line(1).insert_at(0.5, { name = "iron-plate", count = 1 })
+    local res = {}
+    local snaps = {}
+    for t = 1, 8 do after_ticks(t, function()
+      local row = {}
+      for i = 1, 8 do if #sp.get_transport_line(i) > 0 then row[#row + 1] = i end end
+      snaps[#snaps + 1] = "t" .. t .. ":" .. table.concat(row, "/")
+    end) end
+    after_ticks(9, function()
+      assert.are_equal("t1: t2: t3: t4:1 t5:1 t6:1 t7:1 t8:1", table.concat(snaps, " "), "left half left lane input = line 1")
+      -- outputs: clear, front belt only at LEFT half, put one item per output index in turn
+      feed.destroy()
+      for i = 1, 8 do sp.get_transport_line(i).clear() end
+      local fl = surface.create_entity({ name = "turbo-transport-belt", position = { 0.5, -0.5 }, direction = N_, force = force })
+      local idx = 5
+      local function try()
+        for lane = 1, 2 do fl.get_transport_line(lane).clear() end
+        sp.get_transport_line(idx).insert_at(0.3, { name = "copper-plate", count = 1 })
+        after_ticks(20, function()
+          local want = ({ [5] = { 1, 0, 0 }, [6] = { 0, 1, 0 }, [7] = { 0, 0, 1 }, [8] = { 0, 0, 1 } })[idx]
+          assert.are_same(want, { #fl.get_transport_line(1), #fl.get_transport_line(2), #sp.get_transport_line(idx) }, "output line " .. idx)
+          sp.get_transport_line(idx).clear()
+          idx = idx + 1
+          if idx <= 8 then try() else
+            fl.destroy(); sp.destroy()
+            assert.are_equal(1, defines.transport_line.left_line); assert.are_equal(5, defines.transport_line.left_split_line)
+          end
+        end)
+      end
+      try()
+    end)
+  end)
 end)
 

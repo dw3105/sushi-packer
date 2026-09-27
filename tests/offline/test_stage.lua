@@ -8,10 +8,10 @@ describe("stage", function()
     assert(stage:find("factorio%-test") and stage:find("release"), "stage script must filter test dependency for release")
     assert(stage:find("dependencies", 1, true), "stage must update dependency list")
   end)
-  it("versions are 0.1.6 and 0.2.6", function()
-    assert(read("info.json"):find('"version": "0.1.6"', 1, true))
-    assert(read("tools/stage.sh"):find('0.1.6', 1, true) and read("tools/stage.sh"):find('0.2.6', 1, true))
-    assert(read("tools/load_check.sh"):find('0.1.6', 1, true) and read("tools/load_check.sh"):find('0.2.6', 1, true))
+  it("versions are 0.1.7 and 0.2.7", function()
+    assert(read("info.json"):find('"version": "0.1.7"', 1, true))
+    assert(read("tools/stage.sh"):find('0.1.7', 1, true) and read("tools/stage.sh"):find('0.2.7', 1, true))
+    assert(read("tools/load_check.sh"):find('0.1.7', 1, true) and read("tools/load_check.sh"):find('0.2.7', 1, true))
   end)
   it("release ships thumbnail and changelog", function()
     local stage = read("tools/stage.sh")
@@ -28,7 +28,7 @@ describe("stage", function()
     -- GitHub Actions builds release zips on a runner with no Factorio install.
     local dir = os.tmpname(); os.remove(dir)
     local ok = os.execute("FACTORIO_ROOT=/nonexistent STAGE_DIR=" .. dir .. " tools/stage.sh 2.0 release >/dev/null 2>&1")
-    local info = io.open(dir .. "/mods/sushi-packer_0.1.6/info.json")
+    local info = io.open(dir .. "/mods/sushi-packer_0.1.7/info.json")
     os.execute("rm -rf " .. dir)
     assert(ok == true or ok == 0, "stage release failed without Factorio")
     assert(info, "release staged mod missing"); info:close()
@@ -42,7 +42,7 @@ describe("stage", function()
     end
     local w, h = size("portal/logo-512.png"); assert(w == 512 and h == 512, "logo 512")
     local d = read("portal/description.md")
-    for _, needle in ipairs({"# Sushi Packer", "0.1.6", "0.2.6", "Space Age", "belt stack"}) do
+    for _, needle in ipairs({"# Sushi Packer", "0.1.7", "0.2.7", "Space Age", "belt stack"}) do
       assert(d:find(needle, 1, true), "description lacks " .. needle)
     end
     assert(read("README.md"):find("portal/logo-512.png", 1, true), "README shows logo")
@@ -51,7 +51,7 @@ describe("stage", function()
   it("changelog format valid", function()
     local s = read("changelog.txt")
     local sep = string.rep("-", 99)
-    for _, v in ipairs({"0.2.6", "0.2.5", "0.2.4", "0.2.3", "0.2.2", "0.2.1", "0.2.0", "0.1.6", "0.1.5", "0.1.4", "0.1.3", "0.1.2", "0.1.1", "0.1.0"}) do
+    for _, v in ipairs({"0.2.7", "0.2.6", "0.2.5", "0.2.4", "0.2.3", "0.2.2", "0.2.1", "0.2.0", "0.1.7", "0.1.6", "0.1.5", "0.1.4", "0.1.3", "0.1.2", "0.1.1", "0.1.0"}) do
       assert(s:find(sep .. "\nVersion: " .. v .. "\nDate: 2026-09-2", 1, true), "missing changelog block " .. v)
     end
   end)

@@ -5,6 +5,7 @@ local function find(dir, sign, belts)
   local e = { position = { x = 0, y = 0 }, surface = {
     find_entities_filtered = function(filter)
       local p = filter.position
+      if not p then return {} end  -- area query (splitter search)
       local expected = sign == 1 and { x = 0, y = -1 } or { x = 0, y = 1 }
       if p.x == expected.x and p.y == expected.y then return belts end
       return {}
@@ -93,6 +94,42 @@ describe("belt_io", function()
       end)
     end
     ok(got[1] >= 4 and got[2] >= 4, "lane1=" .. got[1] .. " lane2=" .. got[2])
+  end)
+  local function splitter_rec(sp_pos, lines)
+    defines = { direction = { north=0, east=4, south=8, west=12 } }; game = { tick = 1 }
+    prototypes = { entity = { ["turbo-splitter"] = { belt_speed = 0.125 } } }
+    local sp = { valid = true, type = "splitter", direction = 0, name = "turbo-splitter", position = sp_pos }
+    function sp.get_transport_line(i) return lines[i] end
+    local entity = { valid = true, position = { x = 0, y = 0 }, surface = {
+      find_entities_filtered = function(f) if f.area then return { sp } end return {} end } }
+    return { entity = entity, dir = "north" }
+  end
+  it("splitter behind feeds from its output half", function()
+    -- FND-0015 (author blueprint 2026-09-27): splitter behind box; probe: left half out = lines 5/6, right = 7/8.
+    local lines = {}
+    for i = 1, 8 do lines[i] = eta_line(nil, false) end
+    lines[5] = eta_line({ name = "coal", count = 1 }, true); lines[6] = eta_line({ name = "stone", count = 1 }, true)
+    lines[7] = eta_line({ name = "ice", count = 1 }, true); lines[8] = eta_line({ name = "wood", count = 1 }, true)
+    local seen = {}
+    local io = require("scripts.belt_io")
+    io.pull(splitter_rec({ x = 0.5, y = 1 }, lines), { 1, 1 }, function(name, _, lane) seen[lane] = name; return 1 end)
+    eq(seen, { "coal", "stone" }, "box in front of left half reads lines 5/6")
+    seen = {}
+    io.pull(splitter_rec({ x = -0.5, y = 1 }, lines), { 1, 1 }, function(name, _, lane) seen[lane] = name; return 1 end)
+    eq(seen, { "ice", "wood" }, "box in front of right half reads lines 7/8")
+  end)
+  it("splitter in front takes output into its input half", function()
+    -- FND-0015 probe: left half in = lines 1/2, right half in = 3/4.
+    local got = {}
+    local lines = {}
+    for i = 1, 8 do
+      lines[i] = { can_insert_at_back = function() return true end,
+        insert_at_back = function(item) got[#got + 1] = i .. ":" .. item.name; return true end }
+    end
+    local io = require("scripts.belt_io")
+    io.push(splitter_rec({ x = 0.5, y = -1 }, lines), 2, { name = "coal", count = 4 }, 4)
+    io.push(splitter_rec({ x = -0.5, y = -1 }, lines), 1, { name = "ice", count = 4 }, 4)
+    eq(got, { "2:coal", "3:ice" })
   end)
   it("front accepts same direction belt", function()
     ok(find("north", 1, { { valid = true, type = "transport-belt", direction = 0 } }) ~= nil)

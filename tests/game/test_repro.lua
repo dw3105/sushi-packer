@@ -129,4 +129,60 @@ describe("repro", function()
       end
     end)
   end)
+
+  it("author blueprint splitters around turbo box", function()
+    -- author 2026-09-27 blueprint ("THIS DOESN'T WORK"): turbo packer north; turbo splitter behind (stone filter),
+    -- turbo splitter in front (holmium filter), third splitter bypass east. All output priority right.
+    local BP = "0eNqlU9tuwjAM/Rc/pwgKBVpp+5FpQmkJxVoSZ7lMQ6j/PqdFuzJplz5EinN87HPsnqHVSTmPNkJzBuzIBmjuzhCwt1LnmJVGQQMx+ZaK4DTGqDwMAtDu1TM0i+FegLIRI6opd7ycdjaZlpHNQnziSOGIhZPdg/KF07JjkABHgRnI5pLMWpbbWSXgBM1ys5lVXO5JepQTghmj7EOGjmS7iSzfIxpFKe4M7XPFXlPLMsRrnJPmAg6oWUQmYOIOfZdw1K+sbDXnHaQOil/I7nO4I+Okl5G4BNzC+BCizJ7NmeCguYlL0sCf+GJBKb6x8Yru+qJ6PaqeOn03hyNpg8kU5BVnPybJTIwHS96MSj80e5MHxbodS+cpk5/AHvtjhCuNLn/e6HL+YTy/KLL6gxvb626ESPb/PvACY1SGA29/Ay8cb8jYSrUu61VdV9vVesPHMLwAXV8Vgg=="
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+    local inv = game.create_inventory(1)
+    local stack = inv[1]
+    assert.are_equal(0, stack.import_stack(BP), "blueprint imports")
+    -- blueprint box at (228.5, 377.5): put it at (0.5, 0.5); splitters keep relative offsets
+    local ghosts = stack.build_blueprint({ surface = surface, force = force, position = { 1, 1 }, build_mode = defines.build_mode.forced })
+    inv.destroy()
+    for _, g in ipairs(ghosts) do if g.valid then g.revive({ raise_revive = true }) end end
+    local box = surface.find_entities_filtered({ name = N.variant("turbo", "north") })[1]
+    assert.is_not_nil(box, "box built from blueprint")
+    local bx, by = box.position.x, box.position.y
+    local splitters = surface.find_entities_filtered({ type = "splitter", area = { { bx - 3, by - 3 }, { bx + 3, by + 3 } } })
+    assert.are_equal(3, #splitters, "three splitters")
+    local report = {}
+    for _, sp in ipairs(splitters) do report[#report + 1] = string.format("%s@%.1f,%.1f", sp.name, sp.position.x - bx, sp.position.y - by) end
+    -- feed: north belts under splitter behind box (tiles dx=0 and dx=1, dy=+2..+4)
+    local function belt(dx, dy) return surface.create_entity({ name = "turbo-transport-belt", position = { bx + dx, by + dy }, direction = D.north, force = force }) end
+    local feeds = {}
+    for dy = 4, 2, -1 do feeds[#feeds + 1] = belt(0, dy); belt(1, dy) end
+    local feed_right = surface.find_entity("turbo-transport-belt", { bx + 1, by + 4 })
+    -- outputs: north belts above front splitter (dx=0,1) and bypass splitter right half (dx=2)
+    local outs = {}
+    for dy = -2, -10, -1 do outs[#outs + 1] = belt(0, dy); belt(1, dy); belt(2, dy - 0 + 1) end
+    local kinds = { { "iron-plate", "copper-plate", "stone" }, { "coal", "ice", "holmium-ore" } }
+    local rec = storage.boxes[box.unit_number]
+    local stacked = { 0, 0 }
+    on_tick(function()
+      for _, f in ipairs({ feeds[1], feed_right }) do
+        for lane = 1, 2 do
+          local line = f.get_transport_line(lane)
+          if line.can_insert_at_back() then line.insert_at_back({ name = kinds[lane][(game.tick % 3) + 1], count = 1 }) end
+        end
+      end
+      for dx = 0, 2 do
+        local top = surface.find_entity("turbo-transport-belt", { bx + dx, by - 10 + (dx == 2 and 1 or 0) })
+        if top then for lane = 1, 2 do
+          for _, d in ipairs(top.get_transport_line(lane).get_detailed_contents()) do if d.stack.count > 1 then stacked[lane] = stacked[lane] + 1 end end
+          top.get_transport_line(lane).clear()
+        end end
+      end
+      if game.tick % 1200 == 0 then
+        local b = rec.box
+        print(string.format("BP t=%d stacked L=%d R=%d stored=%d used=%d splitters %s", game.tick, stacked[1], stacked[2], b.stored_count, b.used_slots, table.concat(report, " ")))
+      end
+      if stacked[1] > 3 and stacked[2] > 3 then return false end
+    end)
+  end)
 end)
+

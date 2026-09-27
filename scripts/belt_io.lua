@@ -15,24 +15,50 @@ local function direction_value(dir)
     south = defines.direction.south, west = defines.direction.west })[dir]
 end
 
+-- Right-hand unit vector per direction (splitter halves: left = negative side).
+local right = { north = { 1, 0 }, east = { 0, 1 }, south = { -1, 0 }, west = { 0, -1 } }
+
+-- FND-0015 (author blueprint 2026-09-27, probe `probe > splitter transport line numbering`): splitter facing box
+-- direction touching box tile with one half. Behind: box takes that half's output lines (left 5/6, right 7/8).
+-- In front: box writes that half's input lines (left 1/2, right 3/4). Returns line pair or nil.
+local function splitter_lines(sp, entity, dir, sign)
+  if not sp.valid or sp.type ~= "splitter" or sp.direction ~= direction_value(dir) then return nil end
+  local offset, r = offsets[dir], right[dir]
+  local tx, ty = entity.position.x + offset[1] * sign, entity.position.y + offset[2] * sign
+  local dx, dy = tx - sp.position.x, ty - sp.position.y
+  local forward, lateral = dx * offset[1] + dy * offset[2], dx * r[1] + dy * r[2]
+  if math.abs(forward) > 0.01 or math.abs(math.abs(lateral) - 0.5) > 0.01 then return nil end
+  local left = lateral < 0
+  if sign == -1 then return left and { 5, 6 } or { 7, 8 } end
+  return left and { 1, 2 } or { 3, 4 }
+end
+
 local function find_belt(entity, dir, sign)
   local offset = offsets[dir]
   if not offset then return nil end
   local position = entity.position
+  local tx, ty = position.x + offset[1] * sign, position.y + offset[2] * sign
   local found = entity.surface.find_entities_filtered({
-    position = { x = position.x + offset[1] * sign, y = position.y + offset[2] * sign },
+    position = { x = tx, y = ty },
     type = { "transport-belt", "underground-belt" },
   })
   for _, belt in ipairs(found) do
     if belt.valid then
       if sign == -1 and belt.direction == direction_value(dir) then
-        if belt.type == "transport-belt" then return belt end
-        if belt.type == "underground-belt" and belt.belt_to_ground_type == "output" then return belt end
+        if belt.type == "transport-belt" then return belt, { 1, 2 } end
+        if belt.type == "underground-belt" and belt.belt_to_ground_type == "output" then return belt, { 1, 2 } end
       elseif sign == 1 and belt.direction == direction_value(dir) then
-        if belt.type == "transport-belt" then return belt end
-        if belt.type == "underground-belt" and belt.belt_to_ground_type == "input" then return belt end
+        if belt.type == "transport-belt" then return belt, { 1, 2 } end
+        if belt.type == "underground-belt" and belt.belt_to_ground_type == "input" then return belt, { 1, 2 } end
       end
     end
+  end
+  local splitters = entity.surface.find_entities_filtered({
+    area = { { tx - 0.1, ty - 0.1 }, { tx + 0.1, ty + 0.1 } }, type = "splitter",
+  })
+  for _, sp in ipairs(splitters) do
+    local lines = splitter_lines(sp, entity, dir, sign)
+    if lines then return sp, lines end
   end
   return nil
 end
@@ -47,6 +73,7 @@ end
 
 local function matches(belt, entity, dir, sign)
   if not belt or not belt.valid or belt.direction ~= direction_value(dir) then return false end
+  if belt.type == "splitter" then return splitter_lines(belt, entity, dir, sign) ~= nil end
   local offset = offsets[dir]
   if not offset then return false end
   local expected_x = entity.position.x + offset[1] * sign
@@ -56,19 +83,25 @@ local function matches(belt, entity, dir, sign)
   return belt.type == "underground-belt" and belt.belt_to_ground_type == (sign == -1 and "output" or "input")
 end
 
+local PLAIN = { 1, 2 }
+
+-- Returns belt-like entity on this side and its line pair for lanes 1/2.
 local function cached(rec, field, sign)
   local b = rec.belt
   if not b then b = { behind = nil, front = nil, scan = {} }; rec.belt = b end
   if type(b.scan) ~= "table" then b.scan = {} end -- one rescan clock per side: a missing side never starves the other
+  if type(b.lines) ~= "table" then b.lines = {} end
   local belt = b[field]
-  if matches(belt, rec.entity, rec.dir, sign) then return belt end
+  if matches(belt, rec.entity, rec.dir, sign) then return belt, b.lines[field] or PLAIN end
   b[field] = nil
   local tick = game.tick or 0
   if tick < (b.scan[field] or -60) + 60 then return nil end
   b.scan[field] = tick
-  belt = find_belt(rec.entity, rec.dir, sign)
+  local lines
+  belt, lines = find_belt(rec.entity, rec.dir, sign)
   b[field] = belt
-  return belt
+  b.lines[field] = lines
+  return belt, lines or PLAIN
 end
 
 function M._eta(position, speed)
@@ -95,7 +128,7 @@ end
 
 function M.pull(rec, budget, sink)
   local taken = { 0, 0 }
-  local belt = cached(rec, "behind", -1)
+  local belt, map = cached(rec, "behind", -1)
   if not belt then return taken, nil end
   local eta = { nil, nil }
   -- FND-0011: lane that took an item last asks second next time, so a full box hands freed slots to lanes in turn
@@ -103,7 +136,7 @@ function M.pull(rec, budget, sink)
   local first = rec.pull_first == 2 and 2 or 1
   for i = 0, 1 do
     local lane = i == 0 and first or 3 - first
-    local line = belt.get_transport_line(lane)
+    local line = belt.get_transport_line(map[lane])
     local tries = 0
     while tries < (budget[lane] or 0) do
       if #line == 0 or line.can_insert_at(0) then break end
@@ -121,7 +154,7 @@ function M.pull(rec, budget, sink)
   -- ETA describes the leading item after any removals. Lane that took an item: next item sits >= 0.25 tile
   -- (belt item gap) behind, never sooner than next tier visit (PERF-3) -> skip costly detailed read.
   for lane = 1, 2 do
-    local line = belt.get_transport_line(lane)
+    local line = belt.get_transport_line(map[lane])
     if taken[lane] > 0 or #line == 0 then eta[lane] = nil
     elseif not line.can_insert_at(0) then eta[lane] = 0
     else
@@ -133,9 +166,9 @@ function M.pull(rec, budget, sink)
 end
 
 function M.push(rec, lane, item, belt_stack_size)
-  local belt = cached(rec, "front", 1)
+  local belt, map = cached(rec, "front", 1)
   if not belt then return 0 end
-  local line = belt.get_transport_line(lane)
+  local line = belt.get_transport_line(map[lane])
   if not line.can_insert_at_back() then return 0 end
   if line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then
     return item.count

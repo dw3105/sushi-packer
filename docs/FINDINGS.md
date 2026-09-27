@@ -96,3 +96,9 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > front ite
 Reported 2026-09-27 by author (0.1.4): `Error while running event sushi-packer::on_tick ... LuaItemStack doesn't contain key unit_number` at `scripts/tick.lua:74`. `player.opened` is entity, item stack, GUI element or equipment depending on `opened_gui_type`; reading missing key on item stack raises. Fix: read only when `opened_gui_type == defines.gui_type.entity`. Headless test player is not connected (`opened_gui_type` stays 0, measured dev-vm 2.0.77), so repro is offline fake with erroring `__index`, red on 0.1.4 with author's exact message.
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/offline/test_tick.lua::tick > opened blueprint does not crash'`
+
+## FND-0015 - Splitter behind or in front: box read only belts/undergrounds, so it took nothing
+
+Reported 2026-09-27 by author (blueprint, "THIS DOESN'T WORK"): north turbo box between turbo splitters (behind: stone filter, in front: holmium filter, bypass splitter east). Built from author's blueprint string headless on dev-vm 2.0.77: `stored=0` after 80 s. Cause: `belt_io.find_belt` searched only `transport-belt` / `underground-belt`. Probe `probe > splitter transport line numbering` (2.0.77 + 2.1.20, north splitter): input left half = lines 1/2, right half = 3/4; output left half = 5/6, right half = 7/8 (matches `defines.transport_line`). Fix: splitter facing box direction whose half touches box tile; behind → that half's output lines, in front → that half's input lines.
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > author blueprint splitters around turbo box'`

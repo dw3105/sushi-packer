@@ -7,8 +7,8 @@ FV=${1:?usage: tools/stage.sh <2.0|2.1> [test|release]}
 MODE=${2:-test}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "$FV" in
-  2.0) VER=0.1.6 ;;
-  2.1) VER=0.2.6 ;;
+  2.0) VER=0.1.7 ;;
+  2.1) VER=0.2.7 ;;
   *) echo "stage: FV must be 2.0 or 2.1" >&2; exit 2 ;;
 esac
 OUT=${STAGE_DIR:-$ROOT/build/$FV}
