@@ -81,3 +81,9 @@ Reported 2026-09-26 by author (play-test v1.2, screenshot): turbo box facing nor
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > north turbo box moves both lanes with curve behind'`
 
+
+## FND-0013 - Box makes items rest at belt end: tier cadence + 30-tick idle sleep (stutter)
+
+Reported 2026-09-27 by author (v1.3 tips scene): yellow box stutters with tiny input. Cause (code read, PERF-1 + PERF-2): box visited only every `INTERVAL[tier]` ticks and takes item only when it already rests at belt end (`not line.can_insert_at(0)`); idle box sleeps 30 ticks. Measured on `legalcopilot-dev` 2.0.77 before fix, longest rest of item at belt end: sparse yellow feed 19 ticks, sparse turbo feed 21 ticks, tips scene 13 ticks. Fix: PERF-3 (wake on front item eta, idle sleep < tile crossing).
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_tick.lua::tick > front item never rests at exit'`
