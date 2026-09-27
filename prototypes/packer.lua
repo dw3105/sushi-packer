@@ -9,7 +9,7 @@ for i, tier in ipairs(N.TIERS) do TIER_INDEX[tier] = i end
 local FACTORIOPEDIA_SIMULATION = {
   mods = { N.SIM_INTERFACE },
   init = 'remote.call("' .. N.SIM_INTERFACE .. '", "scene", "factoriopedia")',
-  init_update_count = 0,
+  init_update_count = 900,
   checkboard = true,
 }
 

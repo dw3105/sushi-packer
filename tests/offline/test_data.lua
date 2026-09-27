@@ -45,7 +45,7 @@ describe("data", function()
   it("simulations call scene with mods", function()
     local raw = load()
     dofile("prototypes/tips.lua")
-    local expected = { mods = { "sushi-packer" }, init_update_count = 0, checkboard = true }
+    local expected = { mods = { "sushi-packer" }, init_update_count = 900, checkboard = true }
     for _, tier in ipairs(N.TIERS) do
       expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
       eq(raw.item[N.item(tier)].factoriopedia_simulation, expected, tier .. " item")
@@ -54,6 +54,16 @@ describe("data", function()
     end
     expected.init = 'remote.call("sushi-packer", "scene", "tips")'
     eq(raw["tips-and-tricks-item"][N.TIPS].simulation, expected)
+  end)
+
+  it("simulations pre-run 900 ticks", function()
+    local raw = load()
+    dofile("prototypes/tips.lua")
+    for _, tier in ipairs(N.TIERS) do
+      eq(raw.item[N.item(tier)].factoriopedia_simulation.init_update_count, 900, tier .. " item")
+      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation.init_update_count, 900, tier .. " north")
+    end
+    eq(raw["tips-and-tricks-item"][N.TIPS].simulation.init_update_count, 900)
   end)
 
   it("placer joins belt group variants do not", function()
