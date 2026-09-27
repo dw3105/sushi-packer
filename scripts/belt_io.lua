@@ -1,6 +1,9 @@
 -- Belt access for the packer. All coordinates are tile centres.
 local M = {}
 local belt_speeds = {}
+setmetatable(M, { __index = function(t, key)
+  if key == "speed" or key == "eta" then return rawget(t, "_" .. key) end
+end })
 
 local offsets = {
   north = { 0, -1 }, east = { 1, 0 }, south = { 0, 1 }, west = { -1, 0 },
@@ -68,7 +71,7 @@ local function cached(rec, field, sign)
   return belt
 end
 
-function M.eta(position, speed)
+function M._eta(position, speed)
   if not speed or speed <= 0 then return nil end
   return math.max(0, math.ceil(position / speed))
 end
@@ -84,7 +87,7 @@ local function belt_speed(belt)
   return belt_speeds[name] or nil
 end
 
-function M.speed(rec)
+function M._speed(rec)
   if not rec or not rec.entity or not rec.entity.surface
     or type(rec.entity.surface.find_entities_filtered) ~= "function" then return nil end
   return belt_speed(cached(rec, "behind", -1))
