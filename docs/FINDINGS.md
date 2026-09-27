@@ -108,3 +108,23 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > author 
 Reported 2026-09-27 by author (blueprint 2: chest -> modded 1x1 output loader -> west turbo box -> 1x1 input loader -> chest). Headless with vanilla `loader-1x1` stand-in on dev-vm 2.0.77: `pushed L=0 R=0 sink got=0` on old code. Probe `probe > loader transport line numbering` (2.0.77 + 2.1.20): loader-1x1 has 2 lines = lanes, output loader holds items at exit when box does not take, input loader accepts `insert_at_back` on both lines. Fix: loaders (1x1, 2x1 with centre half a tile further) and linked belts facing box direction; behind must be output, front must be input.
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > author blueprint loaders around west box'`
+
+## FND-0017 - CLOSED (plan scrapped 2026-09-27, see FND-0018): plan C S0 host probes (packer as belt-like entity, E-10)
+
+Measured 2026-09-27 on dev-vm 2.0.77 (`tests/game/test_probe_v2.lua`, test-env mod hosts, run single, report via error). Hosts: A `sushi-probe-belt` (turbo belt copy), B `sushi-probe-lane` (copy of hidden base `lane-splitter`, present in 2.0.77 + 2.1.20 data).
+- A: identical to plain belt for belt/underground/splitter/loader behind, inserter drops (far lane), output into belt, side-load onto belt/underground, underground, splitter, loader, inserter pick. Accepts side input -> violates E-10.
+- B: refuses belt pushing in from side (side belt keeps items) -> fits E-10. Lines 1/2 input (len 0.699, lanes kept, inserter east -> 1, west -> 2), 3/4 output (len 0.5). Items rest on 1/2, then cross to 3/4 where lane-splitter logic mixes lanes (left iron ended on 4 after 90 ticks). All outputs work like belt.
+- BLOCKER: `entity.active = false` accepted on both, but belt behind + host emptied within 120 ticks -> cannot stop flow when box full (F-3); front belt not watched, "passed through" inferred.
+- Not probed: drill, recycler, player drop, circuit/GUI on host, save/load, bench.
+Next (author decides): probe 1 circuit-disable host condition set by script; probe 2 parked plug item at input line end; or option 3 accept bounded overflow.
+
+## FND-0018 - CLOSED, plan scrapped: plan B3 probes (lane-splitter base + companion chest + companion belt)
+
+Measured 2026-09-27 on dev-vm, 2.0.77 + 2.1.20 identical except recycler item split (`tests/game/test_probe_b3.lua`, NOT in index; run with temporary index entry, report via error). Author scrapped v2 after report ("scrap the plan, we publish the current version"), 2026-09-27.
+- Companion belt IMPOSSIBLE: load error both versions, `entity prototype "sushi-probe-lane" (lane-splitter) collision_mask ... must collide with entity prototype "sushi-probe-cbelt" (transport-belt)`. Engine: every belt-connectable must collide with every transport-belt (also cbelt with empty mask vs `transport-belt`).
+- Lane-splitter base at runtime: `splitter_filter` and `splitter_input_priority` / `splitter_output_priority` accepted (no GUI); `get_or_create_control_behavior()` nil, no wire connector; `disabled_by_script = true` reads back false; `rotatable` true.
+- Base + companion chest (empty collision mask, `selection_priority` 60) share tile either order; belt behind feeds base, side belt refused; `update_selected_entity` picks chest; red wire + read contents native (`iron=7`); `player.opened = chest` works.
+- Companion chest STEALS drops: inserter `drop_target` = chest (2 of 3 copper in chest after 150 ticks); burner + electric drill into chest; recycler partly chest, partly base output lines 3/4; `spill_item_stack{allow_belts=true}` lands on output lines 3/4. Chest `set_bar(1)` also blocks script `insert` (0) and inserter waits. -> fails E-10.
+- Unpacked pass-through through lane-splitter SWAPS lanes (iron in left -> out right).
+- Stop when full: `disabled_by_script` no effect (4 items to front in 600 ticks); fast-replace swap to `speed = 1/256` copy keeps items but still passes them; fast-replace swap to unlinked `linked-belt` copy (`allow_side_loading=false`) facing forward stops flow (0 to front in 610 ticks, lanes kept) - item conservation NOT checked (only 1 of 2 feed belts counted, 12 of 16 untracked). Facing backward disconnects from belt behind. `linked_belt_type` create param ignored (always `input`).
+- Not probed: save/load, bench.

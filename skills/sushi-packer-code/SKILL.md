@@ -3,7 +3,7 @@ name: sushi-packer-code
 description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking box mod: requirements contract, frozen seams, lanes run single offline mock-based Lua tests only, headless Factorio only at integrator merge and release, API in both versions only, no push from VM. Read before editing prototypes/, scripts/, tests/, control.lua, data.lua, or claiming anything about this repo."
 ---
 
-**v0.2 - 26 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
+**v0.3 - 27 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
 
 **Canonical copy is `skills/sushi-packer-code/` in this repo.** Live copy `~/.claude/skills/sushi-packer-code` installed by `make skill-install` from clean `main` only. Edit live copy and SessionStart audit report drift. Shape copied from `local-transcriber-code`; lane rules follow shared `codex-tasks`. Requirements file in docs outranks this skill; when they disagree, requirements win and this skill gets fixed on next round by integrator.
 
@@ -12,7 +12,7 @@ description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking bo
 | State | Rules |
 |---|---|
 | Machine check | SP-01 (`tests/offline/test_guard.lua`, `tests/game/test_guard.lua`), SP-02 (`tools/run_tests.sh` refuses non-test `T`, and refuses `tests/game/*` and `--full` when `LANE_RUN_ID` is set) |
-| Human checklist | SP-03 .. SP-09 |
+| Human checklist | SP-03 .. SP-10 |
 
 SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which calls it): refuses file or dir, one-test mode fails unless exactly one test ran and passed, and under `LANE_RUN_ID` (set by `lane_run` for engine and checks) refuses every headless run. Lane calling Factorio binary or `lua5.2 tests/offline/run.lua <file>` direct meets no stop, only task-file ban and reviewer read of lane log. Integrator greps lane log for `factorio`, `make test ` and bare runner calls before merge. Green lint prove copy match only, never rule read or obeyed.
 
@@ -30,6 +30,7 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 - **SP-07** **No base-game file in mod.** Graphics only from `graphics/` (copied from `~/share/sushi-packer/mod-graphics/graphics/`). Never redraw unless author asks.
 - **SP-08** **No push from VM.** Operator pushes from laptop via publish boxes (`operator-blocks`). Commit in worktree, `git merge --ff-only` into `~/sushi-packer-mod`.
 - **SP-09** **Requirement IDs are progress.** Report every ID PASS / FAIL / NOT-TESTED with test name in `docs/REQ-STATUS.md`. Never "works" without run.
+- **SP-10** **Probe files (report via `error()`) stay out of `tests/game/index.lua`.** Run: add temporary index entry, `make test-one`, remove entry before commit. Every filtered output keeps `Tests:` line; `0 passed ... skipped` = probe never ran (friction log, 2026-09-27).
 
 | Reference | Read when |
 |---|---|
