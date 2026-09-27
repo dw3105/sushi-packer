@@ -75,17 +75,17 @@ describe("perf", function()
     circuit.evaluate=old.evaluate; require("scripts.led").set=old.set
   end
   it("yellow box visited every 8 ticks", function()
-    local r,c,o=tick_fixture("yellow",1); for t=1,16 do r.next_poll=0; tick.on_tick({tick=t}) end
+    local r,c,o=tick_fixture("yellow",1); core.accept(r.box,"iron","normal",1,1,100,0,false); for t=1,16 do tick.on_tick({tick=t}) end
     eq(c.pull,2); restore(o)
   end)
   it("turbo box visited every 2 ticks", function()
-    local r,c,o=tick_fixture("turbo",1); for t=1,10 do r.next_poll=0; tick.on_tick({tick=t}) end
+    local r,c,o=tick_fixture("turbo",1); core.accept(r.box,"iron","normal",1,1,100,0,false); for t=1,10 do tick.on_tick({tick=t}) end
     eq(c.pull,5); restore(o)
   end)
   it("visits staggered by unit number", function()
-    local r,c,o=tick_fixture("yellow",1); local other={}; for k,v in pairs(r) do other[k]=v end
+    local r,c,o=tick_fixture("yellow",1); core.accept(r.box,"iron","normal",1,1,100,0,false); local other={}; for k,v in pairs(r) do other[k]=v end
     other.unit_number=2; other.entity={valid=true,unit_number=2,force=r.entity.force,get_inventory=r.entity.get_inventory}; other.box=core.new_box(); other.in_credit={0,0}; other.out_credit={0,0}
-    storage.boxes[2]=other; for t=1,8 do r.next_poll=0; other.next_poll=0; tick.on_tick({tick=t}) end
+    core.accept(other.box,"iron","normal",1,1,100,0,false); storage.boxes[2]=other; for t=1,8 do tick.on_tick({tick=t}) end
     eq(c.pull_unit[1],1); eq(c.pull_unit[2],1); eq(other.in_credit,{1,1}); eq(r.in_credit,{1,1}); restore(o)
   end)
   it("credits per visit keep tier rate over 800 ticks", function()
@@ -94,7 +94,7 @@ describe("perf", function()
       belt_io.push=function(_,_,p) pushed=pushed+p.count; return p.count end
       local total=800; local amount=N.TIER[tier].lane_rate*total
       core.adopt_external(r.box,"iron","normal",1000,1000,1); core.flush_partials(r.box,1); c.inv.insert({name="iron",quality="normal",count=1000})
-      for t=1,total do r.next_poll=0; tick.on_tick({tick=t}) end
+      for t=1,total do tick.on_tick({tick=t}) end
       ok(pushed <= amount+2, tier.." exceeded rate"); ok(pushed >= amount-2, tier.." below rate")
       restore(o)
     end

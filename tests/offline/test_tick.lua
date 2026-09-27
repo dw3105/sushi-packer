@@ -45,6 +45,50 @@ end
 local function run(t, rec) if rec then rec.next_poll=0 end; tick.on_tick({tick=t or 1}) end
 
 describe("tick", function()
+ it("wakes on eta tick not on cadence", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); local calls=0
+   belt_io.speed=function() return 0.1 end
+   belt_io.pull=function() calls=calls+1; return {1,0},{3,nil} end
+   tick.on_tick({tick=7}); eq(calls,1); eq(r.next_poll,10)
+   tick.on_tick({tick=9}); eq(calls,1); tick.on_tick({tick=10}); eq(calls,2)
+   belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
+ it("eta zero never wakes early", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); local calls=0
+   belt_io.speed=function() return nil end
+   belt_io.pull=function() calls=calls+1; return {0,0},{0,nil} end
+   tick.on_tick({tick=7}); eq(r.next_poll,37); tick.on_tick({tick=8}); eq(calls,1)
+   belt_io.pull=o.pull; belt_io.speed=nil; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
+ it("idle sleep shorter than tile crossing", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); belt_io.speed=function() return 0.2 end
+   belt_io.pull=function() return {0,0},{nil,nil} end
+   tick.on_tick({tick=7}); eq(r.next_poll,11)
+   belt_io.pull=o.pull; belt_io.speed=nil; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
+ it("credit accrues by elapsed ticks", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); r.last_poll=10; r.next_poll=14
+   belt_io.speed=function() return nil end
+   belt_io.pull=function() return {0,0},{nil,nil} end
+   tick.on_tick({tick=14}); eq(r.in_credit,{0.5,0.5}); eq(r.out_credit,{0.5,0.5})
+   belt_io.pull=o.pull; belt_io.speed=nil; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
+ it("rate cap holds with early wakes", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); local pulled={0,0}
+   core.accept(r.box,"iron","normal",1,1,1000,0,false)
+   belt_io.speed=function() return nil end
+   belt_io.pull=function(_,budget) local got={0,0}; for i=1,2 do got[i]=math.min(1,budget[i]); pulled[i]=pulled[i]+got[i] end; return got,{1,1} end
+   for t=1,600 do tick.on_tick({tick=t}) end
+   for i=1,2 do ok(pulled[i] <= N.TIER[r.tier].lane_rate*600+2) end
+   belt_io.pull=o.pull; belt_io.speed=nil; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
+ it("old rec without last_poll works", function()
+   local r,inv,f,p,b,v,l,o=fixture("yellow"); r.last_poll=nil; r.next_poll=nil
+   belt_io.speed=function() return nil end
+   belt_io.pull=function() return {0,0},{nil,nil} end
+   tick.on_tick({tick=7}); ok(r.last_poll==7); eq(r.next_poll,37)
+   belt_io.pull=o.pull; belt_io.speed=nil; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
+ end)
  it("timeout ticks custom and global", function()
    local rec=fixture(); rec.settings.timeout_mode="custom"; rec.settings.timeout_s=3; eq(tick.timeout_ticks(rec),180); rec.settings.timeout_mode="global"; settings.global[N.SETTING_TIMEOUT].value=7; eq(tick.timeout_ticks(rec),420)
  end)
@@ -64,7 +108,7 @@ describe("tick", function()
  it("led follows core state", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",1,100,1); run(1,r); eq(l[#l].state,core.led_state(r.box)); eq(l[#l].visible,true); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
  it("opened box reconciles next tick", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",3,100,1); inv.insert({name="iron",quality="normal",count=1}); game.connected_players={{opened=r.entity}}; run(1,r); eq(r.box.stored_count,1); eq(inv.get_contents(),{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
  it("closed box reconciles every 60 ticks", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",3,100,1); inv.insert({name="iron",quality="normal",count=1}); run(58,r); eq(r.box.stored_count,3); run(59,r); eq(r.box.stored_count,1); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("idle box sleeps 30 ticks", function() local r,inv,f,p,b,v,l,o=fixture(); run(7,r); eq(r.next_poll,37); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
+ it("idle box sleeps 30 ticks", function() local r,inv,f,p,b,v,l,o=fixture(); belt_io.speed=function() return nil end; run(7,r); eq(r.next_poll,37); belt_io.speed=nil; belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
  it("belt stack computed when cache empty", function() local r,inv,f,p,b,v,l,o=fixture(); r.entity.force.belt_stack_size_bonus=2; core.accept(r.box,"iron","normal",1,4,4,1,false); core.flush_partials(r.box,1); inv.insert({name="iron",quality="normal",count=4}); run(7,r); eq(storage.belt_stack[1],3); eq(p[1],{{name="iron",quality="normal",count=3}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
  it("releases at belt stack", function() local r,inv,f,p,b,v,l,o=fixture("turbo"); storage.belt_stack[1]=4; local arrivals=0; belt_io.pull=function(_,budget,sink) if budget[1]>0 and arrivals<4 then arrivals=arrivals+1; sink("iron","normal",1,1); return {1,0} end; return {0,0} end; for _,t in ipairs({1,3,5,7}) do run(t,r) end; eq(p[1],{{name="iron",quality="normal",count=4}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
  it("belt stack 1 passes through", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=1; f[1]={name="iron",quality="normal",count=1}; run(7,r); eq(p[1],{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
