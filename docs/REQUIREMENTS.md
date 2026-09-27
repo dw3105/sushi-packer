@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9).
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9). v7 (author 2026-09-27): O-3 belt stack follows research up to engine max; E-10 added, then dropped same day.
 
 ## 1. Target
 
@@ -22,7 +22,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | E-5 | Mining entity returns stored items to player (spill on ground if inventory full). Destroyed entity spills contents on ground. |
 | E-6 | Player GUI shows contents. Player may take items out manually; script state reconciles on next tick. |
 | E-8 | Box marked for deconstruction stops: no input, no output, LED off. Cancel → resumes. |
-| E-10 | Author 2026-09-27: box is functionally equivalent to a belt tile for every input and output (belts, curves, undergrounds, splitters, loaders, linked belts, inserters, miners, machine outputs, player drop; output into belt, underground, splitter, loader, side-load onto belt/underground), lanes exactly as on a belt. ONLY exception: nothing side-loads INTO the box. |
+| E-10 | DROPPED by author 2026-09-27 ("E-10 - drop") after v2 host probes (FND-0017, FND-0018). Was: box works like belt tile for every input/output, no side-load into box. Box keeps v1 belt I/O (E-3, FND-0015, FND-0016). |
 | E-9 | Box item placed over belt replaces that belt (belt + its items to player), like splitter. One way: belt never replaces placed box. |
 | E-7 | `ContainerPrototype` cannot rotate. Rotation must come from 4 container variants (one per direction, swapped by script on build/rotate) or other rotatable host. Choice = Q-8: 4 container variants + rotatable placer entity (item `place_result`, carries direction in hand and in blueprints). |
 
