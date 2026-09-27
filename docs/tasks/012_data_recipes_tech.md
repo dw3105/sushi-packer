@@ -1,6 +1,6 @@
 # 012 — data: chained recipes, tech rule, weight (U-1, U-2, U-4)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-012_data_recipes_tech`, branch `lane/012_data_recipes_tech`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-012_data_recipes_tech`, branch `lane/012_data_recipes_tech`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `dev-vm`.
 
 This task is complete in itself. Lanes 013 and 014 run in parallel on other files; you never need them.
 

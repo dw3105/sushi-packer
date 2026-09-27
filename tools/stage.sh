@@ -13,7 +13,10 @@ case "$FV" in
 esac
 OUT=${STAGE_DIR:-$ROOT/build/$FV}
 FACTORIO=${FACTORIO_ROOT:-$HOME/factorio-$FV/factorio}
-test -x "$FACTORIO/bin/x64/factorio" || { echo "stage: no Factorio at $FACTORIO (make factorio FV=$FV)" >&2; exit 2; }
+# release zip needs no Factorio (GitHub Actions runner); test staging does (mod-list + config.ini).
+if [ "$MODE" != release ]; then
+  test -x "$FACTORIO/bin/x64/factorio" || { echo "stage: no Factorio at $FACTORIO (make factorio FV=$FV)" >&2; exit 2; }
+fi
 MOD="$OUT/mods/sushi-packer_$VER"
 rm -rf "$OUT/mods/sushi-packer_"*
 mkdir -p "$MOD" "$OUT/write"
@@ -30,6 +33,7 @@ if mode == "release":
     d["dependencies"] = [dep for dep in d.get("dependencies", []) if "factorio-test" not in dep]
 json.dump(d, open(p, "w"), indent=2)
 PY
+if [ "$MODE" = release ] && [ ! -d "$FACTORIO/data" ]; then echo "$MOD"; exit 0; fi
 # Enable every bundled data mod present in this build (2.1 adds recycler) plus ours and any extra zips in mods/.
 python3 - "$FACTORIO/data" "$OUT/mods" <<'PY'
 import json, os, sys

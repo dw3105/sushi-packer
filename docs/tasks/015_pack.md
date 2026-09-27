@@ -1,6 +1,6 @@
 # 015 — pack at belt stack, quality filter rule, decon stop (C-2, O-5, P-1, E-8)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-015_pack`, branch `lane/015_pack`, base tag `lanes-base-1.2`, merge target `int/v1.2`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-015_pack`, branch `lane/015_pack`, base tag `lanes-base-1.2`, merge target `int/v1.2`. Host `dev-vm`.
 
 This task is complete in itself. Lanes 016, 017, 018 run in parallel on other files; you never need them.
 

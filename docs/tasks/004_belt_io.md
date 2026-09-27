@@ -1,6 +1,6 @@
 # 004 — belt I/O adapter (belt_io)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-004_belt_io`, branch `lane/004_belt_io`, base tag `lanes-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-004_belt_io`, branch `lane/004_belt_io`, base tag `lanes-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Other modules are built by other lanes against the same frozen contract; you never need them.
 

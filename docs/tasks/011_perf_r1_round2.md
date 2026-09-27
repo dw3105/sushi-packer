@@ -1,6 +1,6 @@
 # 011 — perf round 2 for R-1: front item read, stack size cache, core key index, LED skip
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-011_perf_r1_round2`, branch `lane/011_perf_r1_round2`, base tag `wave4-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-011_perf_r1_round2`, branch `lane/011_perf_r1_round2`, base tag `wave4-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself.
 

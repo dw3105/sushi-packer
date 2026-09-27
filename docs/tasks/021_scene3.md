@@ -1,6 +1,6 @@
 # 021 — scene v3: box centered, machinery off frame, bottom pair one tile upstream (U-8)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-021_scene3`, branch `lane/021_scene3`, base tag `lanes-base-1.4`, merge target `int/v1.4`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-021_scene3`, branch `lane/021_scene3`, base tag `lanes-base-1.4`, merge target `int/v1.4`. Host `dev-vm`.
 
 This task is complete in itself. Lane 020 (files `scripts/tick.lua`, `scripts/belt_io.lua`, their offline tests, `tests/offline/test_perf*.lua`) runs in parallel on other files; you never need it.
 

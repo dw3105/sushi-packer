@@ -1,6 +1,6 @@
 # 002 — tiers and data: all four tiers, recipes, techs, locale
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-002_tiers_and_data`, branch `lane/002_tiers_and_data`, base tag `lanes-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-002_tiers_and_data`, branch `lane/002_tiers_and_data`, base tag `lanes-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Other modules are built by other lanes against the same frozen contract; you never need them.
 

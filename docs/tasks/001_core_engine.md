@@ -1,6 +1,6 @@
 # 001 — core engine: pure accumulate/release engine (scripts/core.lua)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-001_core_engine`, branch `lane/001_core_engine`, base tag `lanes-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-001_core_engine`, branch `lane/001_core_engine`, base tag `lanes-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Other modules are built by other lanes against the same frozen contract; you never need them.
 

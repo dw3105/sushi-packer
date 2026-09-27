@@ -13,7 +13,7 @@ Factorio mod, two builds from one source: 2.0 (`0.1.x`) and 2.1 (`0.2.x`), hard 
 
 | Machine | Who | May |
 |---|---|---|
-| `legalcopilot-dev` (this VM, 4 vCPU, 15 GB, shared) | agents, codex lanes | edit, single tests under gateslot, commit in worktree. Never `git push`, never `make release`/`install` in `~/skills` unasked |
+| `dev-vm` (this VM, 4 vCPU, 15 GB, shared) | agents, codex lanes | edit, single tests under gateslot, commit in worktree. Never `git push`, never `make release`/`install` in `~/skills` unasked |
 | operator laptop | operator | `gh repo create`, `git push`, play-test in real game, mod portal downloads (login) |
 
 Headless Factorio: `~/factorio-2.0/factorio` (2.0.77), `~/factorio-2.1/factorio` (2.1.20). Graphics source: `~/share/sushi-packer/mod-graphics/` (already copied to `graphics/`, never redraw).

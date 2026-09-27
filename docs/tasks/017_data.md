@@ -1,6 +1,6 @@
 # 017 — names, menu row, Factoriopedia + tip simulation data, belt-group placer, migration (U-7, U-8, E-9)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-017_data`, branch `lane/017_data`, base tag `lanes-base-1.2`, merge target `int/v1.2`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-017_data`, branch `lane/017_data`, base tag `lanes-base-1.2`, merge target `int/v1.2`. Host `dev-vm`.
 
 This task is complete in itself. Lanes 015, 016, 018 run in parallel on other files; you never need them.
 

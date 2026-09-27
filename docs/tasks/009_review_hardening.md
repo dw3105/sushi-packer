@@ -1,6 +1,6 @@
 # 009 — review hardening: blueprint rename, front belt direction, circuit enable
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-009_review_hardening`, branch `lane/009_review_hardening`, base tag `wave2-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-009_review_hardening`, branch `lane/009_review_hardening`, base tag `wave2-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Lane 008 runs in parallel on other files; you never need it.
 

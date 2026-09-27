@@ -1,0 +1,30 @@
+# Tag push (v*) -> offline tests -> both release zips -> GitHub Release with zips attached.
+# Mod portal upload stays manual (author).
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline tests
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.2
+          status=0
+          for f in tests/offline/test_*.lua; do lua5.2 tests/offline/run.lua "$f" || status=1; done
+          exit $status
+      - name: Build zips
+        run: tools/make_zip.sh 2.0 && tools/make_zip.sh 2.1 && (cd build && sha256sum sushi-packer_0.*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v20=$(sed -n 's/.*2\.0) VER=\([0-9.]*\).*/\1/p' tools/stage.sh)
+          v21=$(sed -n 's/.*2\.1) VER=\([0-9.]*\).*/\1/p' tools/stage.sh)
+          awk 'NR>1 && /^-{99}$/ {exit} NR>1' changelog.txt > notes.md
+          gh release create "$GITHUB_REF_NAME" "build/sushi-packer_$v20.zip" "build/sushi-packer_$v21.zip" build/SHA256SUMS.txt \
+            --title "Sushi Packer $v20 (Factorio 2.0) / $v21 (Factorio 2.1)" --notes-file notes.md

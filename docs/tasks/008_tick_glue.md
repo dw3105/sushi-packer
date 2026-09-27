@@ -1,6 +1,6 @@
 # 008 — tick glue (scripts/tick.lua), offline mocks
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-008_tick_glue`, branch `lane/008_tick_glue`, base tag `wave2-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-008_tick_glue`, branch `lane/008_tick_glue`, base tag `wave2-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Lane 009 runs in parallel on other files; you never need it.
 

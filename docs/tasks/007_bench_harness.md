@@ -1,6 +1,6 @@
 # 007 — bench harness for R-1 (200 boxes, script ms/tick)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-007_bench_harness`, branch `lane/007_bench_harness`, base tag `lanes-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-007_bench_harness`, branch `lane/007_bench_harness`, base tag `lanes-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Other modules are built by other lanes against the same frozen contract; you never need them.
 

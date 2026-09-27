@@ -1,6 +1,6 @@
 # 020 — smooth pull: box wakes when front item reaches belt end (no stutter)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-020_smooth`, branch `lane/020_smooth`, base tag `lanes-base-1.4`, merge target `int/v1.4`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-020_smooth`, branch `lane/020_smooth`, base tag `lanes-base-1.4`, merge target `int/v1.4`. Host `dev-vm`.
 
 This task is complete in itself. Lane 021 (scene, files `scripts/sim.lua`, prototypes, `tests/offline/test_sim.lua`, `tests/offline/test_data.lua`) runs in parallel on other files; you never need it.
 

@@ -1,6 +1,6 @@
 # 013 — upgrade keeps box state (U-3)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-013_upgrade_state`, branch `lane/013_upgrade_state`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-013_upgrade_state`, branch `lane/013_upgrade_state`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `dev-vm`.
 
 This task is complete in itself. Lanes 012 and 014 run in parallel on other files; you never need them.
 

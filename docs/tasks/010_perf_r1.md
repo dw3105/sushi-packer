@@ -1,6 +1,6 @@
 # 010 — perf for R-1: cached belts, circuit early return, per-tier cadence
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-010_perf_r1`, branch `lane/010_perf_r1`, base tag `wave3-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-010_perf_r1`, branch `lane/010_perf_r1`, base tag `wave3-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself.
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Release zip for one version: build/sushi-packer_<ver>.zip (no tests/). usage: tools/make_zip.sh <2.0|2.1>
-# Python zipfile: no `zip` binary on legalcopilot-dev.
+# Python zipfile: no `zip` binary on dev-vm.
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$ROOT/build/zip-$1

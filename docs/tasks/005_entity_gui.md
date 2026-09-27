@@ -1,6 +1,6 @@
 # 005 — entity GUI (gui)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-005_entity_gui`, branch `lane/005_entity_gui`, base tag `lanes-base`, merge target `int/v1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-005_entity_gui`, branch `lane/005_entity_gui`, base tag `lanes-base`, merge target `int/v1`. Host `dev-vm`.
 
 This task is complete in itself. Other modules are built by other lanes against the same frozen contract; you never need them.
 

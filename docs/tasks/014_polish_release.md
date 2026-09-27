@@ -1,6 +1,6 @@
 # 014 — polish: locale descriptions, tips, thumbnail, changelog, README, release zip (U-5, U-6)
 
-Repo `sushi-packer-mod`, lane worktree `/home/dev_zaigraev_gmail_com/wt-sushi-packer-014_polish_release`, branch `lane/014_polish_release`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `legalcopilot-dev`.
+Repo `sushi-packer-mod`, lane worktree `~/wt-sushi-packer-014_polish_release`, branch `lane/014_polish_release`, base tag `lanes-base-1.1`, merge target `int/v1.1`. Host `dev-vm`.
 
 This task is complete in itself. Lanes 012 and 013 run in parallel on other files; you never need them.
 
@@ -17,7 +17,7 @@ Do not stop until every item in "What to build" is done and its checks pass.
 - `locale/en/locale.cfg` today: names only (`[item-name]`, `[entity-name]`, `[technology-name]`, `[mod-setting-name]`, `[controls]`). No descriptions, no `[recipe-name]`, no `[mod-name]`.
 - `data.lua` already has `require("prototypes.tips")`; `prototypes/tips.lua` is a stub. Tips prototypes in 2.0/2.1: `{ type = "tips-and-tricks-item-category", name, order }` and `{ type = "tips-and-tricks-item", name, category, order, is_title?, trigger = { type = "research", technology = <name> } }`; locale sections `[tips-and-tricks-item-name]`, `[tips-and-tricks-item-description]`, `[tips-and-tricks-item-category-name]`. Offline fixture `tests/offline/fake_data.lua` (`F.reset()` installs global `data`; then `dofile("prototypes/tips.lua")`; read `F.raw["tips-and-tricks-item"]`).
 - `tools/stage.sh:10-11` versions `0.1.0`/`0.2.0`; `tools/load_check.sh:9` same; `info.json:3` `"version": "0.1.0"`; `info.json:8` deps include `"? factorio-test"` and stage.sh copies it into release (bug). stage.sh already copies `changelog.txt` and `thumbnail.png` when present (`:20`). `STAGE_DIR=<dir> tools/stage.sh <2.0|2.1> release` stages to `<dir>/mods/sushi-packer_<ver>/` and prints that path (it checks Factorio binary exists, never starts it).
-- No PIL on `legalcopilot-dev`: `tools/thumb.py` uses only `zlib` + `struct` (decode 8-bit RGBA non-interlaced PNG incl. filter types 0-4, write RGBA PNG). Source sprites `graphics/entity/sushi-packer/<tier>/sushi-packer-<tier>-north.png` are 128×128 RGBA.
+- No PIL on `dev-vm`: `tools/thumb.py` uses only `zlib` + `struct` (decode 8-bit RGBA non-interlaced PNG incl. filter types 0-4, write RGBA PNG). Source sprites `graphics/entity/sushi-packer/<tier>/sushi-packer-<tier>-north.png` are 128×128 RGBA.
 - Factorio changelog format: each block starts with a line of exactly 99 `-`, then `Version: x.y.z`, `Date: YYYY-MM-DD`, category lines indented 2 spaces ending `:` (e.g. `  Features:`), entries indented 4 spaces starting `- `.
 - Offline runner: `describe`, `it`, `eq(found, expected, msg)`, `ok(cond, msg)` (`tests/offline/run.lua`); lua5.2 has `io.open`, `io.popen`, `string.byte`.
 
