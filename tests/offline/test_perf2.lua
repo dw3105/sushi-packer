@@ -14,7 +14,10 @@ describe("perf2", function()
     })
     function line.can_insert_at(pos) return not (pos == 0 and at_exit) end
     function line.remove_item(x) line.removed[#line.removed + 1] = x; return x.count end
-    function line.get_detailed_contents() error("detailed contents must not be read") end
+    function line.get_detailed_contents()
+      if at_exit then error("detailed contents must not be read for an item at exit") end
+      return {{position=0.5}}
+    end
     return line
   end
   local function pull_rec(line)

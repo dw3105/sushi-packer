@@ -43,10 +43,17 @@ describe("perf", function()
     belt_io.pull(r,{1,0},function() return 0 end); belt.direction=4; game.tick=61
     belt_io.pull(r,{1,0},function() return 0 end); eq(calls,2); eq(r.belt.behind,nil)
   end)
-  it("pull with zero budget makes no belt calls", function()
+  it("pull with zero budget reads eta without calling sink", function()
     defines={direction={north=0,east=4,south=8,west=12}}; game={tick=1}
-    local calls=0; local r=cache_rec({find_entities_filtered=function() calls=calls+1; return {} end})
-    eq(belt_io.pull(r,{0,0},function() return 0 end),{0,0}); eq(calls,0)
+    prototypes={entity={ ["yellow-belt"]={belt_speed=0.03125} }}
+    local belt=found_belt(); belt.name="yellow-belt"
+    local line={}; setmetatable(line,{__len=function() return 1 end}); line[1]={name="iron",count=1}
+    function line.can_insert_at() return true end
+    function line.get_detailed_contents() return {{position=0.25}} end
+    function belt.get_transport_line() return line end
+    local r=cache_rec({find_entities_filtered=function() return {belt} end})
+    local calls=0; local got,eta=belt_io.pull(r,{0,0},function() calls=calls+1; return 0 end)
+    eq(got,{0,0}); eq(eta,{8,8}); eq(calls,0)
   end)
 
   local function tick_fixture(tier, unit)
