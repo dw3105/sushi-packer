@@ -20,7 +20,7 @@ fi
 MOD="$OUT/mods/sushi-packer_$VER"
 rm -rf "$OUT/mods/sushi-packer_"*
 mkdir -p "$MOD" "$OUT/write"
-for f in info.json data.lua settings.lua control.lua changelog.txt thumbnail.png; do
+for f in info.json data.lua settings.lua control.lua changelog.txt thumbnail.png LICENSE; do
   test -e "$ROOT/$f" && cp "$ROOT/$f" "$MOD/"
 done
 for d in scripts prototypes locale graphics; do cp -r "$ROOT/$d" "$MOD/"; done

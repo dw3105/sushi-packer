@@ -28,3 +28,7 @@ The source supports two builds: Factorio 2.0 uses mod version `0.1.7`; Factorio 
 ## Mod portal assets
 
 `portal/description.md` is the mod portal description. `portal/logo-512.png` and `thumbnail.png` (144×144, shipped in the zip) come from `python3 tools/logo.py`, drawn only from this mod's own box sprite.
+
+## License
+
+MIT — see `LICENSE`.
