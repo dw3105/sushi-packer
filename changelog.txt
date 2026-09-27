@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.4
+Date: 2026-09-27
+  Bugfixes:
+    - Box no longer makes items stop at belt end: it wakes exactly when next item arrives (no stutter).
+  Changes:
+    - Factoriopedia and tip scene show only belt, box, belt; box centered, feeding machinery off screen.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.3
 Date: 2026-09-27
   Changes:
@@ -30,6 +38,14 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.4
+Date: 2026-09-27
+  Bugfixes:
+    - Box no longer makes items stop at belt end: it wakes exactly when next item arrives (no stutter).
+  Changes:
+    - Factoriopedia and tip scene show only belt, box, belt; box centered, feeding machinery off screen.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.3
