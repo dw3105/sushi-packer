@@ -58,7 +58,7 @@ describe("perf", function()
 
   local function tick_fixture(tier, unit)
     local old={pull=belt_io.pull,push=belt_io.push,bss=belt_io.belt_stack_size,evaluate=require("scripts.circuit").evaluate,set=require("scripts.led").set}
-    defines={inventory={chest=1},direction={north=0,east=4,south=8,west=12},wire_connector_id={circuit_red=1,circuit_green=2}}
+    defines={inventory={chest=1},gui_type={entity=1,item=3},direction={north=0,east=4,south=8,west=12},wire_connector_id={circuit_red=1,circuit_green=2}}
     settings={global={[N.SETTING_TIMEOUT]={value=0}}}; prototypes={item={iron={stack_size=100}}}
     local calls={pull=0,pull_unit={},push=0,led=0,inventory=0,players=0}
     local inv={contents={}}
@@ -112,7 +112,7 @@ describe("perf", function()
   end)
   it("opened set built once per tick", function()
     local r,c,o=tick_fixture("yellow",1); local n=0
-    game.connected_players=setmetatable({{opened={unit_number=99}}},{__pairs=function(t) n=n+1; return next,t,nil end})
+    game.connected_players=setmetatable({{opened={unit_number=99},opened_gui_type=1}},{__pairs=function(t) n=n+1; return next,t,nil end})
     for t=1,5 do r.next_poll=0; tick.on_tick({tick=t}) end
     eq(n,5); restore(o)
   end)

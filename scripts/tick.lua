@@ -70,8 +70,10 @@ end
 function M.on_tick(e)
   local opened = {}
   for _, player in pairs(game.connected_players) do
-    local entity = player.opened
-    if entity and entity.unit_number then opened[entity.unit_number] = true end
+    if player.opened_gui_type == defines.gui_type.entity then  -- opened may be item stack (blueprint), gui, equipment
+      local entity = player.opened
+      if entity and entity.valid and entity.unit_number then opened[entity.unit_number] = true end
+    end
   end
   for _, rec in pairs(storage.boxes) do
     if not rec.entity.valid then
