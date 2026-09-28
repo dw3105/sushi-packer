@@ -86,3 +86,5 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0020 - `lane launch` loop ran lanes one after another
 
 **2026-09-28, v9 S1.** `for l in 024 025 027; do lane.py launch ...; done` blocks per lane (foreground until lane ends); only 024 started. Killed loop shell, relaunched 025 + 027 as separate background calls (~5 min lost). `--deadline 80m` refused (plain seconds). Bucket: tooling. Proposed: `lane launch --help` says it blocks; parallel lanes = one background call each (memory `lane-launch-blocks`).
+
+**Applied 2026-09-28 (author: "all 4"):** FRC-0015 -> `codex-tasks:CX-31` + SP-02 v0.5; FRC-0017 -> `shared-host:SH-31`; FRC-0018 -> `talking-to-operator:OP-52`, `OP-53` (token box also broke existing `OP-50`: asked secret via `read -s`); FRC-0019 -> `shipping-and-integration:SI-14`. Estate rules on `~/skills` branch `ledger/sushi-v19-0928`, not merged or installed.
