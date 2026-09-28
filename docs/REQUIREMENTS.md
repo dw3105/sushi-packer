@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9). v7 (author 2026-09-27): O-3 belt stack follows research up to engine max; E-10 added, then dropped same day. v8 (author 2026-09-28, plan approved): lanes own 24 slots each (L-2, L-3, F-1, F-3, F-4, V-4), one item stack per (item, quality, lane) (C-6).
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9). v7 (author 2026-09-27): O-3 belt stack follows research up to engine max; E-10 added, then dropped same day. v8 (author 2026-09-28, plan approved): lanes own 24 slots each (L-2, L-3, F-1, F-3, F-4, V-4), one item stack per (item, quality, lane) (C-6). v9 (author 2026-09-28, plan approved; portal suggestion by Ziktofel): modded belt tiers §17 (M-1..M-9).
 
 ## 1. Target
 
@@ -18,7 +18,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | E-1 | 1x1 entity, rotatable (4 directions). Input side = back, output side = front, like belt segment. |
 | E-2 | Built as scripted 1x1 container with 48-slot inventory (steel chest size). Lua moves items; no hidden loaders. |
 | E-3 | Takes items from belt tile behind it (lane-preserving, see §4). Writes items onto belt tile in front. No belt in front → output stalls; input continues until storage full (§5). |
-| E-4 | Tier per belt: yellow, red, blue, turbo. Tier sets max input and output rate = matching belt throughput. Tier does NOT set belt stack size (see O-3). |
+| E-4 | Tier per belt: yellow, red, blue, turbo, plus modded tiers (§17). Tier sets max input and output rate = matching belt throughput. Tier does NOT set belt stack size (see O-3). |
 | E-5 | Mining entity returns stored items to player (spill on ground if inventory full). Destroyed entity spills contents on ground. |
 | E-6 | Player GUI shows contents. Player may take items out manually; script state reconciles on next tick. |
 | E-8 | Box marked for deconstruction stops: no input, no output, LED off. Cancel → resumes. |
@@ -95,11 +95,11 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | ID | Requirement |
 |----|-------------|
 | U-1 | One tech per tier `sushi-packer-<tier>`. Prerequisites: matching belt tech + previous tier tech + every tech whose effects unlock an ingredient recipe (scanned from `data.raw.technology` at data stage). Cost: `count` = belt tech count × 1.5, `time` = belt tech time, `ingredients` = union of science packs over direct prerequisites. |
-| U-2 | Recipe per tier, chained, crafted in `crafting` category (hand + assembler). yellow 30 s: 1 `steel-chest`, 1 `splitter`, 2 `inserter`, 5 `electronic-circuit`. red 45 s: 1 yellow box, 1 `fast-splitter`, 2 `fast-inserter`, 5 `advanced-circuit`. blue 60 s: 1 red box, 1 `express-splitter`, 2 `bulk-inserter`, 5 `processing-unit`. turbo 120 s: 1 blue box, 1 `turbo-splitter`, 2 `stack-inserter`, 2 `quantum-processor`. |
-| U-3 | Upgrade planner: yellow → red → blue → turbo, same direction. Upgraded box keeps settings, stored items, pass-through hold, circuit wires. |
+| U-2 | Recipe per tier, chained, crafted in `crafting` category (hand + assembler). yellow 30 s: 1 `steel-chest`, 1 `splitter`, 2 `inserter`, 5 `electronic-circuit`. red 45 s: 1 yellow box, 1 `fast-splitter`, 2 `fast-inserter`, 5 `advanced-circuit`. blue 60 s: 1 red box, 1 `express-splitter`, 2 `bulk-inserter`, 5 `processing-unit`. turbo 120 s: 1 blue box, 1 `turbo-splitter`, 2 `stack-inserter`, 2 `quantum-processor`. Modded tiers: M-5. |
+| U-3 | Upgrade planner: yellow → red → blue → turbo (→ modded tiers, M-4), same direction. Upgraded box keeps settings, stored items, pass-through hold, circuit wires. |
 | U-4 | Item weight 20 kg (50 per rocket). No surface conditions (works on space platforms). Space Age recycler recipes exist per tier (auto-generated). |
 | U-5 | Every item, entity, technology, recipe and setting has locale name + description. One tips-and-tricks entry explains lanes and stacks. |
-| U-7 | Names follow vanilla belt series: Sushi packer, Fast sushi packer, Express sushi packer, Turbo sushi packer (internal `sushi-packer`, `fast-sushi-packer`, `express-sushi-packer`, `turbo-sushi-packer`). Own crafting-menu row after belts, sorted yellow, red, blue, turbo. Old names migrated. |
+| U-7 | Names follow vanilla belt series: Sushi packer, Fast sushi packer, Express sushi packer, Turbo sushi packer (internal `sushi-packer`, `fast-sushi-packer`, `express-sushi-packer`, `turbo-sushi-packer`). Own crafting-menu row after belts, sorted yellow, red, blue, turbo, then modded tiers (M-8). Old names migrated. |
 | U-8 | Factoriopedia page and tip show live scene: mixed items in, 4-stacks sorted per lane out, real box logic (simulation `mods`). |
 | U-6 | Release zip ships `thumbnail.png` (144×144), `changelog.txt`; repo has `README.md`. Release `info.json` has no test-only dependency. |
 
@@ -128,7 +128,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | ID | Requirement |
 |----|-------------|
 | G-1 | Design: twin-lane hood (one hood per lane, steel spine), w2-medium wear. |
-| G-2 | Per-tier paint + wear matched to vanilla undergrounds of same tier: yellow 192,150,60 wear 0.65; red 178,52,44 wear 0.50; blue 60,150,200 wear 0.40; turbo 140,176,60 wear 0.60. |
+| G-2 | Per-tier paint + wear matched to vanilla undergrounds of same tier: yellow 192,150,60 wear 0.65; red 178,52,44 wear 0.50; blue 60,150,200 wear 0.40; turbo 140,176,60 wear 0.60. Modded tiers: M-7. |
 | G-3 | Entity sprites HR only: 64 px per tile, `scale = 0.5`, frame 128x128 (2 tiles, room for shadow), tile centre = frame centre, `shift = {0, 0}`. |
 | G-4 | 4 directions (north, east, south, west). Direction = side items leave. Per-direction files + one 4-frame sheet per tier. |
 | G-5 | Separate shadow layer, `draw_as_shadow = true`, same frame size. |
@@ -167,3 +167,17 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 - Events `on_entity_settings_pasted`, `on_player_setup_blueprint`, `on_entity_cloned`, `on_nth_tick` — https://lua-api.factorio.com/latest/events.html
 - Loader prototype (rejected alternative, `max_belt_stack_size`) — https://lua-api.factorio.com/latest/prototypes/LoaderPrototype.html
 - Similar mods: Belt Buffer https://mods.factorio.com/mod/belt_buffer_up, Stacked Items https://mods.factorio.com/mod/stacked-items, Belt Sorter https://mods.factorio.com/mod/beltSorter, Miniloader https://github.com/mspielberg/factorio-miniloader
+
+## 17. Modded belt tiers (v9)
+
+| ID | Requirement |
+|----|-------------|
+| M-1 | Extra tier per supported modded belt (table `N.EXTRA`): Planetaris Arig hyper, Krastorio 2 / K2SO superior, Bob's ultimate, Ultimate Belts Space Age ×5, Better Belts ultra. Tier exists only if its belt prototype exists and is not hidden, and its belt tech exists with science `unit`. Else skipped, logged, no error. |
+| M-2 | Vanilla (no belt mod): exactly 4 tiers; names, recipes, techs same as v8. |
+| M-3 | Extra tiers built in `data-final-fixes`. Supported mods listed as optional dependencies. |
+| M-4 | Order + upgrade chain = belt `speed` ascending after turbo; tie by table order. Own chain; belt `next_upgrade` ignored. |
+| M-5 | Recipe: previous tier box 1, own belt splitter 1, `stack-inserter` 2, `quantum-processor` 2, 120 s. Tech per U-1 with own belt tech. |
+| M-6 | Every tier (vanilla too) rate = live belt prototype speed (E-4, O-4 same meaning); settings that change belt speed followed. Output never above belt rate. Engine places several belt items per tick per lane, full rate up to 270/s (FND-0022). |
+| M-7 | Graphics: same hood as G-1..G-9; paint = mod's own underground-belt icon colour calibrated to G-2 (hue kept, V ×1.21, S +0.06); wear 0.40 unless author changes on preview. |
+| M-8 | Names mirror belt names ("Hyper sushi packer", ...), own row order after turbo. |
+| M-9 | Mod removed from save: its boxes vanish per Factorio rule; no script error. |

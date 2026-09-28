@@ -13,8 +13,9 @@ fi
 FACTORIO=${FACTORIO_ROOT:-$HOME/factorio-$FV/factorio}
 rm -f "$OUT/check.zip"
 if "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$OUT/check.zip" > "$OUT/load.log" 2>&1 \
-   && grep -q "Loading mod sushi-packer" "$OUT/load.log" && ! grep -qiE "error|failed" "$OUT/load.log"; then
-  echo "load-check-$FV-ok"
+   && grep -q "Loading mod sushi-packer" "$OUT/load.log" \
+   && if [ -n "${MODSET:-}" ]; then ! grep -iE "error|failed" "$OUT/load.log" | grep -qi "sushi"; else ! grep -qiE "error|failed" "$OUT/load.log"; fi; then
+  echo "load-check-$FV${MODSET:+-$MODSET}-ok"
 else
-  tail -40 "$OUT/load.log"; echo "load-check-$FV-FAIL"; exit 1
+  tail -40 "$OUT/load.log"; echo "load-check-$FV${MODSET:+-$MODSET}-FAIL"; exit 1
 fi

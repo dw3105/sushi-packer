@@ -48,7 +48,7 @@ describe("perf2", function()
     local old={pull=belt_io.pull,push=belt_io.push,bss=belt_io.belt_stack_size,evaluate=circuit.evaluate,set=led.set}
     defines={inventory={chest=1},direction={north=0,east=4,south=8,west=12},wire_connector_id={circuit_red=1,circuit_green=2}}
     settings={global={[N.SETTING_TIMEOUT]={value=0}}}; local lookups=0
-    prototypes={item=setmetatable({}, {__index=function(_,name) lookups=lookups+1; return {stack_size=100} end})}
+    prototypes={entity=require("tests.offline.belts"),item=setmetatable({}, {__index=function(_,name) lookups=lookups+1; return {stack_size=100} end})}
     local rec={entity={valid=true,unit_number=7,position={x=0,y=0},force={index=1,belt_stack_size_bonus=0},get_inventory=function() return {get_contents=function() return {} end,insert=function(x) return x.count end,remove=function(x) return x.count end} end},unit_number=7,tier="yellow",dir="north",box=core.new_box(),settings={timeout_mode="global",filters={},circuit={}},enabled=true,in_credit={0,0},out_credit={0,0},next_poll=0}
     belt_io.pull=function(_,_,sink) sink("iron","normal",1,1); sink("iron","normal",1,1); return {0,0} end
     belt_io.push=function(_,_,item) return item.count end; belt_io.belt_stack_size=function() return 1 end
@@ -70,7 +70,7 @@ describe("perf2", function()
   it("led set skipped when unchanged", function()
     local old={pull=belt_io.pull,push=belt_io.push,bss=belt_io.belt_stack_size,evaluate=circuit.evaluate,set=led.set}
     defines={inventory={chest=1},direction={north=0,east=4,south=8,west=12},wire_connector_id={circuit_red=1,circuit_green=2}}
-    settings={global={[N.SETTING_TIMEOUT]={value=0}}}; prototypes={item={}}
+    settings={global={[N.SETTING_TIMEOUT]={value=0}}}; prototypes={entity=require("tests.offline.belts"),item={}}
     local rec={entity={valid=true,unit_number=8,position={x=0,y=0},force={index=1,belt_stack_size_bonus=0},get_inventory=function() return {get_contents=function() return {} end} end},unit_number=8,tier="yellow",dir="north",box=core.new_box(),settings={timeout_mode="global",filters={},circuit={}},enabled=true,in_credit={0,0},out_credit={0,0},next_poll=0,led={state="green",visible=true}}
     belt_io.pull=function() return {0,0} end; belt_io.push=function() return 0 end; belt_io.belt_stack_size=function() return 1 end
     circuit.evaluate=function() return true,false end; local calls=0; led.set=function() calls=calls+1 end

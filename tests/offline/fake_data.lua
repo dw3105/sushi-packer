@@ -42,9 +42,66 @@ F.UNLOCK = {
   ["turbo-splitter"] = { "turbo-transport-belt" },
 }
 
+-- v9 S0 fixture (FND-0023, real P1 dumps 2026-09-28): belt-family prototypes per mod set. Vanilla belts always
+-- present after reset(). F.with_mods(set) adds that set's belts, splitters (recipe + item) and belt techs.
+-- Belt speed = tiles/tick (x 480 = items/s). Unit counts/prereqs as dumped; packs trimmed to what cost tests need.
+F.BELTS = {
+  ["transport-belt"] = 0.03125, ["fast-transport-belt"] = 0.0625, ["express-transport-belt"] = 0.09375, ["turbo-transport-belt"] = 0.125,
+}
+local SP, LP, CP, PP, UP = "automation-science-pack", "logistic-science-pack", "chemical-science-pack", "production-science-pack", "utility-science-pack"
+local function unit(count, packs) local ing = {} for _, p in ipairs(packs) do ing[#ing + 1] = { p, 1 } end return { count = count, time = 60, ingredients = ing } end
+-- row: belt, speed, splitter, tech, tech unit, tech prereqs, hidden
+local ROWS = {
+  hyper = { "planetaris-hyper-transport-belt", 0.15625, "planetaris-hyper-splitter", "planetaris-hyper-transport-belt",
+    unit(3000, { SP, LP, CP, PP, "space-science-pack", "metallurgic-science-pack", "planetaris-compression-science-pack" }), { "planetaris-compression-science", "turbo-transport-belt" } },
+  superior = { "kr-superior-transport-belt", 0.1875, "kr-superior-splitter", "kr-logistic-5",
+    unit(2000, { PP, UP, "space-science-pack", "kr-singularity-tech-card" }), { "kr-singularity-tech-card", "turbo-transport-belt" } },
+  advanced = { "kr-advanced-transport-belt", 0.125, "kr-advanced-splitter", "kr-logistic-4", unit(500, { SP, LP, CP, UP }), { "logistics-3" }, true },
+  bob = { "bob-ultimate-transport-belt", 0.15625, "bob-ultimate-splitter", "logistics-5", unit(300, { SP, LP, CP, PP, UP }), { "logistics-4" } },
+  ub1 = { "ultra-fast-belt", 0.1875, "ultra-fast-splitter", "ultra-fast-logistics", unit(300, { SP, LP, CP }), { "logistics-3" } },
+  ub2 = { "extreme-fast-belt", 0.28125, "extreme-fast-splitter", "extreme-fast-logistics", unit(300, { SP, LP, CP, PP }), { "ultra-fast-logistics" } },
+  ub3 = { "ultra-express-belt", 0.375, "ultra-express-splitter", "ultra-express-logistics", unit(400, { SP, LP, CP, PP }), { "extreme-fast-logistics" } },
+  ub4 = { "extreme-express-belt", 0.46875, "extreme-express-splitter", "extreme-express-logistics", unit(400, { SP, LP, CP, PP, UP }), { "ultra-express-logistics" } },
+  ub5 = { "ultimate-belt", 0.5625, "original-ultimate-splitter", "ultimate-logistics", unit(500, { SP, LP, CP, PP, UP }), { "extreme-express-logistics" } },
+  bb = { "BetterBelts_ultra-transport-belt", 0.2, "BetterBelts_ultra-splitter", "BetterBelts_ultra-class", unit(150, { SP, LP, CP, PP }), { "logistics-3" } },
+}
+F.MODSETS = {
+  vanilla = {}, arig = { "hyper" }, hyarion = { "hyper" }, ["arig-off"] = { "hyper" }, k2so = { "superior", "advanced" },
+  ["arig-k2so"] = { "hyper", "superior", "advanced" }, bob = { "bob" }, ubsa = { "ub1", "ub2", "ub3", "ub4", "ub5" }, bb = { "bb" },
+  all = { "hyper", "superior", "advanced", "bob", "ub1", "ub2", "ub3", "ub4", "ub5", "bb" },
+}
+
+local function add_belt(raw, name, speed, hidden)
+  raw["transport-belt"][name] = { type = "transport-belt", name = name, speed = speed, hidden = hidden or nil }
+end
+
+function F.with_mods(set)
+  local raw = F.raw
+  for _, key in ipairs(assert(F.MODSETS[set], "unknown mod set " .. tostring(set))) do
+    local r = ROWS[key]
+    local belt, speed, splitter, tech, u, prereq, hidden = r[1], r[2], r[3], r[4], r[5], r[6], r[7]
+    add_belt(raw, belt, speed, hidden)
+    raw.technology[tech] = { type = "technology", name = tech, prerequisites = deepcopy(prereq), unit = deepcopy(u), hidden = hidden or nil,
+      effects = { { type = "unlock-recipe", recipe = belt }, { type = "unlock-recipe", recipe = splitter } } }
+    for _, n in ipairs({ belt, splitter }) do
+      raw.recipe[n] = { type = "recipe", name = n, enabled = false, hidden = hidden or nil }
+      raw.item[n] = { type = "item", name = n, hidden = hidden or nil }
+    end
+  end
+  if set == "hyarion" then
+    raw.technology["planetaris-hyper-transport-belt"].prerequisites = { "planetaris-polishing-science-pack", "turbo-transport-belt" }
+  end
+  if set == "arig-off" then
+    raw["transport-belt"]["planetaris-hyper-transport-belt"].hidden = true
+    raw.technology["planetaris-hyper-transport-belt"].hidden = true
+  end
+  return F
+end
+
 function F.reset()
   local raw = { technology = {}, recipe = {}, item = {}, container = {}, ["simple-entity-with-owner"] = {}, corpse = {},
-    ["tips-and-tricks-item"] = {}, ["tips-and-tricks-item-category"] = {} }
+    ["tips-and-tricks-item"] = {}, ["tips-and-tricks-item-category"] = {}, ["transport-belt"] = {} }
+  for name, speed in pairs(F.BELTS) do add_belt(raw, name, speed) end
   for name, t in pairs(F.TECH) do
     local tech = deepcopy(t); tech.type = "technology"; tech.name = name; tech.effects = {}
     raw.technology[name] = tech

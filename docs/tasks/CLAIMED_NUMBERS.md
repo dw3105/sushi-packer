@@ -25,3 +25,7 @@
 | `021` | `sushi-packer/agent` | scene v3 off-frame | 2026-09-27 |
 | `022` | `sushi-packer/agent` | v8 lane quota 24+24 | 2026-09-28 |
 | `023` | `sushi-packer/agent` | v8 item cap per lane | 2026-09-28 |
+| `024` | `sushi-packer/agent` | v9 data: modded belt tiers | 2026-09-28 |
+| `025` | `sushi-packer/agent` | v9 rate: live belt speed | 2026-09-28 |
+| `026` | - | v9 runtime names (folded into S0, V9-4, never launched) | 2026-09-28 |
+| `027` | `sushi-packer/agent` | v9 text: locale, README, portal, changelog | 2026-09-28 |

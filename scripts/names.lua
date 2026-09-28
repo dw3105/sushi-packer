@@ -45,10 +45,57 @@ N.INPUT_ROTATE = "sushi-packer-rotate"
 N.INPUT_REVERSE_ROTATE = "sushi-packer-reverse-rotate"
 N.FAST_REPLACE_GROUP = "sushi-packer"
 
--- Reverse lookups: entity name -> {tier, dir}; placer name -> tier.
+-- v9 (REQUIREMENTS §17, author 2026-09-28): extra tiers for modded belts. Row counts only when its belt
+-- prototype exists, is not hidden and its tech has a science unit (M-1); chain order = belt speed, tie by
+-- row order (M-4). Names verified from real prototypes per mod set (FND-0023). paint/wear = G-2 for graphics.
+-- Row: key (tier key = internal prefix), paint RGB + wear (M-7: mod underground icon median, calibrated to G-2
+-- hue kept, V x1.21, S +0.06; hyper = whole-metal median, part is grey), belt, splitter, tech, mod (display), fv.
+N.EXTRA = {
+  { key = "planetaris-hyper", paint = { 179, 158, 150 }, wear = 0.40, belt = "planetaris-hyper-transport-belt", splitter = "planetaris-hyper-splitter",
+    tech = "planetaris-hyper-transport-belt", mod = "Planetaris: Arig", fv = { "2.0", "2.1" } },
+  { key = "bob-ultimate", paint = { 51, 166, 52 }, wear = 0.40, belt = "bob-ultimate-transport-belt", splitter = "bob-ultimate-splitter",
+    tech = "logistics-5", mod = "Bob's Logistics", fv = { "2.0", "2.1" } },
+  { key = "kr-superior", paint = { 140, 44, 189 }, wear = 0.40, belt = "kr-superior-transport-belt", splitter = "kr-superior-splitter",
+    tech = "kr-logistic-5", mod = "Krastorio 2", fv = { "2.0", "2.1" } },
+  { key = "ub-ultra-fast", paint = { 36, 157, 9 }, wear = 0.40, belt = "ultra-fast-belt", splitter = "ultra-fast-splitter",
+    tech = "ultra-fast-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+  { key = "bb-ultra", paint = { 61, 144, 43 }, wear = 0.40, belt = "BetterBelts_ultra-transport-belt", splitter = "BetterBelts_ultra-splitter",
+    tech = "BetterBelts_ultra-class", mod = "Better Belts", fv = { "2.0" } },
+  { key = "ub-extreme-fast", paint = { 162, 12, 42 }, wear = 0.40, belt = "extreme-fast-belt", splitter = "extreme-fast-splitter",
+    tech = "extreme-fast-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+  { key = "ub-ultra-express", paint = { 66, 12, 162 }, wear = 0.40, belt = "ultra-express-belt", splitter = "ultra-express-splitter",
+    tech = "ultra-express-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+  { key = "ub-extreme-express", paint = { 12, 47, 162 }, wear = 0.40, belt = "extreme-express-belt", splitter = "extreme-express-splitter",
+    tech = "extreme-express-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+  { key = "ub-ultimate", paint = { 12, 162, 138 }, wear = 0.40, belt = "ultimate-belt", splitter = "original-ultimate-splitter",
+    tech = "ultimate-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+}
+-- Extra tier recipe (M-5): previous tier box 1 + own splitter 1 + inserter 2 + circuits, craft_s.
+N.EXTRA_RECIPE = { inserter = "stack-inserter", inserters = 2, circuit = "quantum-processor", circuits = 2, craft_s = 120 }
+N.ALL = {}
+for _, t in ipairs(N.TIERS) do N.ALL[#N.ALL + 1] = t end
+for _, row in ipairs(N.EXTRA) do
+  N.ALL[#N.ALL + 1] = row.key
+  N.PREFIX[row.key] = row.key .. "-"
+  N.TIER[row.key] = { belt = row.belt, tech = row.tech, splitter = row.splitter, inserter = N.EXTRA_RECIPE.inserter,
+    circuit = N.EXTRA_RECIPE.circuit, circuits = N.EXTRA_RECIPE.circuits, craft_s = N.EXTRA_RECIPE.craft_s, extra = row }
+end
+
+-- Runtime only (control stage, FND-0022 P3: prototypes readable in main chunk): tier keys whose item
+-- prototype exists, in N.ALL order. Vanilla game -> exactly N.TIERS.
+function N.active()
+  local out = {}
+  for _, t in ipairs(N.ALL) do
+    if prototypes.item[N.item(t)] then out[#out + 1] = t end
+  end
+  return out
+end
+
+-- Reverse lookups: entity name -> {tier, dir}; placer name -> tier. Over N.ALL (names only; a name with no
+-- prototype never reaches an event, filters use N.active()).
 N.VARIANTS = {}
 N.PLACERS = {}
-for _, tier in ipairs(N.TIERS) do
+for _, tier in ipairs(N.ALL) do
   N.PLACERS[N.placer(tier)] = tier
   for _, dir in ipairs(N.DIRS) do
     N.VARIANTS[N.variant(tier, dir)] = { tier = tier, dir = dir }

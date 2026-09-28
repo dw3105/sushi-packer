@@ -21,14 +21,21 @@ CLI=$FT/node_modules/.bin/factorio-test
 game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.json
   pattern=$1
   mod=$("$ROOT/tools/stage.sh" "$FV" test)
-  data="$ROOT/build/$FV/ftdata"
+  data="$ROOT/build/$FV/ftdata${MODSET:+-$MODSET}"  # own data dir per mod set (mod-settings, saves)
   mkdir -p "$data/mods"
   test -f "$data/mods/factorio-test_$FT_VER.zip" || cp "$FT_ZIP_DIR/factorio-test_$FT_VER.zip" "$data/mods/"
   rm -rf "$data/mods/sushi-packer-test-env_"*; cp -r "$(dirname "$mod")/sushi-packer-test-env_0.0.1" "$data/mods/"  # test-only env mod (max belt stack 20)
+  # v9 MODSET: same third-party zips + settings mod as staged (stage.sh wrote mods/.modset)
+  staged=$(dirname "$mod"); extra=$(cat "$staged/.modset" 2>/dev/null || true)
+  rm -rf "$data/mods/sushi-packer-test-settings_"*
+  python3 -c "import json,os,sys; l=json.load(open(sys.argv[1])); fs={e['file'] for v in l.values() for e in v.values()}; [os.remove(os.path.join(sys.argv[2],f)) for f in os.listdir(sys.argv[2]) if f in fs]" "$ROOT/tests/mods.lock.json" "$data/mods"
+  for f in "$staged"/*.zip; do case "$(basename "$f")" in factorio-test_*) ;; *) cp "$f" "$data/mods/" ;; esac; done 2>/dev/null || true
+  test -d "$staged/sushi-packer-test-settings_0.0.1" && cp -r "$staged/sushi-packer-test-settings_0.0.1" "$data/mods/"
   test -x "$CLI" || { echo "run_tests: FactorioTest CLI missing: (cd $FT && npm ci)" >&2; exit 2; }
   FT_DIR="$FT" "$ROOT/tools/ft/patch-cli.sh" >/dev/null  # FND-0005: 10 s startup watchdog -> 120 s
   mods="space-age quality elevated-rails sushi-packer-test-env"
   test -d "$FACTORIO/data/recycler" && mods="$mods recycler"
+  mods="$mods $extra"
   rm -f "$ROOT/build/$FV/results.json"
   set -- run -p "$mod" --factorio-path "$FACTORIO/bin/x64/factorio" -d "$data" --no-reorder-failed-first \
     --output-file "$ROOT/build/$FV/results.json" --mods $mods
@@ -40,7 +47,7 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
 # is for integrator merge and release. lane_run sets LANE_RUN_ID in engine and checks env.
 if [ -n "${LANE_RUN_ID:-}" ]; then
   case "$T" in
-    --full|tests/game/*) echo "run_tests: refuse, lanes run offline tests only (SP-02); headless is integrator merge/release" >&2; exit 2 ;;
+    --full|--modtiers|tests/game/*) echo "run_tests: refuse, lanes run offline tests only (SP-02); headless is integrator merge/release" >&2; exit 2 ;;
   esac
 fi
 
@@ -50,6 +57,24 @@ if [ "$T" = --full ]; then
   game "" || status=1
   [ $status = 0 ] && echo "full-$FV-ok"
   exit $status
+fi
+
+# v9: whole tests/game/test_modtiers.lua under current MODSET (integrator, make test-modsets)
+if [ "$T" = --modtiers ]; then
+  test -n "${MODSET:-}" || { echo "run_tests: --modtiers needs MODSET" >&2; exit 2; }
+  game '^tests%.game%.test_modtiers >' || true
+  python3 - "$ROOT/build/$FV/results.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+hits = [t for t in d["tests"] if t["path"].startswith("tests.game.test_modtiers >")]
+bad = [t for t in hits if t["result"] != "passed"]
+for t in bad:
+    print("FAIL", t["path"]); [print("  " + e) for e in t.get("errors", [])]
+errs = d["summary"].get("describeBlockErrors", 0)
+print(f"modtiers ran={len(hits)} failed={len(bad)} describeBlockErrors={errs}")
+sys.exit(0 if hits and not bad and errs == 0 else 1)
+PY
+  exit $?
 fi
 
 case "$T" in *::*) ;; *) echo "run_tests: refuse, T must be '<file>::<full test name>', not a file or dir" >&2; exit 2 ;; esac

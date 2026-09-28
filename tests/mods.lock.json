@@ -1,0 +1,180 @@
+{
+  "2.0": {
+    "BetterBelts": {
+      "file": "BetterBelts_1.4.1.zip",
+      "sha1": "9a90684def0fb1391593778528c2eb8e5a369216",
+      "url": "/download/BetterBelts/67b6369933c6df19f2b7074e",
+      "version": "1.4.1"
+    },
+    "ChangeInserterDropLane": {
+      "file": "ChangeInserterDropLane_1.2.0.zip",
+      "sha1": "812e7530643c079ba8305da3523dbc929005ec8e",
+      "url": "/download/ChangeInserterDropLane/68e9386d4a859387912fe409",
+      "version": "1.2.0"
+    },
+    "Krastorio2-spaced-out": {
+      "file": "Krastorio2-spaced-out_1.6.21.zip",
+      "sha1": "09b50767f7a140dadfb44df4f03e7cd382b27188",
+      "url": "/download/Krastorio2-spaced-out/6a4d32ab8fbddcd85e2854b9",
+      "version": "1.6.21"
+    },
+    "Krastorio2Assets": {
+      "file": "Krastorio2Assets_2.0.5.zip",
+      "sha1": "6a56e6ed11b15b25e16a0ec7b826fa45b33d8a7c",
+      "url": "/download/Krastorio2Assets/6a3d7709353f65fde86d8850",
+      "version": "2.0.5"
+    },
+    "Krastorio2MenuSimulations": {
+      "file": "Krastorio2MenuSimulations_2.0.2.zip",
+      "sha1": "61b4aac582cb271cc081d1395585367ab181855d",
+      "url": "/download/Krastorio2MenuSimulations/689f86a5d6d62e707879d63b",
+      "version": "2.0.2"
+    },
+    "PlanetsLib": {
+      "file": "PlanetsLib_1.18.0.zip",
+      "sha1": "6b4de4b2e5e419dbb0d6596d9c3d0b22cab15ccd",
+      "url": "/download/PlanetsLib/6a1c4f7e66d3580e59a30488",
+      "version": "1.18.0"
+    },
+    "UltimateBeltsSpaceAge": {
+      "file": "UltimateBeltsSpaceAge_1.3.0.zip",
+      "sha1": "e76b752bb80be9d92b3d9739e4ce6451a3037a82",
+      "url": "/download/UltimateBeltsSpaceAge/6773ff73911e2b31cead6e04",
+      "version": "1.3.0"
+    },
+    "boblibrary": {
+      "file": "boblibrary_2.1.0.zip",
+      "sha1": "c2f97c52bb45fc26643a397899bd6e269622940e",
+      "url": "/download/boblibrary/6a1d16072eed8ad19262b53f",
+      "version": "2.1.0"
+    },
+    "boblogistics": {
+      "file": "boblogistics_2.1.1.zip",
+      "sha1": "0e6639c095bb84424a82ca4b9c1b60187f238b65",
+      "url": "/download/boblogistics/6a1d72622eed8ad19262b55d",
+      "version": "2.1.1"
+    },
+    "condensing-agricultural-tower": {
+      "file": "condensing-agricultural-tower_1.1.1.zip",
+      "sha1": "b64a2de96d3913c4d6f1dba96339a89baf6fc460",
+      "url": "/download/condensing-agricultural-tower/699e1c41ad39dd1d8a377a1a",
+      "version": "1.1.1"
+    },
+    "flib": {
+      "file": "flib_0.16.5.zip",
+      "sha1": "be7ce1b5c9477ad3161df120a379aec091b86f77",
+      "url": "/download/flib/690aa58f2da58c0b75aadd06",
+      "version": "0.16.5"
+    },
+    "k2so-assets": {
+      "file": "k2so-assets_1.0.5.zip",
+      "sha1": "7d94d4d4c51f693399d5ba1ce016366ec4242ab7",
+      "url": "/download/k2so-assets/696bd9c9fb6c0f5d09188095",
+      "version": "1.0.5"
+    },
+    "lamp-post": {
+      "file": "lamp-post_1.0.5.zip",
+      "sha1": "49e8c06bd9d9cc3a4ae242234d034f287131757c",
+      "url": "/download/lamp-post/6a9c00ed6ad12f110f02541e",
+      "version": "1.0.5"
+    },
+    "planetaris-arig": {
+      "file": "planetaris-arig_1.1.46.zip",
+      "sha1": "a3214c0cd1d7d5c632c282f77a7088d7cd779ec3",
+      "url": "/download/planetaris-arig/6a81921366ddea70c3e5a8dc",
+      "version": "1.1.46"
+    },
+    "planetaris-hyarion": {
+      "file": "planetaris-hyarion_1.3.22.zip",
+      "sha1": "627223def73293dfb12c98c946af10e1412388ec",
+      "url": "/download/planetaris-hyarion/6aaa38d4059174dccaa19d2b",
+      "version": "1.3.22"
+    }
+  },
+  "2.1": {
+    "ChangeInserterDropLane": {
+      "file": "ChangeInserterDropLane_1.3.0.zip",
+      "sha1": "d1e0f6728f93564bbb623e5ea15b19ea55117a15",
+      "url": "/download/ChangeInserterDropLane/6a3da0182020ee94ff46cf38",
+      "version": "1.3.0"
+    },
+    "Krastorio2": {
+      "file": "Krastorio2_2.1.3.zip",
+      "sha1": "044454b47de7b3c73b97282baad6243365f2e7b0",
+      "url": "/download/Krastorio2/6ab30802b7ce337ecb8270d7",
+      "version": "2.1.3"
+    },
+    "Krastorio2-spaced-out": {
+      "file": "Krastorio2-spaced-out_2.0.17.zip",
+      "sha1": "1fed6f807ba7fec55ffd5a557efee8777510f2d2",
+      "url": "/download/Krastorio2-spaced-out/6a9193adec4acf201ab35bf3",
+      "version": "2.0.17"
+    },
+    "Krastorio2Assets": {
+      "file": "Krastorio2Assets_2.1.0.zip",
+      "sha1": "754e187664fd45a4bcfce016366f0029f093a249",
+      "url": "/download/Krastorio2Assets/6a3d9e80b47877e4de0fdda9",
+      "version": "2.1.0"
+    },
+    "Krastorio2MenuSimulations": {
+      "file": "Krastorio2MenuSimulations_2.1.0.zip",
+      "sha1": "ead8df6d63241e8cb6f0f0def3894d5efa1de3b2",
+      "url": "/download/Krastorio2MenuSimulations/6a3d9eab10acfc28e4c66c1f",
+      "version": "2.1.0"
+    },
+    "PlanetsLib": {
+      "file": "PlanetsLib_2.0.6.zip",
+      "sha1": "e69133d7b630f72cd196fa3fc27f5143f1a36143",
+      "url": "/download/PlanetsLib/6ab962004bc0412f0db9b329",
+      "version": "2.0.6"
+    },
+    "boblibrary": {
+      "file": "boblibrary_3.0.1.zip",
+      "sha1": "34c1bdc3934751c150e42c1434c3ffed632019ac",
+      "url": "/download/boblibrary/6ab8b828e89dccd069a63b5c",
+      "version": "3.0.1"
+    },
+    "boblogistics": {
+      "file": "boblogistics_3.0.2.zip",
+      "sha1": "469ecb4c6da044dfde48cc1faac877b0480bdcc7",
+      "url": "/download/boblogistics/6ab8b832aa745d552ecca420",
+      "version": "3.0.2"
+    },
+    "condensing-agricultural-tower": {
+      "file": "condensing-agricultural-tower_1.1.2.zip",
+      "sha1": "4ad21940a9924a27cdd7b8aeb6876dfb8efd130d",
+      "url": "/download/condensing-agricultural-tower/6a58050850a9e1cc4f2fe6a0",
+      "version": "1.1.2"
+    },
+    "flib": {
+      "file": "flib_0.17.2.zip",
+      "sha1": "6c7cedeefbdce89348d1e979a24e5706fd5a4311",
+      "url": "/download/flib/6a3d4af12b2a85ea00e307a6",
+      "version": "0.17.2"
+    },
+    "k2so-assets": {
+      "file": "k2so-assets_1.0.7.zip",
+      "sha1": "94df2729880ed27df14918fd28ed37f448778d14",
+      "url": "/download/k2so-assets/6a3e89ec2020ee94ff46cf7f",
+      "version": "1.0.7"
+    },
+    "lamp-post": {
+      "file": "lamp-post_1.0.6.zip",
+      "sha1": "9af52b8762f40d687f66848ea75b7cfc9e56a816",
+      "url": "/download/lamp-post/6a9c00fcd64f464787f77210",
+      "version": "1.0.6"
+    },
+    "planetaris-arig": {
+      "file": "planetaris-arig_1.1.47.zip",
+      "sha1": "4661d0aaefa1e6a9820e942e5aa4a8691f0514c8",
+      "url": "/download/planetaris-arig/6ab7b728be2fb935a4da689f",
+      "version": "1.1.47"
+    },
+    "planetaris-hyarion": {
+      "file": "planetaris-hyarion_1.3.23.zip",
+      "sha1": "faf64c706a42f839154ea58db47007a5400b4abb",
+      "url": "/download/planetaris-hyarion/6aaa38f100389afe869af433",
+      "version": "1.3.23"
+    }
+  }
+}

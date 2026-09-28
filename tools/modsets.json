@@ -1,0 +1,78 @@
+{
+  "_doc": "v9 headless mod sets (REQUIREMENTS \u00a717). mods = top-level; required deps resolved by tools/fetch_mods.py into tests/mods.lock.json. settings = startup overrides.",
+  "arig": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "planetaris-arig"
+    ]
+  },
+  "hyarion": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "planetaris-arig",
+      "planetaris-hyarion"
+    ]
+  },
+  "arig-off": {
+    "fv": [
+      "2.0"
+    ],
+    "mods": [
+      "planetaris-arig"
+    ],
+    "settings": {
+      "disable-hyper-belts": true
+    },
+    "_note": "2.1 excluded: planetaris-arig 1.1.47 fails load with disable-hyper-belts=true (turbo next_upgrade -> hidden hyper), FND-0023"
+  },
+  "k2so": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "Krastorio2-spaced-out"
+    ]
+  },
+  "arig-k2so": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "planetaris-arig",
+      "Krastorio2-spaced-out"
+    ]
+  },
+  "bob": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "boblogistics"
+    ]
+  },
+  "ubsa": {
+    "fv": [
+      "2.0"
+    ],
+    "mods": [
+      "UltimateBeltsSpaceAge"
+    ]
+  },
+  "bb": {
+    "fv": [
+      "2.0"
+    ],
+    "mods": [
+      "BetterBelts"
+    ]
+  }
+}

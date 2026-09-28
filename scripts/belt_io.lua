@@ -197,6 +197,12 @@ function M.push(rec, lane, item, belt_stack_size)
   return 0
 end
 
+-- v9 (M-6): belt items per lane per tick for tier = live belt prototype speed x 4. S0 stub (table value);
+-- lane 025 fills.
+function M.lane_rate(tier)
+  return require("scripts.names").TIER[tier].lane_rate
+end
+
 -- Research-set belt stack (O-3 v7, author 2026-09-27): 1 + bonus, capped by engine max (utility constant,
 -- 4 in vanilla, raised by mods). Never a literal cap.
 function M.belt_stack_size(force)

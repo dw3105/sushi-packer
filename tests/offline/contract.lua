@@ -5,7 +5,7 @@ return {
     peek_out = 2, take_out = 3, remove_external = 4, adopt_external = 6, hold_items = 1,
     clear_hold = 1, totals = 1, led_state = 1, is_idle = 1,
   },
-  belt_io = { behind = 2, front = 2, pull = 3, push = 4, belt_stack_size = 1 },
+  belt_io = { behind = 2, front = 2, pull = 3, push = 4, belt_stack_size = 1, lane_rate = 1 },
   led = { create = 1, set = 3, destroy = 1, ensure = 1 },
   registry = {
     on_built = 1, on_removed = 1, on_died = 1, on_rotate_input = 2, swap = 2, get = 1,

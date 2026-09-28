@@ -129,7 +129,7 @@ local function build(player, rec)
   local old = frame_for(player)
   if old then old.destroy() end
   local variant_names = {}
-  for _, tier in ipairs(N.TIERS) do
+  for _, tier in ipairs(N.active()) do  -- v9: modded tiers only when present (anchor names must exist)
     for _, dir in ipairs(N.DIRS) do variant_names[#variant_names + 1] = N.variant(tier, dir) end
   end
   local frame = player.gui.relative.add({

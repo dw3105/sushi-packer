@@ -29,7 +29,7 @@ local function fixture()
   } } } }
   prototypes = { quality = {
     normal = { level = 0, hidden = false }, uncommon = { level = 1, hidden = false }, rare = { level = 2, hidden = false }, legendary = { level = 5, hidden = false }, ["quality-unknown"] = { level = 0, hidden = true },
-  } }
+  }, item = { ["sushi-packer"] = {}, ["fast-sushi-packer"] = {}, ["express-sushi-packer"] = {}, ["turbo-sushi-packer"] = {} } }  -- v9: N.active() = vanilla 4
   defines = { relative_gui_type = { container_gui = 1 }, relative_gui_position = { right = 2 },
     events = { on_gui_click = 1, on_gui_elem_changed = 2, on_gui_selection_state_changed = 3, on_gui_checked_state_changed = 4, on_gui_switch_state_changed = 5, on_gui_text_changed = 6 } }
   gui.on_opened({ entity = { valid = true, unit_number = 7 }, player_index = 1 })

@@ -18,14 +18,18 @@ script.on_configuration_changed(function(data)
   registry.on_configuration_changed(data)
 end)
 
--- Build: placers (normal path) and variants (clone/revive/undo/script paths).
+-- Build: placers (normal path) and variants (clone/revive/undo/script paths). Active tiers only (v9 M-1:
+-- modded tier names without prototype would break filters; FND-0022 P3 prototypes readable here).
 local build_filter = {}
-for name in pairs(N.PLACERS) do build_filter[#build_filter + 1] = { filter = "name", name = name } end
-for name in pairs(N.VARIANTS) do build_filter[#build_filter + 1] = { filter = "name", name = name } end
-table.sort(build_filter, function(a, b) return a.name < b.name end)
-
 local box_filter = {}
-for name in pairs(N.VARIANTS) do box_filter[#box_filter + 1] = { filter = "name", name = name } end
+for _, tier in ipairs(N.active()) do
+  build_filter[#build_filter + 1] = { filter = "name", name = N.placer(tier) }
+  for _, dir in ipairs(N.DIRS) do
+    build_filter[#build_filter + 1] = { filter = "name", name = N.variant(tier, dir) }
+    box_filter[#box_filter + 1] = { filter = "name", name = N.variant(tier, dir) }
+  end
+end
+table.sort(build_filter, function(a, b) return a.name < b.name end)
 table.sort(box_filter, function(a, b) return a.name < b.name end)
 
 for _, ev in ipairs({

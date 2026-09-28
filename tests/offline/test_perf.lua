@@ -59,7 +59,7 @@ describe("perf", function()
   local function tick_fixture(tier, unit)
     local old={pull=belt_io.pull,push=belt_io.push,bss=belt_io.belt_stack_size,evaluate=require("scripts.circuit").evaluate,set=require("scripts.led").set}
     defines={inventory={chest=1},gui_type={entity=1,item=3},direction={north=0,east=4,south=8,west=12},wire_connector_id={circuit_red=1,circuit_green=2}}
-    settings={global={[N.SETTING_TIMEOUT]={value=0}}}; prototypes={item={iron={stack_size=100}}}
+    settings={global={[N.SETTING_TIMEOUT]={value=0}}}; prototypes={entity=require("tests.offline.belts"),item={iron={stack_size=100}}}
     local calls={pull=0,pull_unit={},push=0,led=0,inventory=0,players=0}
     local inv={contents={}}
     function inv.insert(x) inv.contents[1]=inv.contents[1] or {name=x.name,quality=x.quality,count=0}; inv.contents[1].count=inv.contents[1].count+x.count; return x.count end

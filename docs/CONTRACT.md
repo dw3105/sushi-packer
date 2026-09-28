@@ -19,7 +19,7 @@ storage.upgrade_stash = { [key] = { rec = rec, tick = uint, force = uint } }  --
 rec = {
   entity = LuaEntity,                            -- container variant
   unit_number = uint,
-  tier = "yellow"|"red"|"blue"|"turbo",
+  tier = "yellow"|"red"|"blue"|"turbo"|<N.EXTRA key>,  -- v9: any key of N.ALL
   dir = "north"|"east"|"south"|"west",           -- side items leave
   box = <core box>,                              -- owned by scripts/core.lua, opaque to others
   settings = {
@@ -88,6 +88,7 @@ Item key = (name, quality, lane). `quality` is a string (`"normal"`, ...).
 | `belt_io.front(entity, dir) -> LuaEntity\|nil` | belt-like entity on tile in front, not facing back into box |
 | `belt_io.pull(rec, budget, sink) -> {n1, n2}` | per lane `i`, up to `budget[i]` belt items: take front-most item at end of behind line, call `sink(name, quality, lane, count) -> accepted`, remove accepted from belt. Stop lane on 0 accepted. Returns belt items taken per lane. |
 | `belt_io.push(rec, lane, item, belt_stack_size) -> pushed` | one belt item `{name, quality, count}` (`count <= belt_stack_size`) via `insert_at_back(item, belt_stack_size)` on front line `lane` (O-1). 0 when blocked or no front belt. |
+| `belt_io.lane_rate(tier) -> r` | v9 M-6: belt items per lane per tick = live `prototypes.entity[N.TIER[tier].belt].belt_speed * 4` (cached per load, prototype-derived) |
 | `belt_io.belt_stack_size(force) -> n` | `min(4, 1 + force.belt_stack_size_bonus)` (O-3) |
 
 ## scripts/led.lua — LED (lane C)
@@ -162,3 +163,11 @@ N-2 read contents = container's native circuit output (items live in inventory, 
 | Signature | Does |
 |---|---|
 | `sim.scene(kind)` | `kind = "factoriopedia"\|"tips"`: on `game.surfaces[1]` set bonus 3, build infinity chest → `loader-1x1` → 4 belts → box east (placer, `raise_built`) → 4 belts → `loader-1x1` → void infinity chest; camera on box. Called by simulation init via `remote.call(N.SIM_INTERFACE, "scene", kind)` |
+
+
+## prototypes/extra.lua — v9 modded tiers (lane 024), data stage
+
+| Signature | Rule |
+|---|---|
+| `extra.tiers(raw) -> { {key=, prev=, speed=}, ... }` | active `N.EXTRA` rows (M-1: `raw["transport-belt"][belt]` exists, not `hidden`; `raw.technology[tech]` exists with `unit`), sorted by belt `speed`, tie by row order (M-4); `prev` = previous entry key, first = `"turbo"`. Skipped rows `log()` reason. |
+| `extra.build(raw)` | for each of `tiers(raw)`: item, recipe (M-5), tech (U-1 rule), placer, 4 variants, remnant via `prototypes/packer.lua` shared maker; turbo variants + each extra `next_upgrade` = next in chain, same direction. Called by `data-final-fixes.lua`. |

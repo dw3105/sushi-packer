@@ -45,5 +45,16 @@ describe("guard", function()
     eq(N.SUBGROUP, "sushi-packer")
     eq(N.SIM_INTERFACE, "sushi-packer")
     eq(N.BELT_GROUP, "transport-belt")
+    -- v9 (V9-1): extra tiers table shape; vanilla list unchanged
+    eq(#N.ALL, #N.TIERS + #N.EXTRA)
+    eq(N.ALL[5], N.EXTRA[1].key)
+    eq(N.item("kr-superior"), "kr-superior-sushi-packer")
+    eq(N.variant("planetaris-hyper", "west"), "planetaris-hyper-sushi-packer-west")
+    eq(N.EXTRA_RECIPE, { inserter = "stack-inserter", inserters = 2, circuit = "quantum-processor", circuits = 2, craft_s = 120 })
+    for _, row in ipairs(N.EXTRA) do
+      ok(N.TIER[row.key] and N.TIER[row.key].belt == row.belt and N.TIER[row.key].lane_rate == nil, "extra tier row " .. row.key)
+      ok(row.splitter and row.tech and row.mod and #row.paint == 3 and row.wear and row.fv, "extra row fields " .. row.key)
+      eq(N.VARIANTS[N.variant(row.key, "east")], { tier = row.key, dir = "east" })
+    end
   end)
 end)

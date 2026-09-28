@@ -9,7 +9,7 @@ local function fixture(tier)
   defines = {direction={north=0,east=4,south=8,west=12},inventory={chest=1},gui_type={entity=1,item=3},wire_connector_id={circuit_red=1,circuit_green=2}}
   storage = {boxes={},belt_stack={}}
   settings = {global={[N.SETTING_TIMEOUT]={value=0}}}
-  prototypes = {item={iron={stack_size=100},copper={stack_size=100}},quality={normal={level=0},uncommon={level=1},rare={level=2},legendary={level=5}}}
+  prototypes = {entity=require("tests.offline.belts"),item={iron={stack_size=100},copper={stack_size=100}},quality={normal={level=0},uncommon={level=1},rare={level=2},legendary={level=5}}}
   game = {connected_players={}}
   local inv={contents={}}
   function inv.insert(x)
