@@ -60,7 +60,7 @@ Each tier has its own technology after its belt technology. Upgrade planner swap
 ## Requirements
 
 - **Space Age** (belt stacking and quality come from it).
-- Factorio 2.0 → mod version **0.1.8**; Factorio 2.1 → mod version **0.2.8**. Same features in both.
+- Factorio 2.0 → mod version **0.1.9**; Factorio 2.1 → mod version **0.2.9**. Same features in both.
 
 ## Source and bug reports
 

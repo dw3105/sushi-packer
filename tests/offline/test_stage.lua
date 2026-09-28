@@ -12,6 +12,10 @@ describe("stage", function()
     assert(read("info.json"):find('"version": "0.1.9"', 1, true))
     assert(read("tools/stage.sh"):find('0.1.9', 1, true) and read("tools/stage.sh"):find('0.2.9', 1, true))
     assert(read("tools/load_check.sh"):find('0.1.9', 1, true) and read("tools/load_check.sh"):find('0.2.9', 1, true))
+    -- v1.9 (author): README + portal page named 0.1.8 / 0.2.8 after bump; docs must name current versions
+    for _, f in ipairs({ "README.md", "portal/description.md" }) do
+      assert(read(f):find('0.1.9', 1, true) and read(f):find('0.2.9', 1, true), f .. " names current versions")
+    end
   end)
   it("release ships thumbnail and changelog", function()
     local stage = read("tools/stage.sh")
@@ -42,7 +46,7 @@ describe("stage", function()
     end
     local w, h = size("portal/logo-512.png"); assert(w == 512 and h == 512, "logo 512")
     local d = read("portal/description.md")
-    for _, needle in ipairs({"# Sushi Packer", "0.1.8", "0.2.8", "Space Age", "belt stack"}) do
+    for _, needle in ipairs({"# Sushi Packer", "0.1.9", "0.2.9", "Space Age", "belt stack"}) do
       assert(d:find(needle, 1, true), "description lacks " .. needle)
     end
     assert(not d:find("logo-512.png", 1, true), "description repeats portal thumbnail (author 2026-09-28)")
