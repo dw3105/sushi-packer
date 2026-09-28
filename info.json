@@ -5,5 +5,5 @@
   "author": "dw3105",
   "factorio_version": "2.0",
   "description": "Inline belt box: sorts mixed belt items per lane into full stacks and releases them as stacked belt items.",
-  "dependencies": ["base >= 2.0.0", "space-age", "? factorio-test"]
+  "dependencies": ["base >= 2.0.0", "space-age", "? factorio-test", "(?) planetaris-arig", "(?) Krastorio2", "(?) Krastorio2-spaced-out", "(?) boblogistics >= 2.1.0", "(?) UltimateBeltsSpaceAge", "(?) BetterBelts"]
 }
