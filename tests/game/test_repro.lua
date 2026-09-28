@@ -219,5 +219,86 @@ describe("repro", function()
       assert.is_true(got > 0, r)
     end)
   end)
+  -- FND-0019 (author 2026-09-28): left output lane congested must not starve right lane. East red box; input belt
+  -- left lane iron/copper, right lane coal/stone (script feed); output belt dead end, only right lane drained.
+  it("blocked left lane never starves right lane", function()
+    async(9000)
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+    local B = "fast-transport-belt"
+    local function belt(x) return surface.create_entity({ name = B, position = { x + 0.5, 0.5 }, direction = D.east, force = force }) end
+    local feed = belt(0)
+    for x = 1, 3 do belt(x) end
+    surface.create_entity({ name = N.placer("red"), position = { 4.5, 0.5 }, direction = D.east, force = force, raise_built = true })
+    local box = surface.find_entities_filtered({ name = N.variant("red", "east") })[1]
+    assert.is_not_nil(box, "east box built")
+    local last
+    for x = 5, 10 do last = belt(x) end
+    local left_items, right_items = { "iron-plate", "copper-plate" }, { "coal", "stone" }
+    local n, drained, fed = 0, {}, { 0, 0 }
+    local start = game.tick
+    on_tick(function()
+      local t = game.tick - start
+      n = n + 1
+      for lane, items in ipairs({ left_items, right_items }) do
+        local line = feed.get_transport_line(lane)
+        if line.can_insert_at_back() and line.insert_at_back({ name = items[n % 2 + 1], count = 1 }) then fed[lane] = fed[lane] + 1 end
+      end
+      local right = last.get_transport_line(2)
+      for _, x in ipairs(right.get_contents()) do drained[#drained + 1] = { t = t, count = x.count } end
+      right.clear()
+      if t >= 7200 then
+        local function window(a, b) local s = 0; for _, d in ipairs(drained) do if d.t >= a and d.t < b then s = s + d.count end end; return s end
+        local early, late = window(600, 2400), window(5400, 7200)
+        local rec = storage.boxes[box.unit_number]
+        local lane_slots = { 0, 0 }
+        for _, p in ipairs(rec.box.partials) do lane_slots[p.lane] = lane_slots[p.lane] + 1 end
+        for l = 1, 2 do lane_slots[l] = lane_slots[l] + #rec.box.ready[l] end
+        local r = string.format("FND-0019 right drained early=%d late=%d fed L=%d R=%d used=%d slotsL=%d slotsR=%d",
+          early, late, fed[1], fed[2], rec.box.used_slots, lane_slots[1], lane_slots[2])
+        print(r)
+        force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+        assert.is_true(early > 0 and late >= 0.8 * early, r)
+        done()
+        return false
+      end
+    end)
+  end)
+
+  -- FND-0020 (author 2026-09-28): box holds at most one item stack per (item, quality, lane). Iron ore stack 50.
+  it("box holds at most one stack per item per lane", function()
+    async(4000)
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    force.belt_stack_size_bonus = 3; storage.belt_stack = {}
+    local function belt(x) return surface.create_entity({ name = "transport-belt", position = { x + 0.5, 10.5 }, direction = D.east, force = force }) end
+    local feed = belt(0); belt(1)
+    surface.create_entity({ name = N.placer("yellow"), position = { 2.5, 10.5 }, direction = D.east, force = force, raise_built = true })
+    local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+    assert.is_not_nil(box, "east box built")
+    local cap = prototypes.item["iron-ore"].stack_size
+    local start = game.tick
+    on_tick(function()
+      for lane = 1, 2 do
+        local line = feed.get_transport_line(lane)
+        if line.can_insert_at_back() then line.insert_at_back({ name = "iron-ore", count = 1 }) end
+      end
+      if game.tick - start >= 3600 then
+        local rec = storage.boxes[box.unit_number]
+        local per_lane = { 0, 0 }
+        for _, p in ipairs(rec.box.partials) do if p.name == "iron-ore" then per_lane[p.lane] = per_lane[p.lane] + p.count end end
+        for l = 1, 2 do for _, p in ipairs(rec.box.ready[l]) do if p.name == "iron-ore" then per_lane[l] = per_lane[l] + p.count end end end
+        local chest = box.get_inventory(defines.inventory.chest).get_item_count("iron-ore")
+        local r = string.format("FND-0020 stack=%d chest=%d laneL=%d laneR=%d used=%d", cap, chest, per_lane[1], per_lane[2], rec.box.used_slots)
+        print(r)
+        assert.is_true(per_lane[1] <= cap and per_lane[2] <= cap and chest <= 2 * cap, r)
+        done()
+        return false
+      end
+    end)
+  end)
 end)
 

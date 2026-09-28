@@ -41,13 +41,39 @@ local function find_partial(box, name, quality, lane)
   ensure_partial_index(box)
   return box.partial_by_key[partial_key(name, quality, lane)]
 end
-local function add(box, name, quality, lane, count, stack_size, tick, limited)
+-- D-5 (v8): per-lane slot count and per-(name, quality, lane) item count, partials + ready. Built lazily so
+-- v1.7 saves migrate on first touch.
+local function ensure_counters(box)
+  if box.lane_used and box.held then return end
+  local used, held = { 0, 0 }, {}
+  local function count(p)
+    used[p.lane] = used[p.lane] + 1
+    local key = partial_key(p.name, p.quality, p.lane)
+    held[key] = (held[key] or 0) + p.count
+  end
+  for i = 1, #box.partials do count(box.partials[i]) end
+  for l = 1, 2 do for i = 1, #box.ready[l] do count(box.ready[l][i]) end end
+  box.lane_used, box.held = used, held
+end
+local function held_add(box, p, n)
+  local key = partial_key(p.name, p.quality, p.lane)
+  local v = (box.held[key] or 0) + n
+  if v <= 0 then v = nil end
+  box.held[key] = v
+end
+local function add(box, name, quality, lane, count, stack_size, tick, limited, item_stack)
+  ensure_counters(box)
+  if limited then
+    local room = M.item_room(box, name, quality, lane, item_stack)
+    if room < count then count = room end
+    if count <= 0 then return 0 end
+  end
   local accepted = 0
   while count > 0 do
     local p = find_partial(box, name, quality, lane)
     if p then
       local n = math.min(count, p.stack_size - p.count)
-      p.count = p.count + n; box.stored_count = box.stored_count + n
+      p.count = p.count + n; box.stored_count = box.stored_count + n; held_add(box, p, n)
       count = count - n; accepted = accepted + n
       if p.count == p.stack_size then
         local idx
@@ -55,7 +81,7 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited)
         remove_partial(box, idx); ready_add(box, p)
       end
     else
-      if limited and box.used_slots >= N.SLOTS then
+      if limited and (box.used_slots >= N.SLOTS or not M.lane_room(box, lane)) then
         local oldest = oldest_partial(box)
         if oldest then
           local p = remove_partial(box, oldest); ready_add(box, p)
@@ -77,6 +103,7 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited)
         box.partial_by_key[partial_key(name, quality, lane)] = p
       end
       box.used_slots = box.used_slots + 1
+      box.lane_used[lane] = box.lane_used[lane] + 1; held_add(box, p, n)
       box.stored_count = box.stored_count + n
       count = count - n; accepted = accepted + n
     end
@@ -85,14 +112,19 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited)
 end
 
 function M.new_box()
-  return {partials={}, partial_by_key={}, ready={{},{}}, hold={nil,nil}, used_slots=0, stored_count=0, sequence=0}
+  return {partials={}, partial_by_key={}, ready={{},{}}, hold={nil,nil}, used_slots=0, stored_count=0, sequence=0,
+    lane_used={0,0}, held={}}
 end
-function M.accept(box, name, quality, lane, count, stack_size, tick, passthrough)
+-- L-2 v8 (lane A): may `lane` take one more slot? false -> flush/refuse like full box.
+function M.lane_room(box, lane) return true end
+-- C-6 v8 (lane B): how many more of (name, quality) `lane` may hold. item_stack nil = no cap.
+function M.item_room(box, name, quality, lane, item_stack) return math.huge end
+function M.accept(box, name, quality, lane, count, stack_size, tick, passthrough, item_stack)
   if passthrough then
     if box.hold[lane] ~= nil then return 0 end
     box.hold[lane]={name=name,quality=quality,count=count}; return count
   end
-  return add(box,name,quality,lane,count,stack_size,tick,true)
+  return add(box,name,quality,lane,count,stack_size,tick,true,item_stack)
 end
 function M.adopt_external(box, name, quality, n, stack_size, tick)
   add(box,name,quality,1,n,stack_size,tick,false); return n
@@ -127,11 +159,14 @@ function M.take_out(box, lane, n)
     local h=box.hold[lane]; h.count=h.count-n
     if h.count==0 then box.hold[lane]=nil end
   else
+    ensure_counters(box)
     local head=box.ready[lane][1]; head.started=true; head.count=head.count-n; box.stored_count=box.stored_count-n
-    if head.count==0 then table.remove(box.ready[lane],1); box.used_slots=box.used_slots-1 end
+    held_add(box,head,-n)
+    if head.count==0 then table.remove(box.ready[lane],1); box.used_slots=box.used_slots-1; box.lane_used[lane]=box.lane_used[lane]-1 end
   end
 end
 function M.remove_external(box, name, quality, n)
+  ensure_counters(box)
   local removed=0
   while removed<n do
     local best
@@ -141,8 +176,8 @@ function M.remove_external(box, name, quality, n)
     end
     if not best then break end
     local p=box.partials[best]; local take=math.min(n-removed,p.count)
-    p.count=p.count-take; box.stored_count=box.stored_count-take; removed=removed+take
-    if p.count==0 then remove_partial(box,best); box.used_slots=box.used_slots-1 end
+    p.count=p.count-take; box.stored_count=box.stored_count-take; removed=removed+take; held_add(box,p,-take)
+    if p.count==0 then remove_partial(box,best); box.used_slots=box.used_slots-1; box.lane_used[p.lane]=box.lane_used[p.lane]-1 end
   end
   while removed<n do
     local lane,idx,seq
@@ -151,8 +186,8 @@ function M.remove_external(box, name, quality, n)
     end end
     if not lane then break end
     local q=box.ready[lane]; local p=q[idx]; local take=math.min(n-removed,p.count)
-    p.count=p.count-take; box.stored_count=box.stored_count-take; removed=removed+take
-    if p.count==0 then table.remove(q,idx); box.used_slots=box.used_slots-1 end
+    p.count=p.count-take; box.stored_count=box.stored_count-take; removed=removed+take; held_add(box,p,-take)
+    if p.count==0 then table.remove(q,idx); box.used_slots=box.used_slots-1; box.lane_used[lane]=box.lane_used[lane]-1 end
   end
   return removed
 end

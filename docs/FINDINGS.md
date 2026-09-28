@@ -128,3 +128,15 @@ Measured 2026-09-27 on dev-vm, 2.0.77 + 2.1.20 identical except recycler item sp
 - Unpacked pass-through through lane-splitter SWAPS lanes (iron in left -> out right).
 - Stop when full: `disabled_by_script` no effect (4 items to front in 600 ticks); fast-replace swap to `speed = 1/256` copy keeps items but still passes them; fast-replace swap to unlinked `linked-belt` copy (`allow_side_loading=false`) facing forward stops flow (0 to front in 610 ticks, lanes kept) - item conservation NOT checked (only 1 of 2 feed belts counted, 12 of 16 untracked). Facing backward disconnects from belt behind. `linked_belt_type` create param ignored (always `input`).
 - Not probed: save/load, bench.
+
+## FND-0019 - Blocked output lane starves other lane (shared 48 slots)
+
+Reported 2026-09-28 by author ("when one output lane is congested, other must not starve"). Repro `repro > blocked left lane never starves right lane` (east red box, belt stack 4, script feed iron/copper left + coal/stone right, output belt dead end, only right lane drained), dev-vm 2.0.77, code `e5dfff1`: RED, `right drained early=172 late=0 fed L=301 R=300 used=48 slotsL=48 slotsR=0` (early = ticks 600..2400, late = 5400..7200). Left ready stacks take all 48 slots, input stops on both lanes, right lane output dies. Fix (author pick): hard split 24 + 24 per lane (REQUIREMENTS v8 L-2, D-5).
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > blocked left lane never starves right lane'`
+
+## FND-0020 - Box hoards far more than one stack of an item
+
+Reported 2026-09-28 by author ("prevent getting more than one full stack ... of each item"). Repro `repro > box holds at most one stack per item per lane` (east yellow box, no front belt, iron-ore both lanes, belt stack 4, 3600 ticks), dev-vm 2.0.77, code `e5dfff1`: RED, `stack=50 chest=192 laneL=96 laneR=96 used=48`. Fix (author pick): cap one item stack per (item, quality, lane), size from `prototypes.item[name].stack_size` at runtime (REQUIREMENTS v8 C-6, D-5).
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > box holds at most one stack per item per lane'`

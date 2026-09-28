@@ -63,7 +63,9 @@ Item key = (name, quality, lane). `quality` is a string (`"normal"`, ...).
 | Signature | Does |
 |---|---|
 | `core.new_box() -> box` | empty box, plain tables only |
-| `core.accept(box, name, quality, lane, count, stack_size, tick, passthrough) -> accepted` | `passthrough=false`: add to buffer (C-1..C-5), full stack → ready FIFO of `lane` (C-3, C-4). Needs new slot and none free → flush oldest partial (F-1, F-2) and accept 0 (F-3). All slots ready → accept 0 (F-4). May accept part. `passthrough=true`: one belt item into lane hold (P-3), `count` whole or 0 when hold busy. Returns accepted count. |
+| `core.accept(box, name, quality, lane, count, stack_size, tick, passthrough, item_stack) -> accepted` | `passthrough=false`: add to buffer (C-1..C-5), at most `item_room` (C-6), full stack → ready FIFO of `lane` (C-3, C-4). Needs new slot and lane has none (`lane_room` false) → flush oldest partial of lane (F-1, F-2) and accept 0 (F-3). All lane slots ready → accept 0 (F-4). May accept part. `passthrough=true`: one belt item into lane hold (P-3), `count` whole or 0 when hold busy. Returns accepted count. |
+| `core.lane_room(box, lane) -> bool` | v8 L-2: lane may take one more slot (lane owns `N.SLOTS / 2`) |
+| `core.item_room(box, name, quality, lane, item_stack) -> n` | v8 C-6: `item_stack - held` for (name, quality, lane); `item_stack` nil = `math.huge` |
 | `core.used_slots(box) -> n` | sum over buffers `ceil(count/stack_size)` incl. ready stacks (L-2). Hold not counted (P-2). |
 | `core.free_slots(box) -> n` | `48 - used_slots` |
 | `core.on_tick(box, tick, timeout_ticks)` | partial with first arrival `<= tick - timeout_ticks` queued (S-1, Q-3). `timeout_ticks = 0` = off. |

@@ -2,7 +2,7 @@
 
 Factorio mod. 1x1 belt-inline box. Takes mixed ("sushi") items off belt, holds them until one item type reaches full stack, then pushes that stack out as stacked belt items. Output = sorted, compressed runs of single item type.
 
-Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9). v7 (author 2026-09-27): O-3 belt stack follows research up to engine max; E-10 added, then dropped same day.
+Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and graphics spec (§13). v3 (author 2026-09-26): T-1 two builds 2.0 + 2.1; Q-8, Q-9 answered. v4 (author 2026-09-26): R-1 budget 5 ms on `dev-vm`; Q-6 answered. v5 (author 2026-09-26): chained recipes + tech rule (U-1, U-2, Q-1 answered), upgrade planner, weight, locale, tips, release files (U-3..U-6); no stack gate (O-3 unchanged). v6 (author play-test 2026-09-26): release at belt stack (C-2, O-5), vanilla-style names + own row (U-7), live Factoriopedia/tips scene (U-8), splitter-style quality filter (P-1), GUI sections (S-3, N-3, N-4), decon stops box (E-8), box placed over belt (E-9). v7 (author 2026-09-27): O-3 belt stack follows research up to engine max; E-10 added, then dropped same day. v8 (author 2026-09-28, plan approved): lanes own 24 slots each (L-2, L-3, F-1, F-3, F-4, V-4), one item stack per (item, quality, lane) (C-6).
 
 ## 1. Target
 
@@ -35,23 +35,24 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | C-3 | When buffer reaches full stack, that stack is marked ready and queued for output on its own lane. |
 | C-4 | Output queue per lane is FIFO by time stack became ready. |
 | C-5 | Item arriving while its buffer already has queued ready stack starts new partial. |
+| C-6 | Per lane, box holds at most one item stack of each (item, quality): partial + ready summed ≤ `prototypes.item[name].stack_size` (runtime value, modded sizes followed). Belt item that would exceed waits at belt end; that lane input pauses. Other lane unaffected. Items inserted by inserter/player into chest adopted as today (D-1), not refused. (author 2026-09-28) |
 
 ## 4. Lanes
 
 | ID | Requirement |
 |----|-------------|
 | L-1 | Lane-preserving. Item picked from input left lane only ever leaves on output left lane; same for right. |
-| L-2 | Two lanes share one 48-slot pool. Slot use = sum over buffers of `ceil(count / stack_size)`, including ready-but-not-yet-output stacks. |
-| L-3 | Each lane output runs independently; blocked left lane does not stall right lane output. |
+| L-2 | Each lane owns half of 48-slot pool: 24 slots (`N.SLOTS / 2`). Lane slot use = its partials + its ready stacks (each = 1 slot). (v8, author 2026-09-28; was one shared pool) |
+| L-3 | Each lane output runs independently; blocked left lane does not stall right lane output. Blocked lane never stops other lane input or output (author 2026-09-28). |
 
 ## 5. Storage full — flush rule
 
 | ID | Requirement |
 |----|-------------|
-| F-1 | If item arrives, needs new slot, and all 48 slots used: flush oldest partial. Oldest = partial whose first item arrived earliest (across both lanes). |
+| F-1 | If item arrives, needs new slot, and its lane's 24 slots used: flush oldest partial of same lane. Oldest = partial whose first item arrived earliest. |
 | F-2 | Flushed partial is queued on its own lane like ready stack (joins FIFO at flush time). |
-| F-3 | While no slot free (flushed stack still leaving), input stops; belt behind backs up. No items lost, no items dropped. |
-| F-4 | If all 48 slots hold ready stacks (output blocked), input stops until output frees slot. |
+| F-3 | While lane has no slot free (flushed stack still leaving), that lane input stops; belt lane behind backs up. No items lost, no items dropped. |
+| F-4 | If all 24 slots of lane hold ready stacks (output blocked), that lane input stops until its output frees slot. Other lane unaffected. Migration: old saves keep contents; lane over 24 or item over cap (C-6) takes nothing new until drained. |
 
 ## 6. Output
 
@@ -116,7 +117,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 | V-1 | Each box shows one status LED on its crossbar (visible in all 4 directions). |
 | V-2 | Green = box empty: 0 items stored, nothing queued for output, pass-through hold empty. |
 | V-3 | Yellow = box has items waiting, but at least 1 of 48 slots free. |
-| V-4 | Red = box full: all 48 slots used (input stopped, F-3 / F-4). |
+| V-4 | Red = either lane full: its 24 slots used (that lane input stopped, F-3 / F-4). |
 | V-5 | State recalculated every tick for every box, from counters script already keeps (no inventory scan per tick). |
 | V-6 | LED drawn by script: one `rendering.draw_sprite` per box, targeted on entity. On state change only, write `LuaRenderObject.sprite` (RW) to new colour sprite. No write when state same. |
 | V-7 | LED visible at night: small `rendering.draw_light` in LED colour, colour updated with sprite. |

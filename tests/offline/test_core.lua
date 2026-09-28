@@ -1,6 +1,7 @@
 local core = require("scripts.core")
 
 local function box() return core.new_box() end
+local function key(name, q, lane) return name .. "\0" .. q .. "\0" .. lane end
 local function accept(b, name, q, lane, n, size, tick, pass)
   return core.accept(b, name, q, lane, n, size, tick or 1, pass or false)
 end
@@ -87,5 +88,38 @@ describe("core", function()
   end)
   it("box is plain data", function()
     local b=box(); accept(b,"iron","normal",1,2,50); accept(b,"copper","rare",2,1,50,3,true); local function walk(v) local t=type(v); ok(t=="table" or t=="number" or t=="string" or t=="boolean"); if t=="table" then for k,x in pairs(v) do walk(k); walk(x) end end end; walk(b)
+  end)
+  -- S1 v8 (D-5): per-lane slot and per-key item counters kept by core, rebuilt for old saves.
+  it("counters track partial and ready per lane", function()
+    local b = box()
+    accept(b, "iron", "normal", 1, 3, 4, 1)           -- partial 3 on lane 1
+    accept(b, "iron", "normal", 1, 2, 4, 2)           -- fills 4 -> ready, new partial 1
+    accept(b, "coal", "normal", 2, 4, 4, 3)           -- ready on lane 2
+    eq(b.lane_used, { 2, 1 })
+    eq(b.held[key("iron", "normal", 1)], 5); eq(b.held[key("coal", "normal", 2)], 4)
+    core.take_out(b, 1, 4)                            -- ready iron leaves
+    eq(b.lane_used, { 1, 1 }); eq(b.held[key("iron", "normal", 1)], 1)
+    core.remove_external(b, "iron", "normal", 1)      -- player took last iron
+    eq(b.lane_used, { 0, 1 }); eq(b.held[key("iron", "normal", 1)], nil)
+    core.take_out(b, 2, 4)
+    eq(b.lane_used, { 0, 0 }); eq(b.held[key("coal", "normal", 2)], nil)
+  end)
+  it("counters rebuilt for old box", function()
+    local b = box()
+    accept(b, "iron", "normal", 1, 6, 4, 1)
+    accept(b, "coal", "rare", 2, 1, 4, 1)
+    b.lane_used, b.held = nil, nil                    -- v1.7 save: no counters
+    accept(b, "coal", "rare", 2, 1, 4, 2)
+    eq(b.lane_used, { 2, 1 })
+    eq(b.held[key("iron", "normal", 1)], 6); eq(b.held[key("coal", "rare", 2)], 2)
+  end)
+  it("accept passes item stack to room stubs", function()
+    local b = box()
+    local seen
+    local real = core.item_room
+    core.item_room = function(bx, name, q, lane, item_stack) seen = { name, q, lane, item_stack }; return real(bx, name, q, lane, item_stack) end
+    core.accept(b, "iron", "normal", 2, 1, 4, 1, false, 100)
+    core.item_room = real
+    eq(seen, { "iron", "normal", 2, 100 })
   end)
 end)

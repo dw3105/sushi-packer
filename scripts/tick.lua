@@ -115,7 +115,7 @@ function M.on_tick(e)
               return core.accept(rec.box, name, quality, input_lane, count, release_size, e.tick, true)
             end
             local stack = release_size
-            local accepted = core.accept(rec.box, name, quality, input_lane, count, stack, e.tick, false)
+            local accepted = core.accept(rec.box, name, quality, input_lane, count, stack, e.tick, false, stack_size(name))
             if accepted <= 0 then return 0 end
             local inserted = inventory().insert({name=name, count=accepted, quality=quality})
             if inserted < accepted then core.remove_external(rec.box, name, quality, accepted - inserted) end
