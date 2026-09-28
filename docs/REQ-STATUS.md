@@ -92,7 +92,7 @@ Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bo
 | M-4 | PASS | PASS | `modtiers > upgrade chain follows belt speed` (every set; arig-k2so turbo -> hyper -> superior; ubsa 5 tiers); `modtiers > upgrade turbo to next tier keeps state`; offline `data extra > all mods sorted by speed tie by row order` |
 | M-5 | PASS | PASS | `modtiers > tech unlocks recipe and every ingredient reachable`; offline `data extra > recipe chains previous tier`, `tech prereqs belt tech previous tier and ingredient unlocks`, `tech cost belt count x 1.5 and pack union` |
 | M-6 | PASS | PASS | `modtiers > box output matches belt rate` per lane over 600 ticks: turbo 300/300, hyper 375/375, superior 450/450, bob 375/375, ub 450/675/900/1125/1350 exact, bb 478/480 (2.0); FND-0022, FND-0024; offline `tick extra > *`, `belt_io fast > *` |
-| M-7 | see graphics preview | same | paint from mod underground icons calibrated to G-2 (names.lua rows); author preview pending |
+| M-7 | PASS | PASS | author approved preview 2026-09-28 ("art ok"): 9 tiers, paint from mod underground icons calibrated to G-2, wear 0.40; files load in `load-check` both builds |
 | M-8 | PASS | PASS | offline `locale extra > names mirror belt names`, `descriptions name source mod`; `modtiers > upgrade chain follows belt speed` (item order after turbo) |
 | M-9 | PASS (existing rule) | PASS | `lifecycle > configuration changed drops invalid recs` (engine removes entities of missing prototypes); no removed-mod save load run — NOT-TESTED end to end |
 | R-1 | over budget under load | NOT-TESTED | v9 A/B same load (avg ~21, 21:53-21:58): v8 10.837 / 7.617 ms, v9 7.798 / 7.257 ms -> no regression; clean rerun pending |
