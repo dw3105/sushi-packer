@@ -70,3 +70,19 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0016 - S0 stub with `require` inside function reached headless
 
 **2026-09-28, v9 S2.** My S0 stub `belt_io.lane_rate` did `require("scripts.names")` inside the function; lua5.2 allows it, Factorio does not (`Require can't be used outside of control.lua parsing.`). Lane 025 kept the line; first modded headless run crashed. Fix: guard test `guard > no require inside runtime functions` (red on that line first). Bucket: integrator seam quality.
+
+## FRC-0017 - Uncalibrated gateslot wrap blocked shared queue 16 min
+
+**2026-09-28, v9 S0.** Blender test render wrapped in `gateslot --label sushi-packer/heavy` got whole-box weight (15986 MiB / 4 cores), sat at queue head (no overtaking), blocked own P1 + `skills/heavy` x2 + `suite-runner/agent` x2 for ~16 min. Auto mode refused my kill of own queued pid; author ran `! kill 633219`. Bucket: shared host. Root cause: new command never calibrated; label weight lookup falls back to whole machine. Proposed rule (shared-host): first run of any new command under gateslot needs `gateslot calibrate`, or runs unwrapped under `nice -n 19` when single-thread light.
+
+## FRC-0018 - Operator asks buried or unlocatable
+
+**2026-09-28.** (1) Token box given mid-turn then buried under tool output; later status said only "P1 waits on your token file" -> "THEN FUCKING GIVE ME INSTRUCTIONS!!!!!". (2) Told author zips are "in the Box 3 temp dir" of a `mktemp -d` subshell that never printed its path -> "ARE YOU SERIOUS?". Bucket: talking to operator. Root cause: ask written for my context, not operator's screen. Proposed rule (talking-to-operator): every operator ask = numbered steps as last content of turn, never "as before"; every file handed over sits at a named, printed path.
+
+## FRC-0019 - Version bump missed README + portal text; test pinned stale value
+
+**2026-09-28, v1.9.** Bump edited `info.json`, `stage.sh`, `load_check.sh`, tests, changelog; `README.md` + `portal/description.md` kept `0.1.8` / `0.2.8`; `stage > portal logo and description in repo` required `0.1.8`, so it stayed green. Author caught it on portal page. Bucket: shipping. Fix: test pins current version in both docs (red first). Proposed rule (shipping-and-integration): version bump greps whole repo for previous version string before commit.
+
+## FRC-0020 - `lane launch` loop ran lanes one after another
+
+**2026-09-28, v9 S1.** `for l in 024 025 027; do lane.py launch ...; done` blocks per lane (foreground until lane ends); only 024 started. Killed loop shell, relaunched 025 + 027 as separate background calls (~5 min lost). `--deadline 80m` refused (plain seconds). Bucket: tooling. Proposed: `lane launch --help` says it blocks; parallel lanes = one background call each (memory `lane-launch-blocks`).
