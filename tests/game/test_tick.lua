@@ -313,23 +313,26 @@ describe("tick", function()
   end)
 
   it("output never faster than tier", function()
-    -- backlog of 3 ready stacks (150 items = 38 pieces of 4) while no front belt; then turbo front belt appears.
+    -- backlog of ready stacks while no front belt; then turbo front belt appears.
     -- Uncapped push would move ~0.5 piece/tick; yellow cap is 0.125 piece/lane/tick.
     local _, rec, feed = build(surface, force, { belt = "turbo-transport-belt", front = 0 })
     local front
     local opened_at
-    local q = rep("iron-ore", 150)
+    -- v8: lane owns 24 slots (L-2), item cap one stack (C-6): backlog 3 items x 32 = 24 pieces of 4, all ready.
+    -- 100-tick window: yellow cap floor(100 * 0.125) + 2 = 14 < 24, uncapped push would move all 24.
+    local q = rep("iron-ore", 32)
+    for _, name in ipairs({ "copper-ore", "stone" }) do for _, x in ipairs(rep(name, 32)) do q[#q + 1] = x end end
     local step = feeder(feed, { q, {} })
     run_until(function()
       step()
       if not front and core.is_idle(rec.box) == false and #q == 0 and core.used_slots(rec.box) >= 3 and core.peek_out(rec.box, 1) then
         front = front_belts(surface, force, 0, 30, "turbo-transport-belt"); opened_at = game.tick
       end
-    end, function() return opened_at and game.tick - opened_at >= 200 end, 3400, function()
+    end, function() return opened_at and game.tick - opened_at >= 100 end, 3400, function()
       assert.is_not_nil(front, "backlog built")
       local pieces = #output(front, 1)
       assert.is_true(pieces > 0)
-      assert.is_true(pieces <= math.floor(200 * N.TIER.yellow.lane_rate) + 2, "belt items " .. pieces)
+      assert.is_true(pieces <= math.floor(100 * N.TIER.yellow.lane_rate) + 2, "belt items " .. pieces)
     end)
   end)
 
