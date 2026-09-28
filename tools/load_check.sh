@@ -6,7 +6,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$ROOT/build/load-$FV
 STAGE_DIR=$OUT "$ROOT/tools/stage.sh" "$FV" release >/dev/null
 # Release zip present (make zip) -> load the zip itself, not the staged folder.
-case "$FV" in 2.0) VER=0.1.7 ;; 2.1) VER=0.2.7 ;; esac
+case "$FV" in 2.0) VER=0.1.8 ;; 2.1) VER=0.2.8 ;; esac
 if [ -f "$ROOT/build/sushi-packer_$VER.zip" ]; then
   rm -rf "$OUT/mods/sushi-packer_$VER"; cp "$ROOT/build/sushi-packer_$VER.zip" "$OUT/mods/"; echo "load-check: using build/sushi-packer_$VER.zip"
 fi

@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.8
+Date: 2026-09-28
+  Changes:
+    - Each lane owns 24 of the 48 slots: a blocked output lane no longer stops the other lane.
+    - Each lane holds at most one full item stack of each item and quality (modded stack sizes included); more waits on the belt.
+    - Status light turns red when one lane is full.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.7
 Date: 2026-09-27
   Bugfixes:
@@ -61,6 +69,14 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.8
+Date: 2026-09-28
+  Changes:
+    - Each lane owns 24 of the 48 slots: a blocked output lane no longer stops the other lane.
+    - Each lane holds at most one full item stack of each item and quality (modded stack sizes included); more waits on the belt.
+    - Status light turns red when one lane is full.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.7
