@@ -4,7 +4,7 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 
 | ID | 2.0 | 2.1 | Proof |
 |---|---|---|---|
-| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.7 = 2.0, 0.2.7 = 2.1) load headless; full suites green on both |
+| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.8 = 2.0, 0.2.8 = 2.1) load headless; full suites green on both (131 game each, 191 offline, dev-vm 2026-09-28) |
 | T-2 | NOT-TESTED | NOT-TESTED |  — NOT-TESTED: no save/load or multiplayer desync run; design: all state in `storage` (`core > box is plain data`), no pairs-order logic |
 | E-1 | PASS | PASS | `belt_io > works in all four directions`, `lifecycle > placer becomes variant facing its direction` |
 | E-2 | PASS | PASS | `data > variants are 48 slot not rotatable containers` |
@@ -20,13 +20,14 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | C-3 | PASS | PASS | `core > full stack becomes ready on its lane`, `tick > sushi in sorted stacks out` |
 | C-4 | PASS | PASS | `core > ready stacks leave in ready order` |
 | C-5 | PASS | PASS | `core > arrival after ready starts new partial` |
+| C-6 | PASS | PASS | v8: `repro > box holds at most one stack per item per lane` (FND-0020, red on e5dfff1), `cap > ore stops at 50 per lane`, `cap > other lane same item unaffected`, `cap > modded stack size 7 honored`, `cap > quality separate`, `tick > sink passes item stack size to core` |
 | L-1 | PASS | PASS | `tick > lanes kept end to end`, `belt_io > pull keeps lanes` |
-| L-2 | PASS | PASS | `core > used slots counts ready and partials` |
-| L-3 | PASS | PASS | `tick > blocked left lane does not stall right`, `tick > blocked lane does not stall other lane` |
-| F-1 | PASS | PASS | `core > oldest partial chosen across lanes`, `tick > full box flushes oldest partial and loses nothing` |
+| L-2 | PASS | PASS | v8: `quota > blocked lane never takes 25th slot`, `quota > other lane keeps 24 slots`, `core > counters track partial and ready per lane`, `core > counters rebuilt for old box` |
+| L-3 | PASS | PASS | `repro > blocked left lane never starves right lane` (FND-0019, red on e5dfff1), `tick > blocked left lane does not stall right`, `tick > blocked lane does not stall other lane` |
+| F-1 | PASS | PASS | v8: `quota > flush picks oldest partial same lane`, `core > oldest partial chosen across lanes`, `tick > full box flushes oldest partial and loses nothing` |
 | F-2 | PASS | PASS | `core > full box flushes oldest partial and accepts zero` |
 | F-3 | PASS | PASS | `tick > full box flushes oldest partial and loses nothing` |
-| F-4 | PASS | PASS | `core > all ready refuses input` |
+| F-4 | PASS | PASS | v8: `core > all ready refuses input`, `quota > old box over quota drains` |
 | O-1 | PASS | PASS | `belt_io > push inserts stacked item on matching lane` |
 | O-2 | PASS | PASS | `tick > sushi in sorted stacks out`, `core > hold waits while stack run started` |
 | O-3 | PASS | PASS | `belt_io > belt stack follows research up to engine max`, `belt_io > belt stack size follows research capped at engine max`, `tick > releases at modded belt stack 20` (test env mod max 20) |
@@ -51,12 +52,12 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | U-6 | PASS | PASS | offline `stage > release info has no test dependency`, `stage > thumbnail is 144 by 144 png`, `stage > changelog format valid`, `stage > release ships thumbnail and changelog`; zip listing: deps `base >= 2.0.0`, `space-age` only |
 | U-7 | PASS | PASS | `data > tiers sort yellow red blue turbo in own row`; offline `data > own subgroup row after belts`, `locale > vanilla style names`, `migration > maps every old name to new` — old-save load NOT-TESTED in engine (mapping tested offline) |
 | U-8 | PASS (logic), look NOT-TESTED | PASS (logic), look NOT-TESTED | `sim > scene feeds both lanes with four kinds` + `sim > scene never stalls` (v1.4 author layout: box centered, machinery off frame, bottom pair one tile upstream); offline `sim > *` (8) — picture = author eyes |
-| R-1 | PASS | NOT-TESTED | `make bench FV=2.0`: `script_ms_avg=4.177` (200 boxes, 3600 ticks, load avg ~11, 2026-09-27, dev-vm, v1.6); pre-fix same minute 4.422; budget ≤ 5 ms (R-1 v4) — 2.1: bench not run |
+| R-1 | PASS | NOT-TESTED | `make bench FV=2.0`: `script_ms_avg=4.493` (200 boxes, 3600 ticks, load avg 8.05, 2026-09-28 09:29 UTC, dev-vm, v8); budget ≤ 5 ms (R-1 v4) — 2.1: bench not run |
 | R-2 | PASS | PASS | `tick > idle box sleeps 30 ticks`, `perf > yellow box visited every 8 ticks` |
 | V-1 | PASS | PASS | `lifecycle > built box gets rec and green led` |
 | V-2 | PASS | PASS | `core > new box is idle and green`, `tick > led green then yellow` |
 | V-3 | PASS | PASS | `core > led yellow with items and red when full`, `tick > led green then yellow` |
-| V-4 | PASS | PASS | `tick > full box flushes oldest partial and loses nothing` |
+| V-4 | PASS | PASS | v8: `quota > led red when one lane full`, `tick > full box flushes oldest partial and loses nothing` |
 | V-5 | PASS | PASS | `perf > led checked every tick` |
 | V-6 | PASS | PASS | `lifecycle > led set writes only on change` |
 | V-7 | PASS | PASS | `lifecycle > built box gets rec and green led` — light drawn with sprite; night look NOT-TESTED visually |
