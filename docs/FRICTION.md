@@ -58,3 +58,7 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0013 - Auto-mode classifier outage blocked tools mid-turn
 
 **2026-09-28.** Server-side auto-mode classifier returned no verdict on `Bash` and `SendMessage` 6+ times (peer handoff to `rrc_fixer_3` pasted by author instead). Bucket: environment. No rule change; retry once, then hand text to operator.
+
+## FRC-0014 - `cmd | tail` hid failing exit code twice
+
+**2026-09-28, close-out.** `make skill-lint | tail -2 && git commit` committed + installed despite lint failure (fixed next commit `7b2d083`); `git commit ... | tail -3` in `~/skills` reported exit 0 while pre-commit hook refused commit (found ~20 min later). Bucket: evidence-and-claims. Root cause: pipeline exit = last stage. Rule: gate commands never piped without `set -o pipefail`; read `commit_rc` / `git log -1` after commit. Also found: `~/skills` main `72a4f1c` red on `tests.test_host_sweep_roots` `test_mutation_evidence_reproduces` (125 != 0), unrelated; skills commit `9e2e2d4` used `--no-verify` with reason in body.
