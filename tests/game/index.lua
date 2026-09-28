@@ -11,4 +11,5 @@ return {
   "tests.game.test_bench",
   "tests.game.test_sim",
   "tests.game.test_repro",
+  "tests.game.test_modtiers",
 }
