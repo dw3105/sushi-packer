@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.9
+Date: 2026-09-28
+  Changes:
+    - Added modded belt tiers for Planetaris: Arig, Bob's Logistics, Krastorio 2, Ultimate Belts Space Age, and Better Belts.
+    - Modded box speed follows the real belt speed, including changes from mod settings.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.8
 Date: 2026-09-28
   Changes:
@@ -69,6 +76,13 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.9
+Date: 2026-09-28
+  Changes:
+    - Added modded belt tiers for Planetaris: Arig, Bob's Logistics, Krastorio 2, Ultimate Belts Space Age, and Better Belts.
+    - Modded box speed follows the real belt speed, including changes from mod settings.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.8

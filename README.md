@@ -15,6 +15,24 @@ Each tier matches a belt speed. Recipes are crafted in the crafting category, by
 | Express sushi packer | 1 fast sushi packer, 1 express splitter, 2 bulk inserters, 5 processing units | 60 s | Express sushi packer |
 | Turbo sushi packer | 1 express sushi packer, 1 turbo splitter, 2 stack inserters, 2 quantum processors | 120 s | Turbo sushi packer |
 
+## Modded belt tiers
+
+These tiers appear only when the matching belt mod is installed.
+
+| Tier | Belt mod | Speed | Builds |
+| --- | --- | ---: | --- |
+| Hyper sushi packer | Planetaris: Arig | 75/s | 2.0 + 2.1 |
+| Ultimate sushi packer | Bob's Logistics | 75/s | 2.0 + 2.1 |
+| Superior sushi packer | Krastorio 2 | 90/s | 2.0 + 2.1 |
+| Ultra fast sushi packer | Ultimate Belts Space Age | 90/s | 2.0 |
+| Ultra sushi packer | Better Belts | 96/s | 2.0 |
+| Extreme fast sushi packer | Ultimate Belts Space Age | 135/s | 2.0 |
+| Ultra express sushi packer | Ultimate Belts Space Age | 180/s | 2.0 |
+| Extreme express sushi packer | Ultimate Belts Space Age | 225/s | 2.0 |
+| Ultimate sushi packer | Ultimate Belts Space Age | 270/s | 2.0 |
+
+Each modded tier recipe uses 1 previous tier box, 1 matching belt splitter, 2 stack inserters, and 2 quantum processors, and takes 120 s to craft. The upgrade chain follows increasing belt speed from turbo through the modded tiers. Each box runs at its belt's real speed and follows speed changes made by the belt mod's settings. Planetaris Hyarion has no belt of its own: the hyper belt comes from Planetaris: Arig, and with Hyarion installed its technology moves into Hyarion's progression, so the packer tier follows it.
+
 Each box tier unlocks from its matching belt technology and the recipe ingredient technologies. The red, blue, and turbo boxes also require the previous box tier's technology.
 
 ## Settings
