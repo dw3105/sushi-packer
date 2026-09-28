@@ -62,3 +62,11 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0014 - `cmd | tail` hid failing exit code twice
 
 **2026-09-28, close-out.** `make skill-lint | tail -2 && git commit` committed + installed despite lint failure (fixed next commit `7b2d083`); `git commit ... | tail -3` in `~/skills` reported exit 0 while pre-commit hook refused commit (found ~20 min later). Bucket: evidence-and-claims. Root cause: pipeline exit = last stage. Rule: gate commands never piped without `set -o pipefail`; read `commit_rc` / `git log -1` after commit. Also found: `~/skills` main `72a4f1c` red on `tests.test_host_sweep_roots` `test_mutation_evidence_reproduces` (125 != 0), unrelated; skills commit `9e2e2d4` used `--no-verify` with reason in body.
+
+## FRC-0015 - Lane tests green one by one, red as a file (twice in v9)
+
+**2026-09-28, v9 S2.** Lane 025 (`belt_io` rate cache kept across tests) and lane 024 (tests set `_G.log = nil`) passed every `make test-one` check, but whole-file runs failed (1 of 8, 8 of 16). Lanes only run single tests (SP-02), so order dependence is invisible to them. Integrator caught both by running each merged file whole before headless. Bucket: process. Proposed (author decides): task checks also run the lane's own new file whole (`lua5.2 tests/offline/run.lua <new file>`, ms, offline, not a suite).
+
+## FRC-0016 - S0 stub with `require` inside function reached headless
+
+**2026-09-28, v9 S2.** My S0 stub `belt_io.lane_rate` did `require("scripts.names")` inside the function; lua5.2 allows it, Factorio does not (`Require can't be used outside of control.lua parsing.`). Lane 025 kept the line; first modded headless run crashed. Fix: guard test `guard > no require inside runtime functions` (red on that line first). Bucket: integrator seam quality.

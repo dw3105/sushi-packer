@@ -79,3 +79,21 @@ Runs v1.1 2026-09-26 on `dev-vm`, tree `int/v1.1`: `make test FV=2.0` → `full-
 Runs v1.2 2026-09-26 on `dev-vm`, tree `int/v1.2`: `make test FV=2.0` → `full-2.0-ok`, `make test FV=2.1` → `full-2.1-ok` (96 game tests each + offline). Zips `sushi-packer_0.1.2.zip` (sha256 `2a26543c…`), `sushi-packer_0.2.2.zip` (sha256 `0c12df68…`) load headless. Author checks: Factoriopedia + tip scene look, GUI look, belt swap by hand, old save load.
 
 Runs v1.3 2026-09-26 23:48 on `dev-vm`, tree `int/v1.3`: `full-2.0-ok`, `full-2.1-ok` (101 game tests each + offline). Zips `sushi-packer_0.1.3.zip` (sha256 `0ba405f9…`), `sushi-packer_0.2.3.zip` (sha256 `ae1fa447…`) load headless. Open: author one-lane report (FND-0011) not reproduced in 4 layouts (`tick > north turbo box moves both lanes*`); waiting for author save.
+
+## v9 modded belt tiers (§17), 2026-09-28, dev-vm, `int/v9`
+
+Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bob, ubsa, bb; 2.1 arig, hyarion, k2so, arig-k2so, bob (arig-off 2.0 only, FND-0023). Each set: 5 of 5 `tests/game/test_modtiers.lua` passed. Vanilla full: `full-2.0-ok`, `full-2.1-ok` (137 game each).
+
+| ID | 2.0 | 2.1 | Evidence |
+|---|---|---|---|
+| M-1 | PASS | PASS | `modtiers > active tiers match installed mods` (every set); arig-off (2.0): no hyper tier, no error; offline `data extra > hidden belt skipped`, `belt tech without unit skipped`, `missing tech skipped`, `k2so hidden advanced belt ignored` |
+| M-2 | PASS | PASS | offline `data extra > vanilla prototypes identical to v8` (golden at `lanes-base-v9`); vanilla full suites incl. `data > *`; `modtiers > active tiers match installed mods` vanilla = 4 |
+| M-3 | PASS | PASS | `data-final-fixes.lua` -> `prototypes/extra.lua`; `data extra > info lists belt mods as hidden optional deps` |
+| M-4 | PASS | PASS | `modtiers > upgrade chain follows belt speed` (every set; arig-k2so turbo -> hyper -> superior; ubsa 5 tiers); `modtiers > upgrade turbo to next tier keeps state`; offline `data extra > all mods sorted by speed tie by row order` |
+| M-5 | PASS | PASS | `modtiers > tech unlocks recipe and every ingredient reachable`; offline `data extra > recipe chains previous tier`, `tech prereqs belt tech previous tier and ingredient unlocks`, `tech cost belt count x 1.5 and pack union` |
+| M-6 | PASS | PASS | `modtiers > box output matches belt rate` per lane over 600 ticks: turbo 300/300, hyper 375/375, superior 450/450, bob 375/375, ub 450/675/900/1125/1350 exact, bb 478/480 (2.0); FND-0022, FND-0024; offline `tick extra > *`, `belt_io fast > *` |
+| M-7 | see graphics preview | same | paint from mod underground icons calibrated to G-2 (names.lua rows); author preview pending |
+| M-8 | PASS | PASS | offline `locale extra > names mirror belt names`, `descriptions name source mod`; `modtiers > upgrade chain follows belt speed` (item order after turbo) |
+| M-9 | PASS (existing rule) | PASS | `lifecycle > configuration changed drops invalid recs` (engine removes entities of missing prototypes); no removed-mod save load run — NOT-TESTED end to end |
+| R-1 | over budget under load | NOT-TESTED | v9 A/B same load (avg ~21, 21:53-21:58): v8 10.837 / 7.617 ms, v9 7.798 / 7.257 ms -> no regression; clean rerun pending |
+
