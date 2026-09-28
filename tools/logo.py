@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mod logo: thumbnail.png (144x144, portal thumbnail, shipped) + portal/logo-512.png (README, GitHub).
 
-Pure Python (no PIL on build VM). Only mod's own box sprite; belts and items are drawn shapes, never base-game art.
+Pure Python (no PIL on build VM). SUPERSEDED 2026-09-28 by tools/thumb_from_shot.py (in-game shot); do not run main(). Only mod's own box sprite; belts and items are drawn shapes, never base-game art.
 Scene: mixed single items ride in on both lanes -> yellow sushi packer -> one-kind 4-stacks ride out, lanes kept.
 Drawn at 1024 px, area-averaged down (anti-aliasing). Layout below in 144-px units.
 """

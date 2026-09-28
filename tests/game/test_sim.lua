@@ -45,6 +45,38 @@ describe("sim", function()
       assert.is_true(outstacks[1] > 0 and outstacks[2] > 0, r)
     end)
   end)
+  it("scene built by console in fresh game outputs", function()
+    -- author 2026-09-28 thumbnail shots: fresh Freeplay, console line (clear area, grass, scene) -> output belt empty.
+    async(3000)
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    storage.boxes = {}
+    force.belt_stack_size_bonus = 0
+    storage.belt_stack = {}
+    local t = {}
+    for x = -22, 17 do for y = -14, 7 do t[#t + 1] = { name = "grass-1", position = { x, y } } end end
+    surface.set_tiles(t)
+    after_ticks(120, function()  -- fresh game: belt stack cached before scene raises bonus
+      remote.call(N.SIM_INTERFACE, "scene", "factoriopedia")
+      local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+      assert.is_not_nil(box, "box built east")
+      local start, out = game.tick, 0
+      on_tick(function()
+        if game.tick - start < 1800 then return end
+        for x = 1, 11 do
+          local belt = surface.find_entity("transport-belt", { x + 0.5, 0.5 })
+          for lane = 1, 2 do out = out + #belt.get_transport_line(lane) end
+        end
+        local rec = storage.boxes[box.unit_number]
+        local r = string.format("out belt items=%d stored=%d bss=%s ready=%d/%d partials=%d", out, rec.box.stored_count,
+          tostring(storage.belt_stack[force.index]), #rec.box.ready[1], #rec.box.ready[2], #rec.box.partials)
+        force.belt_stack_size_bonus = 0; storage.belt_stack = {}
+        assert.is_true(out > 0, r)
+        done()
+        return false
+      end)
+    end)
+  end)
   it("scene never stalls", function()
     -- FND-0013: author 2026-09-27 saw yellow box stutter in scene; item must never rest at belt end behind box.
     local surface, force = game.surfaces[1], game.forces.player
