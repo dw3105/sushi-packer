@@ -32,15 +32,15 @@ describe("core", function()
     local b=box(); accept(b,"iron","normal",1,50,50); accept(b,"copper","normal",2,2,50); eq(core.used_slots(b),2); eq(core.free_slots(b),46)
   end)
   it("full box flushes oldest partial and accepts zero", function()
-    local b=box(); for i=1,48 do accept(b,"i"..i,"normal",1,1,50,i) end; eq(core.used_slots(b),48); eq(accept(b,"extra","normal",2,1,50,99),0); eq(core.peek_out(b,1).name,"i1"); eq(core.used_slots(b),48)
+    local b=box(); for i=1,24 do accept(b,"i"..i,"normal",1,1,50,i) end; eq(core.used_slots(b),24); eq(accept(b,"extra","normal",1,1,50,99),0); eq(core.peek_out(b,1).name,"i1"); eq(core.used_slots(b),24)
   end)
   it("oldest partial chosen across lanes", function()
-    -- oldest partial sits on lane 2; new item arrives on lane 1
-    local b=box(); accept(b,"old2","normal",2,1,50,1); for i=2,48 do accept(b,"i"..i,"normal",1,1,50,i) end
-    eq(accept(b,"extra","normal",1,1,50,99),0); eq(core.peek_out(b,2).name,"old2"); eq(core.peek_out(b,1),nil)
+    -- oldest partial sits on lane 2; lane 1 must flush its own oldest partial
+    local b=box(); accept(b,"old2","normal",2,1,50,1); for i=2,25 do accept(b,"i"..i,"normal",1,1,50,i) end
+    eq(accept(b,"extra","normal",1,1,50,99),0); eq(core.peek_out(b,2),nil); eq(core.peek_out(b,1).name,"i2")
   end)
   it("all ready refuses input", function()
-    local b=box(); for i=1,48 do accept(b,"i"..i,"normal",1,50,50,i) end; eq(accept(b,"extra","normal",2,1,50,99),0); eq(core.used_slots(b),48)
+    local b=box(); for i=1,24 do accept(b,"i"..i,"normal",1,50,50,i) end; eq(accept(b,"extra","normal",1,1,50,99),0); eq(core.used_slots(b),24)
   end)
   it("passthrough uses hold not slots", function()
     local b=box(); eq(accept(b,"iron","normal",1,4,4,1,true),4); eq(core.used_slots(b),0); eq(core.peek_out(b,1),{name="iron",quality="normal",count=4,passthrough=true})

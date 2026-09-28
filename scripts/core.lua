@@ -28,12 +28,12 @@ local function remove_partial(box, i)
   if box.partial_by_key[key] == p then box.partial_by_key[key] = nil end
   return p
 end
-local function oldest_partial(box)
+local function oldest_partial(box, lane)
   local best
   for i = 1, #box.partials do
     local p = box.partials[i]
-    if best == nil or p.first_tick < box.partials[best].first_tick or
-      (p.first_tick == box.partials[best].first_tick and p.sequence < box.partials[best].sequence) then best = i end
+    if p.lane == lane and (best == nil or p.first_tick < box.partials[best].first_tick or
+      (p.first_tick == box.partials[best].first_tick and p.sequence < box.partials[best].sequence)) then best = i end
   end
   return best
 end
@@ -81,8 +81,8 @@ local function add(box, name, quality, lane, count, stack_size, tick, limited, i
         remove_partial(box, idx); ready_add(box, p)
       end
     else
-      if limited and (box.used_slots >= N.SLOTS or not M.lane_room(box, lane)) then
-        local oldest = oldest_partial(box)
+      if limited and not M.lane_room(box, lane) then
+        local oldest = oldest_partial(box, lane)
         if oldest then
           local p = remove_partial(box, oldest); ready_add(box, p)
           box.used_slots = box.used_slots -- partial slot becomes ready slot
@@ -116,7 +116,10 @@ function M.new_box()
     lane_used={0,0}, held={}}
 end
 -- L-2 v8 (lane A): may `lane` take one more slot? false -> flush/refuse like full box.
-function M.lane_room(box, lane) return true end
+function M.lane_room(box, lane)
+  ensure_counters(box)
+  return box.lane_used[lane] < N.SLOTS / 2
+end
 -- C-6 v8 (lane B): how many more of (name, quality) `lane` may hold. item_stack nil = no cap.
 function M.item_room(box, name, quality, lane, item_stack) return math.huge end
 function M.accept(box, name, quality, lane, count, stack_size, tick, passthrough, item_stack)
@@ -209,7 +212,8 @@ function M.totals(box)
   return out
 end
 function M.led_state(box)
-  if box.used_slots>=N.SLOTS then return "red" end
+  ensure_counters(box)
+  if box.lane_used[1] >= N.SLOTS / 2 or box.lane_used[2] >= N.SLOTS / 2 then return "red" end
   if M.is_idle(box) then return "green" end
   return "yellow"
 end
