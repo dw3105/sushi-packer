@@ -121,7 +121,11 @@ function M.lane_room(box, lane)
   return box.lane_used[lane] < N.SLOTS / 2
 end
 -- C-6 v8 (lane B): how many more of (name, quality) `lane` may hold. item_stack nil = no cap.
-function M.item_room(box, name, quality, lane, item_stack) return math.huge end
+function M.item_room(box, name, quality, lane, item_stack)
+  if item_stack == nil then return math.huge end
+  ensure_counters(box)
+  return math.max(0, item_stack - (box.held[partial_key(name, quality, lane)] or 0))
+end
 function M.accept(box, name, quality, lane, count, stack_size, tick, passthrough, item_stack)
   if passthrough then
     if box.hold[lane] ~= nil then return 0 end
