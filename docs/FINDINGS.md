@@ -140,3 +140,10 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > blocked
 Reported 2026-09-28 by author ("prevent getting more than one full stack ... of each item"). Repro `repro > box holds at most one stack per item per lane` (east yellow box, no front belt, iron-ore both lanes, belt stack 4, 3600 ticks), dev-vm 2.0.77, code `e5dfff1`: RED, `stack=50 chest=192 laneL=96 laneR=96 used=48`. Fix (author pick): cap one item stack per (item, quality, lane), size from `prototypes.item[name].stack_size` at runtime (REQUIREMENTS v8 C-6, D-5).
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > box holds at most one stack per item per lane'`
+
+## FND-0021 - Leak report: sushi-packer state flat; author save dominated by RRC-Fork storage
+
+Reported 2026-09-28 by author (RAM grows, UPS drops over time; perf CSV = `--output-perf-stats` renderer dump, no Lua memory data). Soak probe `tests/game/test_probe_soak.lua` (NOT in index, SP-10), dev-vm 2.0.77, code `e5dfff1`: 200 yellow boxes full flow, churn every 600 ticks (destroy+rebuild, rotate x4, die+rebuild, clone+destroy), 108 000 ticks. Every 3600 ticks: recs = live = 200, render objects 400, upgrade_stash 0, `storage.boxes` tables 4 592 (t=3600) -> 4 506 (t=108000), `collectgarbage("count")` after collect 2 997..3 715 KB, no trend (log `~/share/sushi-packer/soak-2.0.txt`). Verdict: no growth in sushi-packer state or render objects.
+Author save `SA_D0.zip` (2026-09-28): `script.dat` 30 334 631 B parsed per mod block: `mod-RRC-Fork` 30 030 288 B (~99 %), machine-upgrades 201 522 B, sushi-packer 51 580 B (9 boxes). RRC-Fork block = cache of ~41 553 records (`status`, `selected`, `consumer`, `beacons`, `modules`). Growth unproven (one save; second save asked). Handed to RRC session `rrc_fixer_3` (author pasted, 2026-09-28). No sushi-packer code change (lane L not spawned).
+
+Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_probe_soak.lua::probe > soak storage and render objects bounded'` (temporary index entry)
