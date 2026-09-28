@@ -28,7 +28,7 @@ rm -rf "$OUT/mods/sushi-packer-test-env_"* "$OUT/mods/sushi-packer-test-settings
 # v9 MODSET (env): third-party belt mods from ~/.cache/sushi-packer-mods/<FV> (tools/fetch_mods.py fetch first).
 # Old third-party zips always removed; startup overrides go into generated test-only mod sushi-packer-test-settings.
 python3 - "$ROOT" "$FV" "$OUT/mods" "${MODSET:-}" <<'PY'
-import json, os, shutil, subprocess, sys
+import errno, json, os, shutil, subprocess, sys
 root, fv, mods, modset = sys.argv[1:]
 lock = json.load(open(os.path.join(root, "tests", "mods.lock.json")))
 files = {e["file"] for v in lock.values() for e in v.values()}
@@ -41,7 +41,12 @@ if modset:
     for n in names:
         src = os.path.join(os.path.expanduser("~/.cache/sushi-packer-mods"), fv, lock[fv][n]["file"])
         if not os.path.exists(src): sys.exit(f"stage: {src} missing (tools/fetch_mods.py fetch {fv} {modset})")
-        shutil.copy(src, mods)
+        dst = os.path.join(mods, os.path.basename(src))  # hardlink: no extra bytes (disk floor, skills_disk_check 2026-09-28)
+        try:
+            os.link(src, dst)
+        except OSError as e:
+            if e.errno != errno.EXDEV: raise
+            shutil.copy(src, dst)
     settings = json.load(open(os.path.join(root, "tools", "modsets.json")))[modset].get("settings", {})
     if settings:
         d = os.path.join(mods, "sushi-packer-test-settings_0.0.1"); os.makedirs(d)

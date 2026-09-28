@@ -29,7 +29,7 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   staged=$(dirname "$mod"); extra=$(cat "$staged/.modset" 2>/dev/null || true)
   rm -rf "$data/mods/sushi-packer-test-settings_"*
   python3 -c "import json,os,sys; l=json.load(open(sys.argv[1])); fs={e['file'] for v in l.values() for e in v.values()}; [os.remove(os.path.join(sys.argv[2],f)) for f in os.listdir(sys.argv[2]) if f in fs]" "$ROOT/tests/mods.lock.json" "$data/mods"
-  for f in "$staged"/*.zip; do case "$(basename "$f")" in factorio-test_*) ;; *) cp "$f" "$data/mods/" ;; esac; done 2>/dev/null || true
+  for f in "$staged"/*.zip; do case "$(basename "$f")" in factorio-test_*) ;; *) ln -f "$f" "$data/mods/" 2>/dev/null || cp "$f" "$data/mods/" ;; esac; done 2>/dev/null || true  # hardlink, copy only across filesystems
   test -d "$staged/sushi-packer-test-settings_0.0.1" && cp -r "$staged/sushi-packer-test-settings_0.0.1" "$data/mods/"
   test -x "$CLI" || { echo "run_tests: FactorioTest CLI missing: (cd $FT && npm ci)" >&2; exit 2; }
   FT_DIR="$FT" "$ROOT/tools/ft/patch-cli.sh" >/dev/null  # FND-0005: 10 s startup watchdog -> 120 s
