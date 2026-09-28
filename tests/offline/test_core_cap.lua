@@ -65,11 +65,11 @@ describe("cap", function()
 
   it("no item stack means no cap", function()
     local b = box(); local total = 0
-    while total < 100 do
+    while total < 80 do  -- 20 slots of 4: under lane quota 24 (022), over any 50 cap
       local n = accept(b, "iron-ore", "normal", 1, 4, 4, total + 1, nil)
       if n == 0 then break end
       total = total + n
     end
-    eq(total, 100)
+    eq(total, 80)
   end)
 end)
