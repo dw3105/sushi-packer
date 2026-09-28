@@ -45,7 +45,11 @@ describe("tick extra", function()
       if not inv.contents[1] then return 0 end
       local n = math.min(x.count, inv.contents[1].count); inv.contents[1].count = inv.contents[1].count - n; return n
     end
-    function inv.get_contents() return {} end
+    function inv.get_contents()
+      local out = {}
+      for i, x in ipairs(inv.contents) do out[i] = { name = x.name, quality = x.quality, count = x.count } end
+      return out
+    end
     local ent = { valid = true, unit_number = unit, position = { x = 0, y = 0 }, force = { index = 1, belt_stack_size_bonus = 0 } }
     function ent.get_inventory() return inv end
     local rec = { entity = ent, unit_number = unit, tier = tier, dir = "north", box = core.new_box(),
@@ -83,11 +87,11 @@ describe("tick extra", function()
     "75 per s tier keeps rate over 800 ticks")
   rate_case("kr-superior", "kr-superior-transport-belt", 0.1875, 600,
     "90 per s tier keeps rate over 800 ticks")
-  rate_case("ub-ultimate", "ub-ultimate-transport-belt", 0.5625, 1800,
+  rate_case("ub-ultimate", "ultimate-belt", 0.5625, 1800,
     "270 per s tier keeps rate over 800 ticks")
 
   it("input budget reaches 2 per tick at 270 per s", function()
-    local r, c, _, o = tick_fixture("ub-ultimate", 1, "ub-ultimate-transport-belt", 0.5625)
+    local r, c, _, o = tick_fixture("ub-ultimate", 1, "ultimate-belt", 0.5625)
     for t = 1, 8 do tick.on_tick({ tick = t }) end
     local reached = false
     for _, b in ipairs(c.budgets) do if b[1] >= 2 or b[2] >= 2 then reached = true end end

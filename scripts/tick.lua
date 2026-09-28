@@ -100,12 +100,13 @@ function M.on_tick(e)
             inv = inv or rec.entity.get_inventory(defines.inventory.chest)
             return inv
           end
-          local rate = N.TIER[rec.tier].lane_rate
+          local rate = belt_io.lane_rate(rec.tier)
+          local credit_cap = math.max(2, 2 * rate)
           local elapsed = e.tick - (rec.last_poll or (e.tick - interval))
           local taken_any = false
           local budget = {0, 0}
           for lane = 1, 2 do
-            rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate * elapsed, 2)
+            rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate * elapsed, credit_cap)
             budget[lane] = math.floor(rec.in_credit[lane])
           end
           local function sink(name, quality, input_lane, count)
@@ -129,7 +130,7 @@ function M.on_tick(e)
             if n > 0 then taken_any = true end
           end
           for lane = 1, 2 do
-            rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * elapsed, 2)
+            rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * elapsed, credit_cap)
             while rec.out_credit[lane] >= 1 do
               local item = core.peek_out(rec.box, lane)
               if not item then break end

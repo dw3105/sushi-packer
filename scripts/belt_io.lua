@@ -1,6 +1,7 @@
 -- Belt access for the packer. All coordinates are tile centres.
 local M = {}
 local belt_speeds = {}
+local lane_rates = {}
 setmetatable(M, { __index = function(t, key)
   if key == "speed" or key == "eta" then return rawget(t, "_" .. key) end
 end })
@@ -200,7 +201,16 @@ end
 -- v9 (M-6): belt items per lane per tick for tier = live belt prototype speed x 4. S0 stub (table value);
 -- lane 025 fills.
 function M.lane_rate(tier)
-  return require("scripts.names").TIER[tier].lane_rate
+  local cached_rate = lane_rates[tier]
+  if cached_rate ~= nil then return cached_rate end
+  local T = require("scripts.names").TIER[tier]
+  local p = prototypes and prototypes.entity and prototypes.entity[T.belt]
+  if p then
+    local rate = p.belt_speed * 4
+    lane_rates[tier] = rate
+    return rate
+  end
+  return T.lane_rate or 0
 end
 
 -- Research-set belt stack (O-3 v7, author 2026-09-27): 1 + bonus, capped by engine max (utility constant,
