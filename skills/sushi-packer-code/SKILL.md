@@ -30,7 +30,7 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 - **SP-07** **No base-game file in mod.** Graphics only from `graphics/` (copied from `~/share/sushi-packer/mod-graphics/graphics/`). Never redraw unless author asks.
 - **SP-08** **No push from VM.** Operator pushes from laptop via publish boxes (`operator-blocks`). Commit in worktree, `git merge --ff-only` into `~/sushi-packer-mod`.
 - **SP-09** **Requirement IDs are progress.** Report every ID PASS / FAIL / NOT-TESTED with test name in `docs/REQ-STATUS.md`. Never "works" without run.
-- **SP-10** **Probe files (report via `error()`) stay out of `tests/game/index.lua`.** Run: add temporary index entry, `make test-one`, remove entry before commit. Every filtered output keeps `Tests:` line; `0 passed ... skipped` = probe never ran (friction log, 2026-09-27). Long probe: passed-test `print` never reaches CLI, so report via `log()` (read `build/<FV>/ftdata/factorio-current.log`); CLI kills run after 15 s silence, so `print` progress under 15 s apart (FRC-0011, 2026-09-28).
+- **SP-10** **Probe files (report via `error()`) stay out of `tests/game/index.lua`.** Run: add temporary index entry, `make test-one`, remove entry before commit. Every filtered output keeps `Tests:` line; `0 passed ... skipped` = probe never ran (friction log, 2026-09-27). Long probe: passed-test `print` never reaches CLI, so report via `log()` (read `build/<FV>/ftdata/factorio-current.log`); CLI kills run after 15 s silence, so `print` progress under 15 s apart (friction log, 2026-09-28).
 
 | Reference | Read when |
 |---|---|
