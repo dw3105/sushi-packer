@@ -1,11 +1,11 @@
 # Portal reply — "Suggestion: Hyarion, K2SO tiers" (Ziktofel)
 
 Thread: https://mods.factorio.com/mod/sushi-packer/discussion/6aba64442c2050c68ef2a3b0
-Post after 0.1.9 / 0.2.9 is live on portal. Author posts (portal login).
+Post after 0.1.10 / 0.2.10 is live on portal. Author posts (portal login).
 
 ---
 
-Thanks for the idea — done in 0.1.9 (Factorio 2.0) / 0.2.9 (Factorio 2.1).
+Thanks for the idea — done in 0.1.10 (Factorio 2.0) / 0.2.10 (Factorio 2.1).
 
 The packer now adds extra tiers, but only when their belt mod is installed:
 
