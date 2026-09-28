@@ -34,3 +34,27 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 
 **2026-09-27.** B3 plan listed companion belt as working piece; first load showed engine forbids it (FND-0018). Cheap check (define prototype, load once) came after author picked shape. Proposed rule change: none; data-stage load of any new prototype idea goes before offering it as plan option.
 
+
+## FRC-0008 - Shell box format pasted into Factorio console broke Lua parse
+
+**2026-09-28, thumbnail.** Box gave `/c ... # expected: ...` lines (shell trailing-comment convention). In Lua `#` = length operator: author got `unexpected symbol near '#'`, one round trip lost. Bucket: operator-blocks. Root cause: box rules written for shells, applied to non-shell console unchanged. Applied: memory `release-box-gate-sha` (second note). Proposed rule change (operator-blocks): box for non-shell target (game console, REPL) carries no trailing comment; expected result goes above box in prose.
+
+## FRC-0009 - Release box gated on wrong CI run
+
+**2026-09-28, v1.8 publish.** `gh run watch --exit-status $(gh run list --workflow release.yml --limit 1 ...)` ran right after tag push; run list still showed v1.7 run 36316885880 (success) -> `main` pushed before v1.8 run existed; `gh release download` -> "release not found". v1.8 run 36418169509 later green, zips identical to dev-vm build. Bucket: shipping-and-integration. Root cause: gate picked newest run, not run of tag sha. Applied: memory `release-box-gate-sha`. Proposed rule change (shipping-and-integration / BL-7 gate): gate command waits for run with `head_sha` = tag sha, then watches that id.
+
+## FRC-0010 - Screenshot line fired on time, not on state
+
+**2026-09-28, thumbnail.** First shots had empty output belt: author pasted screenshot line too soon; I sent a fixed-delay line (3600 ticks) before author asked "is it taken when outputs exist?". Condition line (`on_nth_tick` until both output lanes hold items) worked first time. Headless repro `sim > scene built by console in fresh game outputs` passed on e5dfff1 + v8 = no bug. Bucket: evidence capture. Proposed rule: capture scripts wait on observed state (item on output), never wall or tick delay.
+
+## FRC-0011 - FactorioTest hides print of passed tests; 15 s silence kills run
+
+**2026-09-28, soak probe.** Passed-test `print` never reaches CLI output (soak report lost once), and CLI watchdog killed run after `no output received for 15 seconds` (3600-tick silent window). Fix: report via `log()` (lands in `build/<FV>/ftdata/factorio-current.log`), progress `print` every 600 ticks. Bucket: sushi-packer-code SP-10. Proposed rule change (SP-10): long probes log via `log()` and print progress < 15 s apart.
+
+## FRC-0012 - Parallel lanes on one function: cross-lane test clash found only at merge
+
+**2026-09-28, lanes 022 + 023.** Cap test `cap > no item stack means no cap` put 100 items (25 slots) on one lane; quota lane capped lane at 24 -> red only after both merged; integrator fixed test (80 items). Also game test `tick > output never faster than tier` built 150-ore backlog, now impossible under both rules; fixed at full suite (2 reruns ~25 min). Bucket: codex-tasks / plan. Root cause: task files told each lane other rule absent. Proposed: task file for lanes sharing a seam lists other lane's rule as fact ("lane holds max 24 slots after merge") so lane tests stay valid under both; integrator greps game tests for old-rule fixtures (backlog size, shared 48) in S1.
+
+## FRC-0013 - Auto-mode classifier outage blocked tools mid-turn
+
+**2026-09-28.** Server-side auto-mode classifier returned no verdict on `Bash` and `SendMessage` 6+ times (peer handoff to `rrc_fixer_3` pasted by author instead). Bucket: environment. No rule change; retry once, then hand text to operator.
