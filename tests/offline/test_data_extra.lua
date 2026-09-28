@@ -66,11 +66,11 @@ describe("data extra", function()
   end)
 
   it("hidden belt skipped", function()
-    local logs = {}; _G.log = function(s) logs[#logs + 1] = s end
+    local logs, saved_log = {}, _G.log; _G.log = function(s) logs[#logs + 1] = s end
     local raw = load("arig-off")
     eq(require("prototypes.extra").tiers(raw), {})
     ok(#logs > 0 and logs[1]:find("planetaris-hyper", 1, true))
-    _G.log = nil
+    _G.log = saved_log
   end)
 
   it("k2so hidden advanced belt ignored", function()
@@ -94,22 +94,22 @@ describe("data extra", function()
   end)
 
   it("belt tech without unit skipped", function()
-    local logs = {}; _G.log = function(s) logs[#logs + 1] = s end
+    local logs, saved_log = {}, _G.log; _G.log = function(s) logs[#logs + 1] = s end
     local raw = load("arig")
     raw.technology["planetaris-hyper-transport-belt"].unit = nil
     raw.technology["planetaris-hyper-transport-belt"].research_trigger = { type = "craft-item", item = "x", count = 1 }
     eq(require("prototypes.extra").tiers(raw), {})
     ok(#logs > 0 and logs[1]:find("planetaris-hyper", 1, true))
-    _G.log = nil
+    _G.log = saved_log
   end)
 
   it("missing tech skipped", function()
-    local logs = {}; _G.log = function(s) logs[#logs + 1] = s end
+    local logs, saved_log = {}, _G.log; _G.log = function(s) logs[#logs + 1] = s end
     local raw = load("arig")
     raw.technology["planetaris-hyper-transport-belt"] = nil
     eq(require("prototypes.extra").tiers(raw), {})
     ok(#logs > 0 and logs[1]:find("planetaris-hyper", 1, true))
-    _G.log = nil
+    _G.log = saved_log
   end)
 
   it("recipe chains previous tier", function()
