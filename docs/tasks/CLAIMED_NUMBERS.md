@@ -23,3 +23,5 @@
 | `019` | `sushi-packer/agent` | sim scene redo | 2026-09-26 |
 | `020` | `sushi-packer/agent` | smooth pull eta wake | 2026-09-27 |
 | `021` | `sushi-packer/agent` | scene v3 off-frame | 2026-09-27 |
+| `022` | `sushi-packer/agent` | v8 lane quota 24+24 | 2026-09-28 |
+| `023` | `sushi-packer/agent` | v8 item cap per lane | 2026-09-28 |
