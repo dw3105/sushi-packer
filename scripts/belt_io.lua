@@ -198,8 +198,11 @@ function M.push(rec, lane, item, belt_stack_size)
   return 0
 end
 
--- v9 (M-6): belt items per lane per tick for tier = live belt prototype speed x 4. S0 stub (table value);
--- lane 025 fills.
+-- v9 (M-6): belt items per lane per tick for tier = live belt prototype speed x 4. Cached per tier: prototype-
+-- derived, same on every client, fixed for the Lua state (prototypes change only with a reload). No prototype
+-- (offline mocks) -> table value, not cached.
+function M._reset_rates() lane_rates = {} end  -- tests only: mocks swap prototypes between tests
+
 function M.lane_rate(tier)
   local cached_rate = lane_rates[tier]
   if cached_rate ~= nil then return cached_rate end

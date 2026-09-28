@@ -7,6 +7,7 @@ local N = require("scripts.names")
 
 describe("tick extra", function()
   it("lane rate is belt speed times 4", function()
+    belt_io._reset_rates()
     prototypes = { entity = {
       ["turbo-transport-belt"] = { belt_speed = 0.125 },
       ["kr-superior-transport-belt"] = { belt_speed = 0.1875 },
@@ -16,17 +17,20 @@ describe("tick extra", function()
   end)
 
   it("missing belt prototype falls back to table rate", function()
+    belt_io._reset_rates()
     prototypes = { entity = {} }
     eq(belt_io.lane_rate("turbo"), 0.5)
     eq(belt_io.lane_rate("kr-superior"), 0)
   end)
 
   it("modded vanilla speed followed", function()
+    belt_io._reset_rates()
     prototypes = { entity = { ["transport-belt"] = { belt_speed = 0.0625 } } }
     eq(belt_io.lane_rate("yellow"), 0.25)
   end)
 
   local function tick_fixture(tier, unit, belt_name, speed)
+    belt_io._reset_rates()
     local old = { pull = belt_io.pull, push = belt_io.push, bss = belt_io.belt_stack_size,
       evaluate = circuit.evaluate, set = led.set }
     defines = { inventory = { chest = 1 }, gui_type = { entity = 1, item = 3 },
