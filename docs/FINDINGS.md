@@ -171,3 +171,15 @@ Measured 2026-09-28 on dev-vm, 2.0.77 + 2.1.20, packer v1.8 + v9 seam (`tests/ga
 - All sets load with packer v1.8 (4 vanilla sushi items only).
 
 Verified-by: `~/share/sushi-packer/v9-p1/run.sh` (temporary index entry), per set `make test-one FV=<fv> MODSET=<set> T='tests/game/test_probe_modset.lua::probe v9 modset > dump belts splitters techs'`
+
+## FND-0024 - Boxes on belts faster than turbo capped at 60/s (pull rule + eta wake)
+
+Measured 2026-09-28 on dev-vm, 2.0.77, MODSET `arig-k2so`, code `int/v9` after lanes 024/025/027 merged (`tests/game/test_modtiers.lua::modtiers > box output matches belt rate`, probe `tests/game/test_probe_rate.lua` NOT in index). Belt stack 1, both lanes saturated, 600 ticks:
+- Before: turbo 300/300 per lane, hyper (0.15625) 300 of 375, superior (0.1875) 300 of 450.
+- Cause 1 (superior): `belt_io.pull` took only items resting at position 0 (`not line.can_insert_at(0)`). Front item at 0.063 (< belt_speed, reaches end this tick) gives `can_insert_at(0) == true` -> taken one tick later; compressed items then arrive every 2 ticks -> 0.5 item/lane/tick = 60/s for every belt faster than turbo. Probe: polls 600, pulls 300, pushes 300.
+- Cause 2 (hyper): eta wake (PERF-3) slept until item reaches position 0 (ceil(0.188 / 0.15625) = 2), one tick past the take window -> polls 450, pulls 300.
+- Also on the way: `require` inside `belt_io.lane_rate` crashes at runtime (`Require can't be used outside of control.lua parsing.`); stale `LuaItemStack` read after `remove_item` (`LuaItemStack API call when LuaItemStack was invalid.`).
+- Fix (speed > 0.125 only; vanilla path unchanged): take front items with position <= belt_speed (one `get_detailed_contents` read per lane visit); eta to take window `max(speed/2, pos - speed)`; count read before removal; guard test `guard > no require inside runtime functions`.
+- After: turbo 300/300, hyper 375/375, superior 450/450 per lane.
+
+Verified-by: `make test-one FV=2.0 MODSET=arig-k2so T='tests/game/test_modtiers.lua::modtiers > box output matches belt rate'`

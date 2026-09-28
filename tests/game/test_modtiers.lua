@@ -100,7 +100,9 @@ describe("modtiers", function()
         end
       end
       local recipe = prototypes.recipe[N.item(key)]
-      assert.are_equal(N.item(prev), recipe.ingredients[1].name, "chained " .. key)
+      local has_prev = false  -- runtime ingredient order not kept (measured 2.0.77: quantum-processor first)
+      for _, ing in ipairs(recipe.ingredients) do if ing.name == N.item(prev) and ing.amount == 1 then has_prev = true end end
+      assert.is_true(has_prev, "chained " .. key .. " needs 1 " .. N.item(prev))
       assert.are_equal(120, recipe.energy)
       for _, ing in ipairs(recipe.ingredients) do
         local reach = false

@@ -1,4 +1,5 @@
 -- Belt access for the packer. All coordinates are tile centres.
+local N = require("scripts.names")
 local M = {}
 local belt_speeds = {}
 local lane_rates = {}
@@ -156,19 +157,33 @@ function M.pull(rec, budget, sink)
   -- FND-0011: lane that took an item last asks second next time, so a full box hands freed slots to lanes in turn
   -- (no starving lane). All-refused visits keep order (no parity lock with output cadence).
   local first = rec.pull_first == 2 and 2 or 1
+  -- FND-0024: belt faster than turbo (speed > 0.125) must also take items that reach the end within this tick
+  -- (position <= belt_speed); resting-only rule caps every such belt at 0.5 item/lane/tick = 60/s. Vanilla keeps
+  -- the cheap resting-item check (PERF-2).
+  local speed = belt_speed(belt) or 0
+  local fast = speed > 0.125
   for i = 0, 1 do
     local lane = i == 0 and first or 3 - first
     local line = belt.get_transport_line(map[lane])
     local tries = 0
+    local detailed, di
     while tries < (budget[lane] or 0) do
-      if #line == 0 or line.can_insert_at(0) then break end
+      if #line == 0 then break end
+      if line.can_insert_at(0) then
+        if not fast then break end
+        if not detailed then detailed, di = line.get_detailed_contents(), 1 end
+        local d = detailed[di]
+        if not d or d.position > speed then break end
+      end
       local s = line[1]
       local name = s.name
       local quality = s.quality and s.quality.name or "normal"
-      local accepted = sink(name, quality, lane, s.count)
+      local count = s.count  -- handle invalid once removed (engine, FND-0024)
+      local accepted = sink(name, quality, lane, count)
       tries = tries + 1
       if accepted <= 0 then break end
       line.remove_item({ name = name, count = accepted, quality = quality })
+      if detailed and accepted >= count then di = di + 1 end
       taken[lane] = taken[lane] + 1
       rec.pull_first = 3 - lane
     end
@@ -181,7 +196,10 @@ function M.pull(rec, budget, sink)
     elseif not line.can_insert_at(0) then eta[lane] = 0
     else
       local detailed = line.get_detailed_contents()
-      eta[lane] = M.eta(detailed[1].position, belt_speed(belt))
+      -- fast belt: wake when item enters take window (position <= speed), not at belt end (FND-0024)
+      local position = detailed[1].position
+      if fast then position = math.max(speed / 2, position - speed) end
+      eta[lane] = M.eta(position, speed)
     end
   end
   return taken, eta
@@ -206,7 +224,7 @@ function M._reset_rates() lane_rates = {} end  -- tests only: mocks swap prototy
 function M.lane_rate(tier)
   local cached_rate = lane_rates[tier]
   if cached_rate ~= nil then return cached_rate end
-  local T = require("scripts.names").TIER[tier]
+  local T = N.TIER[tier]
   local p = prototypes and prototypes.entity and prototypes.entity[T.belt]
   if p then
     local rate = p.belt_speed * 4

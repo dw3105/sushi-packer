@@ -40,6 +40,7 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   set -- run -p "$mod" --factorio-path "$FACTORIO/bin/x64/factorio" -d "$data" --no-reorder-failed-first \
     --output-file "$ROOT/build/$FV/results.json" --mods $mods
   if [ -n "$pattern" ]; then set -- "$@" --test-pattern "$pattern"; fi
+  if [ -n "${FT_VERBOSE:-}" ]; then set -- "$@" -v; fi  # pipe Factorio stdout (script errors of other mods)
   (cd "$FT" && "$CLI" "$@")
 }
 

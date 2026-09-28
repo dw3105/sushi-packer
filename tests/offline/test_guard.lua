@@ -18,6 +18,20 @@ describe("guard", function()
     end
   end)
 
+  it("no require inside runtime functions", function()
+    -- Factorio: "Require can't be used outside of control.lua parsing" (v9 S2, belt_io.lane_rate crash on 2.0.77).
+    for _, f in ipairs({ "control.lua", "scripts/belt_io.lua", "scripts/circuit.lua", "scripts/copy.lua", "scripts/core.lua",
+        "scripts/filter.lua", "scripts/gui.lua", "scripts/led.lua", "scripts/registry.lua", "scripts/sim.lua", "scripts/tick.lua" }) do
+      local n = 0
+      for line in io.lines(f) do
+        n = n + 1
+        if line:find("require%(") and line:match("^%s") and not line:match("^%s*%-%-") then
+          ok(line:match("^  require%(\"__factorio%-test__") ~= nil, f .. ":" .. n .. " require inside function: " .. line)
+        end
+      end
+    end
+  end)
+
   it("names frozen", function()
     local N = require("scripts.names")
     eq(N.TIERS, { "yellow", "red", "blue", "turbo" })
