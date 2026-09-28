@@ -174,7 +174,7 @@ Status: v4, 2026-09-26. Source: Q&A with author. v2 adds status LED (§12) and g
 |----|-------------|
 | M-1 | Extra tier per supported modded belt (table `N.EXTRA`): Planetaris Arig hyper, Krastorio 2 / K2SO superior, Bob's ultimate, Ultimate Belts Space Age ×5, Better Belts ultra. Tier exists only if its belt prototype exists and is not hidden, and its belt tech exists with science `unit`. Else skipped, logged, no error. |
 | M-2 | Vanilla (no belt mod): exactly 4 tiers; names, recipes, techs same as v8. |
-| M-3 | Extra tiers built in `data-final-fixes`. Supported mods listed as optional dependencies. |
+| M-3 | Extra tiers built in `data-final-fixes`. Supported mods listed as visible optional dependencies (`? <mod>`, shown on portal and in-game mod list; author 2026-09-28). |
 | M-4 | Order + upgrade chain = belt `speed` ascending after turbo; tie by table order. Own chain; belt `next_upgrade` ignored. |
 | M-5 | Recipe: previous tier box 1, own belt splitter 1, `stack-inserter` 2, `quantum-processor` 2, 120 s. Tech per U-1 with own belt tech. |
 | M-6 | Every tier (vanilla too) rate = live belt prototype speed (E-4, O-4 same meaning); settings that change belt speed followed. Output never above belt rate. Engine places several belt items per tick per lane, full rate up to 270/s (FND-0022). |

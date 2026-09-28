@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.10
+Date: 2026-09-28
+  Changes:
+    - Supported belt mods now listed as optional dependencies, so the portal and the in-game mod list show them.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.9
 Date: 2026-09-28
   Changes:
@@ -76,6 +82,12 @@ Version: 0.2.0
 Date: 2026-09-26
   Features:
     - First release for Factorio 2.1.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.10
+Date: 2026-09-28
+  Changes:
+    - Supported belt mods now listed as optional dependencies, so the portal and the in-game mod list show them.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.9

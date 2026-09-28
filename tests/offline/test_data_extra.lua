@@ -164,11 +164,11 @@ describe("data extra", function()
     eq(raw.item[N.item("planetaris-hyper")].icon, "__sushi-packer__/graphics/icons/sushi-packer-planetaris-hyper.png")
   end)
 
-  it("info lists belt mods as hidden optional deps", function()
+  it("info lists belt mods as visible optional deps", function()
     local file = assert(io.open("info.json", "r"))
     local dependencies = file:read("*a")
     file:close()
-    for _, dependency in ipairs({ "(?) planetaris-arig", "(?) Krastorio2", "(?) Krastorio2-spaced-out", "(?) boblogistics >= 2.1.0", "(?) UltimateBeltsSpaceAge", "(?) BetterBelts" }) do
+    for _, dependency in ipairs({ "? planetaris-arig", "? Krastorio2", "? Krastorio2-spaced-out", "? boblogistics >= 2.1.0", "? UltimateBeltsSpaceAge", "? BetterBelts" }) do
       ok(dependencies:find(dependency, 1, true), "missing " .. dependency)
     end
   end)

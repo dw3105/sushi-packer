@@ -88,7 +88,7 @@ Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bo
 |---|---|---|---|
 | M-1 | PASS | PASS | `modtiers > active tiers match installed mods` (every set); arig-off (2.0): no hyper tier, no error; offline `data extra > hidden belt skipped`, `belt tech without unit skipped`, `missing tech skipped`, `k2so hidden advanced belt ignored` |
 | M-2 | PASS | PASS | offline `data extra > vanilla prototypes identical to v8` (golden at `lanes-base-v9`); vanilla full suites incl. `data > *`; `modtiers > active tiers match installed mods` vanilla = 4 |
-| M-3 | PASS | PASS | `data-final-fixes.lua` -> `prototypes/extra.lua`; `data extra > info lists belt mods as hidden optional deps` |
+| M-3 | PASS | PASS | `data-final-fixes.lua` -> `prototypes/extra.lua`; `data extra > info lists belt mods as visible optional deps` (author 2026-09-28: visible, shown on portal) |
 | M-4 | PASS | PASS | `modtiers > upgrade chain follows belt speed` (every set; arig-k2so turbo -> hyper -> superior; ubsa 5 tiers); `modtiers > upgrade turbo to next tier keeps state`; offline `data extra > all mods sorted by speed tie by row order` |
 | M-5 | PASS | PASS | `modtiers > tech unlocks recipe and every ingredient reachable`; offline `data extra > recipe chains previous tier`, `tech prereqs belt tech previous tier and ingredient unlocks`, `tech cost belt count x 1.5 and pack union` |
 | M-6 | PASS | PASS | `modtiers > box output matches belt rate` per lane over 600 ticks: turbo 300/300, hyper 375/375, superior 450/450, bob 375/375, ub 450/675/900/1125/1350 exact, bb 478/480 (2.0); FND-0022, FND-0024; offline `tick extra > *`, `belt_io fast > *` |
