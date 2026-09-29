@@ -59,6 +59,11 @@ if modset:
         open(os.path.join(d, "settings-final-fixes.lua"), "w").write("\n".join(lines) + "\n")
         names.append("sushi-packer-test-settings")
 open(os.path.join(mods, ".modset"), "w").write("\n".join(names))
+# v10: builtin_off set = no-SA game (space-age, quality, elevated-rails, recycler disabled in mod-list).
+off = os.path.join(mods, ".builtin_off")
+if os.path.exists(off): os.remove(off)
+if modset and json.load(open(os.path.join(root, "tools", "modsets.json")))[modset].get("builtin_off"):
+    open(off, "w").write("1")
 PY
 if [ "$MODE" = test ]; then
   mkdir -p "$MOD/tests"; cp -r "$ROOT/tests/game" "$MOD/tests/"
@@ -79,14 +84,17 @@ if [ "$MODE" = release ] && [ ! -d "$FACTORIO/data" ]; then echo "$MOD"; exit 0;
 python3 - "$FACTORIO/data" "$OUT/mods" <<'PY'
 import json, os, sys
 data, mods = sys.argv[1:]
-names = [n for n in ("base", "elevated-rails", "quality", "recycler", "space-age") if os.path.isdir(os.path.join(data, n))]
+bundled = [n for n in ("base", "elevated-rails", "quality", "recycler", "space-age") if os.path.isdir(os.path.join(data, n))]
+off = [n for n in bundled if n != "base"] if os.path.exists(os.path.join(mods, ".builtin_off")) else []
+names = [n for n in bundled if n not in off]
 names += ["sushi-packer"]
 for f in os.listdir(mods):
     if f.startswith("factorio-test_"): names.append("factorio-test")
     if f.startswith("sushi-packer-test-env_"): names.append("sushi-packer-test-env")
 ms = os.path.join(mods, ".modset")
 if os.path.exists(ms): names += open(ms).read().split()
-json.dump({"mods": [{"name": n, "enabled": True} for n in dict.fromkeys(names)]}, open(os.path.join(mods, "mod-list.json"), "w"), indent=2)
+json.dump({"mods": [{"name": n, "enabled": True} for n in dict.fromkeys(names)] + [{"name": n, "enabled": False} for n in off]},
+          open(os.path.join(mods, "mod-list.json"), "w"), indent=2)
 PY
 cat > "$OUT/config.ini" <<CFG
 [path]

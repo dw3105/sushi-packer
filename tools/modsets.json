@@ -1,5 +1,5 @@
 {
-  "_doc": "v9 headless mod sets (REQUIREMENTS \u00a717). mods = top-level; required deps resolved by tools/fetch_mods.py into tests/mods.lock.json. settings = startup overrides.",
+  "_doc": "v9 headless mod sets (REQUIREMENTS \u00a717). mods = top-level; required deps resolved by tools/fetch_mods.py into tests/mods.lock.json. settings = startup overrides. v10: builtin_off = true disables space-age, quality, elevated-rails, recycler in mod-list (no-SA game).",
   "arig": {
     "fv": [
       "2.0",
@@ -73,6 +73,41 @@
     ],
     "mods": [
       "BetterBelts"
+    ]
+  },
+  "nosa": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [],
+    "builtin_off": true
+  },
+  "se": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "space-exploration"
+    ],
+    "builtin_off": true
+  },
+  "ab": {
+    "fv": [
+      "2.0"
+    ],
+    "mods": [
+      "AdvancedBeltsUpdated"
+    ],
+    "builtin_off": true
+  },
+  "ab-sa": {
+    "fv": [
+      "2.0"
+    ],
+    "mods": [
+      "AdvancedBeltsUpdated"
     ]
   }
 }

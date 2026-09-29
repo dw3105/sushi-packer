@@ -1,5 +1,11 @@
 {
   "2.0": {
+    "AdvancedBeltsUpdated": {
+      "file": "AdvancedBeltsUpdated_2.4.0.zip",
+      "sha1": "b51d5feda7f64692acd5ca8a3f78677b56d3b9c3",
+      "url": "/download/AdvancedBeltsUpdated/69112657be9823949ac1fbcc",
+      "version": "2.4.0"
+    },
     "BetterBelts": {
       "file": "BetterBelts_1.4.1.zip",
       "sha1": "9a90684def0fb1391593778528c2eb8e5a369216",
@@ -42,6 +48,36 @@
       "url": "/download/UltimateBeltsSpaceAge/6773ff73911e2b31cead6e04",
       "version": "1.3.0"
     },
+    "aai-containers": {
+      "file": "aai-containers_0.3.2.zip",
+      "sha1": "564fd44cf4d5b46e7285fb53fe08111c33c0242e",
+      "url": "/download/aai-containers/68d2ad73257dad1106e089a4",
+      "version": "0.3.2"
+    },
+    "aai-industry": {
+      "file": "aai-industry_0.6.16.zip",
+      "sha1": "7a72b485b1346f8d4cf34420de3e3d5233441f62",
+      "url": "/download/aai-industry/69a17555bb02cb306d1ac1a6",
+      "version": "0.6.16"
+    },
+    "aai-signal-transmission": {
+      "file": "aai-signal-transmission_0.5.3.zip",
+      "sha1": "6d70c919a36466613b571afbe66912dfee1137ee",
+      "url": "/download/aai-signal-transmission/68d2ebfdad5e76f30b4d657a",
+      "version": "0.5.3"
+    },
+    "alien-biomes": {
+      "file": "alien-biomes_0.7.4.zip",
+      "sha1": "9bf187dd82e4ff47e8daaa77721cf90a8e68d1db",
+      "url": "/download/alien-biomes/6859bbba7173e6ebc73b434f",
+      "version": "0.7.4"
+    },
+    "alien-biomes-graphics": {
+      "file": "alien-biomes-graphics_0.7.1.zip",
+      "sha1": "a8e0c2f2b9c17763b8c0671524c70e30eeec6b12",
+      "url": "/download/alien-biomes-graphics/6859bb487173e6ebc73b434e",
+      "version": "0.7.1"
+    },
     "boblibrary": {
       "file": "boblibrary_2.1.0.zip",
       "sha1": "c2f97c52bb45fc26643a397899bd6e269622940e",
@@ -66,6 +102,18 @@
       "url": "/download/flib/690aa58f2da58c0b75aadd06",
       "version": "0.16.5"
     },
+    "informatron": {
+      "file": "informatron_0.4.0.zip",
+      "sha1": "52afe475c32dcdb79d6ad551f77a14ecf64199e8",
+      "url": "/download/informatron/67105f3f92a53c90652c767a",
+      "version": "0.4.0"
+    },
+    "jetpack": {
+      "file": "jetpack_0.4.17.zip",
+      "sha1": "000f931cd583445eb14fb4bd389da129613b1ecf",
+      "url": "/download/jetpack/69d695b6aa2bf4e50813630c",
+      "version": "0.4.17"
+    },
     "k2so-assets": {
       "file": "k2so-assets_1.0.5.zip",
       "sha1": "7d94d4d4c51f693399d5ba1ce016366ec4242ab7",
@@ -89,6 +137,66 @@
       "sha1": "627223def73293dfb12c98c946af10e1412388ec",
       "url": "/download/planetaris-hyarion/6aaa38d4059174dccaa19d2b",
       "version": "1.3.22"
+    },
+    "robot_attrition": {
+      "file": "robot_attrition_0.6.6.zip",
+      "sha1": "6453d091d1beea9d7e06a6178f8deafcf2adf068",
+      "url": "/download/robot_attrition/6a00a2fe888659f6aa24fc87",
+      "version": "0.6.6"
+    },
+    "shield-projector": {
+      "file": "shield-projector_0.2.2.zip",
+      "sha1": "b38f2d3efa04d91550bef133dd103bf6c015f091",
+      "url": "/download/shield-projector/67343483e72dc5b3454f9ee2",
+      "version": "0.2.2"
+    },
+    "space-exploration": {
+      "file": "space-exploration_0.7.57.zip",
+      "sha1": "eef3f486b472e82438c5827376ff347420c0b1b2",
+      "url": "/download/space-exploration/6a2c7fb670ecb2568cd20875",
+      "version": "0.7.57"
+    },
+    "space-exploration-graphics": {
+      "file": "space-exploration-graphics_0.7.5.zip",
+      "sha1": "002cfc064b90182b36a118be14f6cd1aa4caac55",
+      "url": "/download/space-exploration-graphics/68d1024051385adfa7ae4780",
+      "version": "0.7.5"
+    },
+    "space-exploration-graphics-2": {
+      "file": "space-exploration-graphics-2_0.7.2.zip",
+      "sha1": "15be19d82380b38f6c94a2c72ae835e7c0243e18",
+      "url": "/download/space-exploration-graphics-2/68d101d97d1014fd0ff0e3b2",
+      "version": "0.7.2"
+    },
+    "space-exploration-graphics-3": {
+      "file": "space-exploration-graphics-3_0.7.2.zip",
+      "sha1": "803866db950ab4640bd289463aaa2125cc44d934",
+      "url": "/download/space-exploration-graphics-3/68d101b2f9797aecf6baf2b4",
+      "version": "0.7.2"
+    },
+    "space-exploration-graphics-4": {
+      "file": "space-exploration-graphics-4_0.7.2.zip",
+      "sha1": "16ba7e0f5f6527c73c4b41cb09e454b6391bbc6e",
+      "url": "/download/space-exploration-graphics-4/68d1015d362159ea25b0f7da",
+      "version": "0.7.2"
+    },
+    "space-exploration-graphics-5": {
+      "file": "space-exploration-graphics-5_0.7.3.zip",
+      "sha1": "2504c89a138a7ffd88c692f3e7c4ad5e01ebff44",
+      "url": "/download/space-exploration-graphics-5/69943a7eb42ba9cc549eda0d",
+      "version": "0.7.3"
+    },
+    "space-exploration-menu-simulations": {
+      "file": "space-exploration-menu-simulations_0.7.4.zip",
+      "sha1": "e3eae777202a850204615b58debef56c642574e0",
+      "url": "/download/space-exploration-menu-simulations/68d10d40e3d244330590a1e8",
+      "version": "0.7.4"
+    },
+    "space-exploration-postprocess": {
+      "file": "space-exploration-postprocess_0.7.5.zip",
+      "sha1": "d6ecccfc3205a0cdac647f127d71969317eea06f",
+      "url": "/download/space-exploration-postprocess/69e5238ce47d8455bd3cfb6a",
+      "version": "0.7.5"
     }
   },
   "2.1": {
@@ -128,6 +236,36 @@
       "url": "/download/PlanetsLib/6ab962004bc0412f0db9b329",
       "version": "2.0.6"
     },
+    "aai-containers": {
+      "file": "aai-containers_0.4.0.zip",
+      "sha1": "61add69db9376ee603ebd5226083b7c10ef5ebe5",
+      "url": "/download/aai-containers/6a3b96ff86ba470d8520dbec",
+      "version": "0.4.0"
+    },
+    "aai-industry": {
+      "file": "aai-industry_0.7.5.zip",
+      "sha1": "0bffb441c09775dcb9dd3e2d403849ccc53e6841",
+      "url": "/download/aai-industry/6ab323a2e236a1d2410f88d1",
+      "version": "0.7.5"
+    },
+    "aai-signal-transmission": {
+      "file": "aai-signal-transmission_0.6.0.zip",
+      "sha1": "c6606a442a66d77eab8c8341a0e84a6c63b50197",
+      "url": "/download/aai-signal-transmission/6a3b96422e6b3d3dc94666ef",
+      "version": "0.6.0"
+    },
+    "alien-biomes": {
+      "file": "alien-biomes_0.8.0.zip",
+      "sha1": "2d28415ca54b129a8c000a8d1de7bf16b2773185",
+      "url": "/download/alien-biomes/6a3b94c51370f054aa144608",
+      "version": "0.8.0"
+    },
+    "alien-biomes-graphics": {
+      "file": "alien-biomes-graphics_0.8.0.zip",
+      "sha1": "8ddfa5a980413e0c8dac6155905b0693fd5a48b8",
+      "url": "/download/alien-biomes-graphics/6a3b94a586ba470d8520dbe9",
+      "version": "0.8.0"
+    },
     "boblibrary": {
       "file": "boblibrary_3.0.1.zip",
       "sha1": "34c1bdc3934751c150e42c1434c3ffed632019ac",
@@ -152,6 +290,18 @@
       "url": "/download/flib/6a3d4af12b2a85ea00e307a6",
       "version": "0.17.2"
     },
+    "informatron": {
+      "file": "informatron_0.5.0.zip",
+      "sha1": "70f8f81ae83f2360626d94e03db4b13db6d93b23",
+      "url": "/download/informatron/6a3dae518da3c2b5fa84a9f2",
+      "version": "0.5.0"
+    },
+    "jetpack": {
+      "file": "jetpack_0.5.1.zip",
+      "sha1": "004f5a157432ec99ca4bde1da8245090d6af758f",
+      "url": "/download/jetpack/6a4cbb77e565efbcb570b1d5",
+      "version": "0.5.1"
+    },
     "k2so-assets": {
       "file": "k2so-assets_1.0.7.zip",
       "sha1": "94df2729880ed27df14918fd28ed37f448778d14",
@@ -175,6 +325,66 @@
       "sha1": "faf64c706a42f839154ea58db47007a5400b4abb",
       "url": "/download/planetaris-hyarion/6aaa38f100389afe869af433",
       "version": "1.3.23"
+    },
+    "robot_attrition": {
+      "file": "robot_attrition_0.7.0.zip",
+      "sha1": "137863c84a45d76c562ea7a8b1a13d6c5d477f0c",
+      "url": "/download/robot_attrition/6a3b931539f8ab4048ac8904",
+      "version": "0.7.0"
+    },
+    "shield-projector": {
+      "file": "shield-projector_0.3.0.zip",
+      "sha1": "81c142b4d3d20e211e07008112a88a72c0c8b42f",
+      "url": "/download/shield-projector/6a3b92f586ba470d8520dbe8",
+      "version": "0.3.0"
+    },
+    "space-exploration": {
+      "file": "space-exploration_0.7.62.zip",
+      "sha1": "fae07967c6472e916aa73f9edf9d6da8106bcd35",
+      "url": "/download/space-exploration/6ab3234f41a585544643cfb7",
+      "version": "0.7.62"
+    },
+    "space-exploration-graphics": {
+      "file": "space-exploration-graphics_0.7.7.zip",
+      "sha1": "3527cb0b75104baecbe44377a99ee0a9efede76d",
+      "url": "/download/space-exploration-graphics/6a762ff78fa6a8630ec108e9",
+      "version": "0.7.7"
+    },
+    "space-exploration-graphics-2": {
+      "file": "space-exploration-graphics-2_0.7.3.zip",
+      "sha1": "52ef60481ea0f02c2873a5dad23f6ded2aacf70a",
+      "url": "/download/space-exploration-graphics-2/6a41add32070c65fb26a00dc",
+      "version": "0.7.3"
+    },
+    "space-exploration-graphics-3": {
+      "file": "space-exploration-graphics-3_0.7.3.zip",
+      "sha1": "a16ff921af0e32ed98014464683dbdacf988d783",
+      "url": "/download/space-exploration-graphics-3/6a41ae69a7283a7106f0a297",
+      "version": "0.7.3"
+    },
+    "space-exploration-graphics-4": {
+      "file": "space-exploration-graphics-4_0.7.3.zip",
+      "sha1": "24a617d22799be4dd38ebf2a7a5ba3b4c5c113c4",
+      "url": "/download/space-exploration-graphics-4/6a41af112070c65fb26a00dd",
+      "version": "0.7.3"
+    },
+    "space-exploration-graphics-5": {
+      "file": "space-exploration-graphics-5_0.7.5.zip",
+      "sha1": "d80c8d4a80b5f22011c9081567d8729a08c79cdc",
+      "url": "/download/space-exploration-graphics-5/6a52ac3a62fac5459f20ac6a",
+      "version": "0.7.5"
+    },
+    "space-exploration-menu-simulations": {
+      "file": "space-exploration-menu-simulations_0.7.5.zip",
+      "sha1": "f9a9621684c6e18df77f6e9c1f73534a898ceaab",
+      "url": "/download/space-exploration-menu-simulations/6a549b98425eced196e68c59",
+      "version": "0.7.5"
+    },
+    "space-exploration-postprocess": {
+      "file": "space-exploration-postprocess_0.7.6.zip",
+      "sha1": "e400b86014cdc3c4d3d1e1097c3a688c74c12bcd",
+      "url": "/download/space-exploration-postprocess/6a549dbc20094db02ee637d2",
+      "version": "0.7.6"
     }
   }
 }

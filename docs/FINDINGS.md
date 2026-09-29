@@ -183,3 +183,14 @@ Measured 2026-09-28 on dev-vm, 2.0.77, MODSET `arig-k2so`, code `int/v9` after l
 - After: turbo 300/300, hyper 375/375, superior 450/450 per lane.
 
 Verified-by: `make test-one FV=2.0 MODSET=arig-k2so T='tests/game/test_modtiers.lua::modtiers > box output matches belt rate'`
+
+## FND-0025 - Stacked belt items need no space-age mod; script stack size ignores force research
+
+Measured 2026-09-29 on dev-vm, 2.0.77 + 2.1.20, standalone probe mod `sp-probe` (`tools/probe_nosa/`, not sushi-packer), log `~/share/sushi-packer/v10/fnd25.txt`. One `transport-belt` per case, `insert_at_back({iron-plate x4}, 4)`, then `get_detailed_contents()`:
+- `base` only (space-age, quality, elevated-rails, recycler disabled), bonus 0: `belt_items=[4]`; bonus 3: `[4]`. Both versions.
+- space-age on (control), bonus 0: `[4]`; bonus 3: `[4]`. Both versions.
+- `belt_stack_size_bonus` writable without space-age (bonus 3 set, read back 3).
+- Separate try: probe with `space_travel_required = true` in info.json and no space-age fails map create (`tile prototype "empty-space" (tile) is missing`) - flag needs space content; not needed for stacking.
+Verdict: engine makes stacked belt items with no space-age mod and no feature flag. Planned red control (bonus 0 -> `[1]`) is NOT red: stack size is the caller's argument, force research does not cap it. So research sets nothing in the engine for script belt inserts; box stack N comes only from our rule O-3 (`1 + force.belt_stack_size_bonus`). T-1 (space-age optional) has no engine blocker.
+
+Verified-by: `gateslot --label sushi-packer/heavy --weight-mib 768 --weight-cores 1 -- sh -c 'for v in 2.0 2.1; do for c in nosa sa; do tools/probe_nosa/run.sh $v $c; done; done'`

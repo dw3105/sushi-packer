@@ -39,23 +39,29 @@ def newest(name, fv):
     return max(rel, key=lambda r: r["released_at"])
 
 
-def resolve(fv, mods):
+def resolve(fv, mods, pinned=None):
+    # v10: mods already in the lock keep their pin (old sets never move); only new mods take newest release.
+    pinned = pinned or {}
     out, todo = {}, list(mods)
     while todo:
         m = todo.pop()
         if m in out or m in BUILTIN:
             continue
-        r = newest(m, fv)
-        out[m] = {"version": r["version"], "file": r["file_name"], "sha1": r["sha1"], "url": r["download_url"]}
+        if m in pinned:
+            out[m] = pinned[m]
+            r = [x for x in api(m)["releases"] if x["version"] == pinned[m]["version"]][0]
+        else:
+            r = newest(m, fv)
+            out[m] = {"version": r["version"], "file": r["file_name"], "sha1": r["sha1"], "url": r["download_url"]}
         todo += [d for d in (dep_name(x) for x in r["info_json"].get("dependencies", [])) if d]
     return out
 
 
 def cmd_lock():
-    lock = {}
+    lock, old = {}, (json.load(open(LOCK)) if os.path.exists(LOCK) else {})
     for fv in ("2.0", "2.1"):
         allm = sorted({m for k, s in SETS.items() if not k.startswith("_") and fv in s["fv"] for m in s["mods"]})
-        lock[fv] = resolve(fv, allm)
+        lock[fv] = resolve(fv, allm, old.get(fv))
     json.dump(lock, open(LOCK, "w"), indent=2, sort_keys=True)
     for fv, mods in lock.items():
         print(fv, len(mods), "mods")
