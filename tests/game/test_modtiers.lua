@@ -6,28 +6,49 @@ local registry = require("scripts.registry")
 
 local NORTH = defines.direction.north
 
--- FND-0023 real rows, in chain order (belt speed ascending, tie = N.EXTRA row order).
+-- v10: top vanilla tier = turbo with space-age, blue without (Q6). Expected from installed mods, never from N.EXTRA logic.
+local function top_vanilla() return script.active_mods["space-age"] and "turbo" or "blue" end
+local function vanilla()
+  return script.active_mods["space-age"] and { "yellow", "red", "blue", "turbo" } or { "yellow", "red", "blue" }
+end
+
+-- FND-0023 + FND-0028 real rows, in N.EXTRA row order (= tie order). Kept: owner mod loaded and belt faster than
+-- top vanilla belt (Q7, Q11). Chain order = live belt speed ascending, tie by this list order (M-4).
 local function expected_extras()
   local m = script.active_mods
   local hyper_off = settings.startup["disable-hyper-belts"] and settings.startup["disable-hyper-belts"].value
-  local ub, out = m["UltimateBeltsSpaceAge"], {}
+  local ub, ab = m["UltimateBeltsSpaceAge"], m["AdvancedBeltsUpdated"]
   local rows = {
-    { "planetaris-hyper", m["planetaris-arig"] and not hyper_off },
-    { "bob-ultimate", m["boblogistics"] },
-    { "kr-superior", m["Krastorio2-spaced-out"] },
-    { "ub-ultra-fast", ub },
-    { "bb-ultra", m["BetterBelts"] },
-    { "ub-extreme-fast", ub },
-    { "ub-ultra-express", ub },
-    { "ub-extreme-express", ub },
-    { "ub-ultimate", ub },
+    { "planetaris-hyper", m["planetaris-arig"] and not hyper_off, "planetaris-hyper-transport-belt" },
+    { "bob-ultimate", m["boblogistics"], "bob-ultimate-transport-belt" },
+    { "kr-superior", m["Krastorio2-spaced-out"] or m["Krastorio2"], "kr-superior-transport-belt" },
+    { "ub-ultra-fast", ub, "ultra-fast-belt" },
+    { "bb-ultra", m["BetterBelts"], "BetterBelts_ultra-transport-belt" },
+    { "ub-extreme-fast", ub, "extreme-fast-belt" },
+    { "ub-ultra-express", ub, "ultra-express-belt" },
+    { "ub-extreme-express", ub, "extreme-express-belt" },
+    { "ub-ultimate", ub, "ultimate-belt" },
+    { "ab-elite", ab, "elite-belt" },
+    { "ab-extreme", ab, "extreme-belt" },
+    { "ab-supreme", ab, "supreme-belt" },
+    { "ab-ultimate", ab, "ultimate-belt" },
+    { "se-deep-space", m["space-exploration"], "se-deep-space-transport-belt-black" },
   }
-  for _, r in ipairs(rows) do if r[2] then out[#out + 1] = r[1] end end
+  local top = prototypes.entity[top_vanilla() == "turbo" and "turbo-transport-belt" or "express-transport-belt"].belt_speed
+  local out = {}
+  for i, r in ipairs(rows) do
+    if r[2] then
+      local speed = prototypes.entity[r[3]].belt_speed
+      if speed > top then out[#out + 1] = { key = r[1], speed = speed, i = i } end
+    end
+  end
+  table.sort(out, function(x, y) if x.speed == y.speed then return x.i < y.i end return x.speed < y.speed end)
+  for i, r in ipairs(out) do out[i] = r.key end
   return out
 end
 
 local function chain()
-  local c = { "turbo" }
+  local c = { top_vanilla() }
   for _, k in ipairs(expected_extras()) do c[#c + 1] = k end
   return c
 end
@@ -48,7 +69,7 @@ describe("modtiers", function()
   end)
 
   it("active tiers match installed mods", function()
-    local want = { "yellow", "red", "blue", "turbo" }
+    local want = vanilla()
     for _, k in ipairs(expected_extras()) do want[#want + 1] = k end
     local got = N.active()
     table.sort(got, function(a, b)
@@ -103,7 +124,7 @@ describe("modtiers", function()
       local has_prev = false  -- runtime ingredient order not kept (measured 2.0.77: quantum-processor first)
       for _, ing in ipairs(recipe.ingredients) do if ing.name == N.item(prev) and ing.amount == 1 then has_prev = true end end
       assert.is_true(has_prev, "chained " .. key .. " needs 1 " .. N.item(prev))
-      assert.are_equal(120, recipe.energy)
+      assert.are_equal(script.active_mods["space-age"] and 120 or 60, recipe.energy)  -- v10 Q6: no-SA recipe = blue set
       for _, ing in ipairs(recipe.ingredients) do
         local reach = false
         for t in pairs(closure) do
@@ -165,7 +186,7 @@ describe("modtiers", function()
     end)
   end)
 
-  it("upgrade turbo to next tier keeps state", function()
+  it("upgrade top vanilla to next tier keeps state", function()
     local c = chain()
     if #c < 2 then return end  -- vanilla: no extra tier (upgrade covered by lifecycle > upgrade keeps state)
     local nxt = c[2]
@@ -175,7 +196,7 @@ describe("modtiers", function()
     local port = surface.create_entity({ name = "roboport", position = { 16, 22 }, force = force })
     port.insert({ name = "construction-robot", count = 4 })
     surface.create_entity({ name = "storage-chest", position = { 13, 20 }, force = force }).insert({ name = N.item(nxt), count = 1 })
-    local old = surface.create_entity({ name = N.variant("turbo", "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
+    local old = surface.create_entity({ name = N.variant(c[1], "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
     local rec = registry.get(old)
     rec.settings.timeout_s = 33
     old.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 7 })
@@ -189,5 +210,52 @@ describe("modtiers", function()
       assert.are_equal(33, nr.settings.timeout_s)
       assert.are_equal(7, new.get_inventory(defines.inventory.chest).get_item_count("iron-plate"))
     end)
+  end)
+
+  it("box releases stacks at research bonus", function()
+    -- v10 T-1 (FND-0025): with or without space-age, box on own top vanilla belt, bonus 3 -> belt stack 4 (O-3).
+    -- 8 iron plates on lane 1 behind; after 600 ticks the front belts hold stacked belt items of 4.
+    force.belt_stack_size_bonus = 3
+    local key = top_vanilla()
+    local belt = N.TIER[key].belt
+    local behind = surface.create_entity({ name = belt, position = { 30.5, 1.5 }, direction = NORTH, force = force })
+    for j = 1, 6 do surface.create_entity({ name = belt, position = { 30.5, 0.5 - j }, direction = NORTH, force = force }) end
+    surface.create_entity({ name = N.placer(key), position = { 30.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
+    local fed, t = 0, 0  -- insert_at_back fills only a free back spot: feed over ticks, not 8 in one tick
+    on_tick(function()
+      t = t + 1
+      local line = behind.get_transport_line(1)
+      if fed < 8 and line.can_insert_at_back() then line.insert_at_back({ name = "iron-plate", count = 1 }); fed = fed + 1 end
+      if t >= 600 then return false end
+    end)
+    after_ticks(600, function()
+      assert.are_equal(8, fed, "fed 8 plates")
+      local stacks = {}
+      for _, e in ipairs(surface.find_entities_filtered({ area = { { 30, -6 }, { 31, 0 } }, name = belt })) do
+        for lane = 1, 2 do
+          for _, d in ipairs(e.get_transport_line(lane).get_detailed_contents()) do stacks[#stacks + 1] = d.stack.count end
+        end
+      end
+      table.sort(stacks)
+      assert.are.same({ 4, 4 }, stacks, "stacked output " .. key)
+    end)
+  end)
+
+  it("box placeable in se space", function()
+    -- v10 Q10: SE blocks containers on space tiles (scaffold = what players build on) unless se_allow_in_space.
+    -- Control: plain belt blocked there, space belt allowed.
+    if not script.active_mods["space-exploration"] then return end
+    local s = game.create_surface("sp-space-test")
+    s.request_to_generate_chunks({ 0, 0 }, 1); s.force_generate_chunk_requests()
+    local tiles = {}
+    for x = -3, 3 do for y = -3, 3 do tiles[#tiles + 1] = { name = "se-space-platform-scaffold", position = { x, y } } end end
+    s.set_tiles(tiles)
+    for _, e in ipairs(s.find_entities_filtered({ area = { { -3, -3 }, { 3, 3 } } })) do if e.type ~= "character" then e.destroy() end end
+    assert.is_false(s.can_place_entity({ name = "transport-belt", position = { 0.5, 0.5 }, force = force }), "control: plain belt blocked in space")
+    assert.is_true(s.can_place_entity({ name = "se-space-transport-belt", position = { 0.5, 1.5 }, force = force }), "space belt allowed")
+    for _, key in ipairs(N.active()) do
+      assert.is_true(s.can_place_entity({ name = N.variant(key, "north"), position = { 0.5, 0.5 }, force = force }), "box in space " .. key)
+    end
+    game.delete_surface(s)
   end)
 end)

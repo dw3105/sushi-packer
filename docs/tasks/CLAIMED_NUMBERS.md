@@ -29,3 +29,5 @@
 | `025` | `sushi-packer/agent` | v9 rate: live belt speed | 2026-09-28 |
 | `026` | - | v9 runtime names (folded into S0, V9-4, never launched) | 2026-09-28 |
 | `027` | `sushi-packer/agent` | v9 text: locale, README, portal, changelog | 2026-09-28 |
+| `028` | `sushi-packer/agent` | v10 data: space-age optional, owner gate, chain after top vanilla | 2026-09-29 |
+| `029` | `sushi-packer/agent` | v10 ui: quality picker hide, locale + text for v10 rows | 2026-09-29 |

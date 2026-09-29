@@ -165,9 +165,10 @@ N-2 read contents = container's native circuit output (items live in inventory, 
 | `sim.scene(kind)` | `kind = "factoriopedia"\|"tips"`: on `game.surfaces[1]` set bonus 3, build infinity chest → `loader-1x1` → 4 belts → box east (placer, `raise_built`) → 4 belts → `loader-1x1` → void infinity chest; camera on box. Called by simulation init via `remote.call(N.SIM_INTERFACE, "scene", kind)` |
 
 
-## prototypes/extra.lua — v9 modded tiers (lane 024), data stage
+## prototypes/extra.lua — v9 modded tiers (lane 024), v10 owner gate + no-SA chain (lane 028), data stage
 
 | Signature | Rule |
 |---|---|
-| `extra.tiers(raw) -> { {key=, prev=, speed=}, ... }` | active `N.EXTRA` rows (M-1: `raw["transport-belt"][belt]` exists, not `hidden`; `raw.technology[tech]` exists with `unit`), sorted by belt `speed`, tie by row order (M-4); `prev` = previous entry key, first = `"turbo"`. Skipped rows `log()` reason. |
-| `extra.build(raw)` | for each of `tiers(raw)`: item, recipe (M-5), tech (U-1 rule), placer, 4 variants, remnant via `prototypes/packer.lua` shared maker; turbo variants + each extra `next_upgrade` = next in chain, same direction. Called by `data-final-fixes.lua`. |
+| `extra.top_vanilla(raw) -> key` | v10: last of `N.TIERS` that is built: always for strict tiers; `N.OPTIONAL_VANILLA` tier only when its belt (`raw["transport-belt"]`) and tech (`raw.technology`, with `unit`) exist. `"turbo"` with space-age, `"blue"` without. |
+| `extra.tiers(raw, mods) -> { {key=, prev=, speed=}, ... }` | active `N.EXTRA` rows. v10 (Q11): some `row.owners[i]` loaded (`mods[name]`), belt exists + not `hidden`, splitter exists, tech exists + not `hidden` + has `unit` (M-1); belt `speed` > top vanilla belt speed unless `row.own_role` (Q7). Sorted by belt `speed`, tie by row order (M-4); `prev` = previous entry key, first = `top_vanilla(raw)`. Every skip `log()`s key + reason. `mods` = data-stage global `mods`. |
+| `extra.build(raw)` | for each of `tiers(raw, mods)`: item, recipe (M-5; v10: `N.EXTRA_RECIPE` when items `stack-inserter` + `quantum-processor` exist, else `N.EXTRA_RECIPE_NOSA`), tech (U-1 rule), placer, 4 variants, remnant via `prototypes/tier.lua`; top vanilla variants + each extra `next_upgrade` = next in chain, same direction. Called by `data-final-fixes.lua`. |

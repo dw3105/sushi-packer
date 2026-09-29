@@ -154,6 +154,7 @@ function M.make(tier, opts)
       hidden_in_factoriopedia = dir ~= "north",
       factoriopedia_simulation = dir == "north" and FACTORIOPEDIA_SIMULATION or nil,
       next_upgrade = next_tier and N.variant(next_tier, dir) or nil,  -- U-3 upgrade planner, same dir
+      se_allow_in_space = true,  -- v10 Q10: Space Exploration lets flagged containers stand on space tiles; engine ignores key
     }
     for k, v in pairs(common) do box[k] = v end
     protos[#protos + 1] = box

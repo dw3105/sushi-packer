@@ -48,30 +48,48 @@ N.FAST_REPLACE_GROUP = "sushi-packer"
 -- v9 (REQUIREMENTS §17, author 2026-09-28): extra tiers for modded belts. Row counts only when its belt
 -- prototype exists, is not hidden and its tech has a science unit (M-1); chain order = belt speed, tie by
 -- row order (M-4). Names verified from real prototypes per mod set (FND-0023). paint/wear = G-2 for graphics.
+-- v10 (Q11): owners = internal mod names; row live only if one is loaded (clash guard, FND-0027). own_role (Q7) =
+-- keep row even when not faster than top vanilla tier; unset everywhere in v10.
 -- Row: key (tier key = internal prefix), paint RGB + wear (M-7: mod underground icon median, calibrated to G-2
 -- hue kept, V x1.21, S +0.06; hyper = whole-metal median, part is grey), belt, splitter, tech, mod (display), fv.
 N.EXTRA = {
-  { key = "planetaris-hyper", paint = { 179, 158, 150 }, wear = 0.40, belt = "planetaris-hyper-transport-belt", splitter = "planetaris-hyper-splitter",
+  { key = "planetaris-hyper", owners = { "planetaris-arig" }, paint = { 179, 158, 150 }, wear = 0.40, belt = "planetaris-hyper-transport-belt", splitter = "planetaris-hyper-splitter",
     tech = "planetaris-hyper-transport-belt", mod = "Planetaris: Arig", fv = { "2.0", "2.1" } },
-  { key = "bob-ultimate", paint = { 51, 166, 52 }, wear = 0.40, belt = "bob-ultimate-transport-belt", splitter = "bob-ultimate-splitter",
+  { key = "bob-ultimate", owners = { "boblogistics" }, paint = { 51, 166, 52 }, wear = 0.40, belt = "bob-ultimate-transport-belt", splitter = "bob-ultimate-splitter",
     tech = "logistics-5", mod = "Bob's Logistics", fv = { "2.0", "2.1" } },
-  { key = "kr-superior", paint = { 140, 44, 189 }, wear = 0.40, belt = "kr-superior-transport-belt", splitter = "kr-superior-splitter",
+  { key = "kr-superior", owners = { "Krastorio2-spaced-out", "Krastorio2" }, paint = { 140, 44, 189 }, wear = 0.40, belt = "kr-superior-transport-belt", splitter = "kr-superior-splitter",
     tech = "kr-logistic-5", mod = "Krastorio 2", fv = { "2.0", "2.1" } },
-  { key = "ub-ultra-fast", paint = { 36, 157, 9 }, wear = 0.40, belt = "ultra-fast-belt", splitter = "ultra-fast-splitter",
+  { key = "ub-ultra-fast", owners = { "UltimateBeltsSpaceAge" }, paint = { 36, 157, 9 }, wear = 0.40, belt = "ultra-fast-belt", splitter = "ultra-fast-splitter",
     tech = "ultra-fast-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
-  { key = "bb-ultra", paint = { 61, 144, 43 }, wear = 0.40, belt = "BetterBelts_ultra-transport-belt", splitter = "BetterBelts_ultra-splitter",
+  { key = "bb-ultra", owners = { "BetterBelts" }, paint = { 61, 144, 43 }, wear = 0.40, belt = "BetterBelts_ultra-transport-belt", splitter = "BetterBelts_ultra-splitter",
     tech = "BetterBelts_ultra-class", mod = "Better Belts", fv = { "2.0" } },
-  { key = "ub-extreme-fast", paint = { 162, 12, 42 }, wear = 0.40, belt = "extreme-fast-belt", splitter = "extreme-fast-splitter",
+  { key = "ub-extreme-fast", owners = { "UltimateBeltsSpaceAge" }, paint = { 162, 12, 42 }, wear = 0.40, belt = "extreme-fast-belt", splitter = "extreme-fast-splitter",
     tech = "extreme-fast-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
-  { key = "ub-ultra-express", paint = { 66, 12, 162 }, wear = 0.40, belt = "ultra-express-belt", splitter = "ultra-express-splitter",
+  { key = "ub-ultra-express", owners = { "UltimateBeltsSpaceAge" }, paint = { 66, 12, 162 }, wear = 0.40, belt = "ultra-express-belt", splitter = "ultra-express-splitter",
     tech = "ultra-express-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
-  { key = "ub-extreme-express", paint = { 12, 47, 162 }, wear = 0.40, belt = "extreme-express-belt", splitter = "extreme-express-splitter",
+  { key = "ub-extreme-express", owners = { "UltimateBeltsSpaceAge" }, paint = { 12, 47, 162 }, wear = 0.40, belt = "extreme-express-belt", splitter = "extreme-express-splitter",
     tech = "extreme-express-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
-  { key = "ub-ultimate", paint = { 12, 162, 138 }, wear = 0.40, belt = "ultimate-belt", splitter = "original-ultimate-splitter",
+  { key = "ub-ultimate", owners = { "UltimateBeltsSpaceAge" }, paint = { 12, 162, 138 }, wear = 0.40, belt = "ultimate-belt", splitter = "original-ultimate-splitter",
     tech = "ultimate-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
+  -- v10 (author 2026-09-29, FND-0028 names from real zips): Advanced Belts 2.0 (no SA) + Space Exploration deep space.
+  -- paint = placeholder G-2 blue until v10 graphics (M-7).
+  { key = "ab-elite", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "elite-belt", splitter = "elite-splitter",
+    tech = "elite-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
+  { key = "ab-extreme", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "extreme-belt", splitter = "extreme-splitter",
+    tech = "extreme-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
+  { key = "ab-supreme", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "supreme-belt", splitter = "supreme-splitter",
+    tech = "supreme-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
+  { key = "ab-ultimate", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "ultimate-belt", splitter = "ultimate-splitter",
+    tech = "ultimate-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
+  { key = "se-deep-space", owners = { "space-exploration" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "se-deep-space-transport-belt-black",
+    splitter = "se-deep-space-splitter-black", tech = "se-deep-space-transport-belt", mod = "Space Exploration", fv = { "2.0", "2.1" } },
 }
 -- Extra tier recipe (M-5): previous tier box 1 + own splitter 1 + inserter 2 + circuits, craft_s.
 N.EXTRA_RECIPE = { inserter = "stack-inserter", inserters = 2, circuit = "quantum-processor", circuits = 2, craft_s = 120 }
+-- v10 (Q6): game without stack-inserter / quantum-processor (no space-age) -> blue tier set.
+N.EXTRA_RECIPE_NOSA = { inserter = "bulk-inserter", inserters = 2, circuit = "processing-unit", circuits = 5, craft_s = 60 }
+-- v10 (T-1, Q6): vanilla tiers built only when own belt + tech exist (turbo lives in space-age). Others strict.
+N.OPTIONAL_VANILLA = { turbo = true }
 N.ALL = {}
 for _, t in ipairs(N.TIERS) do N.ALL[#N.ALL + 1] = t end
 for _, row in ipairs(N.EXTRA) do

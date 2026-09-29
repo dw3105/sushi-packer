@@ -1,6 +1,7 @@
 -- Offline data-stage fixture (SP-02): fake `data` + `data.raw` for prototypes/*.lua under lua5.2.
 -- Values = real data.raw dump of Factorio 2.0.77 + space-age (2.1.20 identical, checked 2026-09-26, FND-0007).
 -- usage: local F = require("tests.offline.fake_data"); F.reset(); dofile("prototypes/packer.lua"); F.raw.technology[...]
+-- v10: F.reset{ sa = false } = no space-age; F.with_mods(set) also fills fake global `mods` (owner gate, Q11).
 local F = {}
 
 local function deepcopy(t)
@@ -64,18 +65,52 @@ local ROWS = {
   ub4 = { "extreme-express-belt", 0.46875, "extreme-express-splitter", "extreme-express-logistics", unit(400, { SP, LP, CP, PP, UP }), { "ultra-express-logistics" } },
   ub5 = { "ultimate-belt", 0.5625, "original-ultimate-splitter", "ultimate-logistics", unit(500, { SP, LP, CP, PP, UP }), { "extreme-express-logistics" } },
   bb = { "BetterBelts_ultra-transport-belt", 0.2, "BetterBelts_ultra-splitter", "BetterBelts_ultra-class", unit(150, { SP, LP, CP, PP }), { "logistics-3" } },
+  -- v10 (FND-0028, real zips 2026-09-29): Advanced Belts 2.0 (AdvancedBeltsUpdated 2.4.0), Space Exploration 0.7.57/0.7.62.
+  ab1 = { "elite-belt", 0.125, "elite-splitter", "elite-logistics", unit(300, { SP, LP, CP }), { "logistics-3" } },
+  ab2 = { "extreme-belt", 0.15625, "extreme-splitter", "extreme-logistics", unit(400, { SP, LP, CP, PP }), { "elite-logistics" } },
+  ab3 = { "supreme-belt", 0.1875, "supreme-splitter", "supreme-logistics", unit(500, { SP, LP, CP, PP, UP }), { "extreme-logistics" } },
+  ab4 = { "ultimate-belt", 0.21875, "ultimate-splitter", "ultimate-logistics", unit(600, { SP, LP, CP, PP, UP }), { "supreme-logistics" } },
+  sespace = { "se-space-transport-belt", 0.09375, "se-space-splitter", "se-space-belt", unit(200, { SP, LP, CP, "se-rocket-science-pack" }), { "logistics-3" } },
+  sedeep = { "se-deep-space-transport-belt-black", 0.1875, "se-deep-space-splitter-black", "se-deep-space-transport-belt",
+    unit(500, { SP, LP, CP, "se-rocket-science-pack", "se-deep-space-science-pack-2" }), { "se-deep-space-science-pack-2", "se-heavy-assembly" } },
 }
 F.MODSETS = {
   vanilla = {}, arig = { "hyper" }, hyarion = { "hyper" }, ["arig-off"] = { "hyper" }, k2so = { "superior", "advanced" },
   ["arig-k2so"] = { "hyper", "superior", "advanced" }, bob = { "bob" }, ubsa = { "ub1", "ub2", "ub3", "ub4", "ub5" }, bb = { "bb" },
   all = { "hyper", "superior", "advanced", "bob", "ub1", "ub2", "ub3", "ub4", "ub5", "bb" },
+  -- v10: no-SA sets (space-age content stripped, see F.reset{ sa = false }); ab-sa = AB with space-age (FND-0027 clash).
+  nosa = {}, se = { "sespace", "sedeep" }, ab = { "ab1", "ab2", "ab3", "ab4" }, ["ab-sa"] = { "ab1", "ab2", "ab3", "ab4" },
 }
+-- v10 (Q11): loaded mod names per set -> fake data-stage global `mods` (owner gate). Built-ins added by reset.
+F.OWNERS = {
+  vanilla = {}, arig = { "planetaris-arig" }, hyarion = { "planetaris-arig", "planetaris-hyarion" }, ["arig-off"] = { "planetaris-arig" },
+  k2so = { "Krastorio2-spaced-out" }, ["arig-k2so"] = { "planetaris-arig", "Krastorio2-spaced-out" }, bob = { "boblogistics" },
+  ubsa = { "UltimateBeltsSpaceAge" }, bb = { "BetterBelts" },
+  all = { "planetaris-arig", "Krastorio2-spaced-out", "boblogistics", "UltimateBeltsSpaceAge", "BetterBelts" },
+  nosa = {}, se = { "space-exploration" }, ab = { "AdvancedBeltsUpdated" }, ["ab-sa"] = { "AdvancedBeltsUpdated" },
+}
+-- v10: sets that only exist without space-age; with_mods() strips SA content for them.
+F.NOSA_SETS = { nosa = true, se = true, ab = true }
+-- space-age content (2.0.77 dump): turbo belt family, its tech, stack inserter + quantum processor (items, recipes, techs).
+F.SA_ONLY = { belts = { "turbo-transport-belt" }, techs = { "turbo-transport-belt", "stack-inserter", "quantum-processor" },
+  recipes = { "turbo-splitter", "stack-inserter", "quantum-processor" } }
+
+function F.strip_sa()
+  local raw = F.raw
+  for _, n in ipairs(F.SA_ONLY.belts) do raw["transport-belt"][n] = nil end
+  for _, n in ipairs(F.SA_ONLY.techs) do raw.technology[n] = nil end
+  for _, n in ipairs(F.SA_ONLY.recipes) do raw.recipe[n] = nil; raw.item[n] = nil end
+  _G.mods = { base = "2.0.77" }
+  return F
+end
 
 local function add_belt(raw, name, speed, hidden)
   raw["transport-belt"][name] = { type = "transport-belt", name = name, speed = speed, hidden = hidden or nil }
 end
 
 function F.with_mods(set)
+  if F.NOSA_SETS[set] then F.strip_sa() end
+  for _, m in ipairs(assert(F.OWNERS[set], "no owners for mod set " .. tostring(set))) do _G.mods[m] = "0.0.0" end
   local raw = F.raw
   for _, key in ipairs(assert(F.MODSETS[set], "unknown mod set " .. tostring(set))) do
     local r = ROWS[key]
@@ -98,7 +133,8 @@ function F.with_mods(set)
   return F
 end
 
-function F.reset()
+-- opts.sa = false -> game without space-age (F.strip_sa). Default: 2.0.77 + space-age, as v9.
+function F.reset(opts)
   local raw = { technology = {}, recipe = {}, item = {}, container = {}, ["simple-entity-with-owner"] = {}, corpse = {},
     ["tips-and-tricks-item"] = {}, ["tips-and-tricks-item-category"] = {}, ["transport-belt"] = {} }
   for name, speed in pairs(F.BELTS) do add_belt(raw, name, speed) end
@@ -129,6 +165,8 @@ function F.reset()
   table.deepcopy = deepcopy
   _G.circuit_connector_definitions = { chest = { fake = "chest-connector" } }
   _G.default_circuit_wire_max_distance = 9
+  _G.mods = { base = "2.0.77", ["space-age"] = "2.0.77", quality = "2.0.77", ["elevated-rails"] = "2.0.77" }
+  if opts and opts.sa == false then F.strip_sa() end
   return F
 end
 

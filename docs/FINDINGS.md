@@ -194,3 +194,26 @@ Measured 2026-09-29 on dev-vm, 2.0.77 + 2.1.20, standalone probe mod `sp-probe` 
 Verdict: engine makes stacked belt items with no space-age mod and no feature flag. Planned red control (bonus 0 -> `[1]`) is NOT red: stack size is the caller's argument, force research does not cap it. So research sets nothing in the engine for script belt inserts; box stack N comes only from our rule O-3 (`1 + force.belt_stack_size_bonus`). T-1 (space-age optional) has no engine blocker.
 
 Verified-by: `gateslot --label sushi-packer/heavy --weight-mib 768 --weight-cores 1 -- sh -c 'for v in 2.0 2.1; do for c in nosa sa; do tools/probe_nosa/run.sh $v $c; done; done'`
+
+## FND-0026 - No-SA game: sushi-packer refuses to load (hard dependency)
+
+Measured 2026-09-29 on dev-vm, code `e5e8e7f` (= v1.10 mod files), `tools/load_check.sh` with sets `nosa` (2.0, 2.1), `ab` (2.0), `se` (2.0 SE 0.7.57, 2.1 SE 0.7.62), all `builtin_off`. Every case: `Error Util.cpp:81: Failed to load mod "sushi-packer": ... Missing required dependency space-age`. Logs `~/share/sushi-packer/v10/load-<FV>-<set>.log`. Data stage never runs, so the turbo `strict` error in `prototypes/packer.lua` (turbo belt tech lives in space-age) is still unseen behind it.
+
+Verified-by: `MODSET=nosa tools/load_check.sh 2.0` (under `gateslot --label sushi-packer/heavy --weight-mib 1536 --weight-cores 1`)
+
+## FND-0027 - Advanced Belts 2.0 + Space Age: shipped 0.1.10 crashes on load (row name clash)
+
+Measured 2026-09-29 on dev-vm 2.0.77, code `e5e8e7f` (= v1.10 mod files), set `ab-sa` (AdvancedBeltsUpdated 2.4.0 + space-age on; AB declares no `! space-age`, so players can load this): `Error in assignID: item with name 'original-ultimate-splitter' does not exist. Source: ub-ultimate-sushi-packer (recipe).` Log `~/share/sushi-packer/v10/load-2.0-ab-sa.log`.
+Cause (log + code): AB defines `ultimate-belt` + tech `ultimate-logistics`, same names as UBSA row `ub-ultimate`. `prototypes/extra.lua` M-1 guard checks belt + tech only, not owner mod, not splitter -> UBSA row goes live on AB belt, recipe asks UBSA splitter. Fix by design: Q11 owner gate + splitter check (v10).
+
+Verified-by: `MODSET=ab-sa tools/load_check.sh 2.0`
+
+## FND-0028 - v10 row names read from real zips
+
+Read 2026-09-29 on dev-vm from portal zips (sha1 = portal API): AdvancedBeltsUpdated 2.4.0 (factorio 2.0 only), space-exploration 0.7.57 (2.0) + 0.7.62 (2.1).
+- AB `prototypes/entities/transport-belts.lua`, `splitters.lua`, `technologies.lua`: `elite-belt` 0.125, `extreme-belt` 0.15625, `supreme-belt` 0.1875, `ultimate-belt` 0.21875; splitters `elite-`/`extreme-`/`supreme-`/`ultimate-splitter`; techs `elite-`/`extreme-`/`supreme-`/`ultimate-logistics`.
+- SE `prototypes/phase-1/combined/transport-belt.lua`: `se-space-transport-belt` = express copy (45/s, ties blue -> no tier, Q7); deep space speed = setting `se-deep-space-belt-speed-2` (default 90, range 60..512) `* (4/3)/10/64` -> 0.1875 at default; 8 colour variants `se-deep-space-transport-belt-<colour>`, default `black`; splitter `se-deep-space-splitter-black`; tech `se-deep-space-transport-belt` (unit 500).
+- SE `prototypes/phase-3/space-collision.lua`: every `container` without `se_allow_in_space` (and name without chest/warehouse/...) gets space collision layer -> sushi-packer boxes blocked in SE space today.
+- `grep belt.stack` over both mods: 0 hits (no belt stack research from SE or AB).
+
+Verified-by: `unzip` of `~/share/sushi-packer/{AdvancedBeltsUpdated_2.4.0,space-exploration_0.7.57,space-exploration_0.7.62}.zip` + read of files above

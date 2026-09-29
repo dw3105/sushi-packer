@@ -65,9 +65,13 @@ describe("guard", function()
     eq(N.item("kr-superior"), "kr-superior-sushi-packer")
     eq(N.variant("planetaris-hyper", "west"), "planetaris-hyper-sushi-packer-west")
     eq(N.EXTRA_RECIPE, { inserter = "stack-inserter", inserters = 2, circuit = "quantum-processor", circuits = 2, craft_s = 120 })
+    -- v10 (Q6, T-1)
+    eq(N.EXTRA_RECIPE_NOSA, { inserter = "bulk-inserter", inserters = 2, circuit = "processing-unit", circuits = 5, craft_s = 60 })
+    eq(N.OPTIONAL_VANILLA, { turbo = true })
     for _, row in ipairs(N.EXTRA) do
       ok(N.TIER[row.key] and N.TIER[row.key].belt == row.belt and N.TIER[row.key].lane_rate == nil, "extra tier row " .. row.key)
       ok(row.splitter and row.tech and row.mod and #row.paint == 3 and row.wear and row.fv, "extra row fields " .. row.key)
+      ok(type(row.owners) == "table" and #row.owners >= 1, "extra row owners " .. row.key)  -- v10 (Q11)
       eq(N.VARIANTS[N.variant(row.key, "east")], { tier = row.key, dir = "east" })
     end
   end)
