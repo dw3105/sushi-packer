@@ -1,6 +1,6 @@
 local gui
 
-local function fixture()
+local function fixture(one_quality)
   package.loaded["scripts.gui"] = nil
   gui = require("scripts.gui")
   local function node(spec, parent)
@@ -27,9 +27,11 @@ local function fixture()
     timeout_mode = "global", timeout_s = 30,
     circuit = { enable = false, cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 5 }, flush = false, flush_signal = nil },
   } } } }
-  prototypes = { quality = {
+  local qualities = {
     normal = { level = 0, hidden = false }, uncommon = { level = 1, hidden = false }, rare = { level = 2, hidden = false }, legendary = { level = 5, hidden = false }, ["quality-unknown"] = { level = 0, hidden = true },
-  }, item = { ["sushi-packer"] = {}, ["fast-sushi-packer"] = {}, ["express-sushi-packer"] = {}, ["turbo-sushi-packer"] = {} } }  -- v9: N.active() = vanilla 4
+  }
+  if one_quality then qualities = { normal = { level = 0, hidden = false }, ["quality-unknown"] = { level = 0, hidden = true } } end
+  prototypes = { quality = qualities, item = { ["sushi-packer"] = {}, ["fast-sushi-packer"] = {}, ["express-sushi-packer"] = {}, ["turbo-sushi-packer"] = {} } }  -- v9: N.active() = vanilla 4
   defines = { relative_gui_type = { container_gui = 1 }, relative_gui_position = { right = 2 },
     events = { on_gui_click = 1, on_gui_elem_changed = 2, on_gui_selection_state_changed = 3, on_gui_checked_state_changed = 4, on_gui_switch_state_changed = 5, on_gui_text_changed = 6 } }
   gui.on_opened({ entity = { valid = true, unit_number = 7 }, player_index = 1 })
@@ -85,6 +87,33 @@ describe("gui", function()
   it("quality list sorted by level with any first", function()
     local p = fixture(); local q = p.gui.relative.sushi_packer_frame.filters_section.filter_editor.filter_quality
     eq(q.items, { { "gui.any-quality" }, "normal", "uncommon", "rare", "legendary" })
+  end)
+  it("one quality hides picker", function()
+    local p = fixture(true)
+    click(p, p.gui.relative.sushi_packer_frame.filters_section.filter_grid.filter_slot_2)
+    local editor = p.gui.relative.sushi_packer_frame.filters_section.filter_editor
+    eq(editor.filter_comparator.visible, false); eq(editor.filter_quality.visible, false)
+  end)
+  it("quality mod shows picker", function()
+    local p = fixture(); local f = p.gui.relative.sushi_packer_frame
+    click(p, f.filters_section.filter_grid.filter_slot_2)
+    local editor = f.filters_section.filter_editor
+    ok(editor.filter_comparator.visible ~= false); ok(editor.filter_quality.visible ~= false)
+  end)
+  it("one quality filter saves item only", function()
+    local p, rec = fixture(true)
+    local f = p.gui.relative.sushi_packer_frame
+    click(p, f.filters_section.filter_grid.filter_slot_2)
+    f.filters_section.filter_editor.filter_item.elem_value = "iron-plate"
+    click(p, f.filters_section.filter_editor.filter_item)
+    eq(rec.settings.filters[2].name, "iron-plate")
+    eq(rec.settings.filters[2].quality, nil); eq(rec.settings.filters[2].comparator, nil)
+  end)
+  it("one quality stored quality filter loads", function()
+    local p = fixture(true)
+    local f = p.gui.relative.sushi_packer_frame
+    click(p, f.filters_section.filter_grid.filter_slot_1)
+    eq(f.filters_section.filter_editor.filter_item.elem_value, "iron-plate")
   end)
   it("timeout switch and seconds written", function()
     local _, rec = fixture(); local f = game.players[1].gui.relative.sushi_packer_frame.timeout_section.timeout_row

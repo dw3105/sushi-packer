@@ -59,6 +59,14 @@ local function quality_items()
   return items
 end
 
+local function has_quality_picker()
+  local count = 0
+  for _, quality in pairs(prototypes.quality) do
+    if not quality.hidden then count = count + 1 end
+  end
+  return count > 1
+end
+
 -- filters is an ipairs array (scripts/filter.lua): empty slots before `slot` must be false, never nil.
 local function pad(filters, slot)
   for i = 1, slot - 1 do if filters[i] == nil then filters[i] = false end end
@@ -72,10 +80,12 @@ local function write_filter(frame, editor, settings)
     settings.filters[slot] = false
     return
   end
-  local quality_choice = editor.filter_quality.selected_index or 1
-  local comparator = FILTER_COMPARATORS[editor.filter_comparator.selected_index or 1]
-  local filter = { name = item, comparator = comparator }
-  if quality_choice ~= 1 then filter.quality = editor.filter_quality.items[quality_choice] end
+  local filter = { name = item }
+  if has_quality_picker() then
+    local quality_choice = editor.filter_quality.selected_index or 1
+    filter.comparator = FILTER_COMPARATORS[editor.filter_comparator.selected_index or 1]
+    if quality_choice ~= 1 then filter.quality = editor.filter_quality.items[quality_choice] end
+  end
   settings.filters[slot] = filter
 end
 
@@ -99,9 +109,10 @@ local function build_filters(box, frame, unit, settings)
   local editor = aligned(box, "filter_editor")
   editor.add({ type = "label", name = "slot_label", caption = { "gui.slot", 1 } })
   add(editor, { type = "choose-elem-button", elem_type = "item", name = "filter_item" }, unit, "filter_item")
-  add(editor, { type = "drop-down", name = "filter_comparator", style = "circuit_condition_comparator_dropdown", items = FILTER_COMPARATORS, selected_index = 1 }, unit, "filter_comparator")
+  local picker_visible = has_quality_picker()
+  add(editor, { type = "drop-down", name = "filter_comparator", style = "circuit_condition_comparator_dropdown", items = FILTER_COMPARATORS, selected_index = 1, visible = picker_visible }, unit, "filter_comparator")
   local qualities = quality_items()
-  add(editor, { type = "drop-down", name = "filter_quality", items = qualities, selected_index = 1 }, unit, "filter_quality")
+  add(editor, { type = "drop-down", name = "filter_quality", items = qualities, selected_index = 1, visible = picker_visible }, unit, "filter_quality")
   show_filter_editor(frame, box, settings, 1)
 end
 

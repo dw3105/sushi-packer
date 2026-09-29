@@ -32,6 +32,9 @@ local names = {
   ["bb-ultra"] = "Ultra sushi packer", ["ub-extreme-fast"] = "Extreme fast sushi packer",
   ["ub-ultra-express"] = "Ultra express sushi packer", ["ub-extreme-express"] = "Extreme express sushi packer",
   ["ub-ultimate"] = "Ultimate sushi packer",
+  ["ab-elite"] = "Elite sushi packer", ["ab-extreme"] = "Extreme sushi packer",
+  ["ab-supreme"] = "Supreme sushi packer", ["ab-ultimate"] = "Ultimate sushi packer",
+  ["se-deep-space"] = "Deep space sushi packer",
 }
 local function entity_keys(row)
   local out = { N.placer(row.key) }
@@ -92,5 +95,12 @@ describe("locale extra", function()
     assert(log:find(sep, 1, true), "missing 99-dash separator")
     local v19, v18 = log:find("Version: 0.1.9", 1, true), log:find("Version: 0.1.8", 1, true)
     assert(v19 and v18 and v19 < v18, "0.1.9 must precede 0.1.8")
+  end)
+  it("changelog has 0.2.11 and 0.1.11", function()
+    local log = read("changelog.txt")
+    local v211, v210 = log:find("Version: 0.2.11\nDate: 2026%-09%-29"), log:find("Version: 0.2.10", 1, true)
+    local v111, v110 = log:find("Version: 0.1.11\nDate: 2026%-09%-29"), log:find("Version: 0.1.10", 1, true)
+    assert(v211 and v210 and v211 < v210, "0.2.11 must precede 0.2.10")
+    assert(v111 and v110 and v111 < v110, "0.1.11 must precede 0.1.10")
   end)
 end)

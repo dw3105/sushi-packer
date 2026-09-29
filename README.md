@@ -13,7 +13,7 @@ Each tier matches a belt speed. Recipes are crafted in the crafting category, by
 | Sushi packer | 1 steel chest, 1 splitter, 2 inserters, 5 electronic circuits | 30 s | Sushi packer |
 | Fast sushi packer | 1 sushi packer, 1 fast splitter, 2 fast inserters, 5 advanced circuits | 45 s | Fast sushi packer |
 | Express sushi packer | 1 fast sushi packer, 1 express splitter, 2 bulk inserters, 5 processing units | 60 s | Express sushi packer |
-| Turbo sushi packer | 1 express sushi packer, 1 turbo splitter, 2 stack inserters, 2 quantum processors | 120 s | Turbo sushi packer |
+| Turbo sushi packer | Space Age: 1 express sushi packer, 1 turbo splitter, 2 stack inserters, 2 quantum processors | 120 s | Turbo sushi packer |
 
 ## Modded belt tiers
 
@@ -30,8 +30,13 @@ These tiers appear only when the matching belt mod is installed.
 | Ultra express sushi packer | Ultimate Belts Space Age | 180/s | 2.0 |
 | Extreme express sushi packer | Ultimate Belts Space Age | 225/s | 2.0 |
 | Ultimate sushi packer | Ultimate Belts Space Age | 270/s | 2.0 |
+| Elite sushi packer | Advanced Belts 2.0 | 60/s | 2.0 |
+| Extreme sushi packer | Advanced Belts 2.0 | 75/s | 2.0 |
+| Supreme sushi packer | Advanced Belts 2.0 | 90/s | 2.0 |
+| Ultimate sushi packer | Advanced Belts 2.0 | 105/s | 2.0 |
+| Deep space sushi packer | Space Exploration | 90/s by default (follows mod setting) | 2.0 + 2.1 |
 
-Each modded tier recipe uses 1 previous tier box, 1 matching belt splitter, 2 stack inserters, and 2 quantum processors, and takes 120 s to craft. The upgrade chain follows increasing belt speed from turbo through the modded tiers. Each box runs at its belt's real speed and follows speed changes made by the belt mod's settings. Planetaris Hyarion has no belt of its own: the hyper belt comes from Planetaris: Arig, and with Hyarion installed its technology moves into Hyarion's progression, so the packer tier follows it.
+Space Age is optional. Without it, stacked output needs belt stacking research from Space Age, Stack Inserters, or Infinite Belt Stacking; without that research items pass through one by one. There is no turbo box, and modded tiers chain after blue using 2 bulk inserters and 5 processing units (60 s). With Space Age, modded recipes use 2 stack inserters and 2 quantum processors (120 s), and tiers chain after turbo. Each box runs at its belt's real speed and follows speed changes made by the belt mod's settings. Boxes can be placed on Space Exploration space tiles. Planetaris Hyarion has no belt of its own: the hyper belt comes from Planetaris: Arig, and with Hyarion installed its technology moves into Hyarion's progression, so the packer tier follows it.
 
 Each box tier unlocks from its matching belt technology and the recipe ingredient technologies. The red, blue, and turbo boxes also require the previous box tier's technology.
 
@@ -41,7 +46,7 @@ The map setting **Sushi packer flush timeout** sets the default age, in seconds,
 
 ## Factorio versions
 
-The source supports two builds: Factorio 2.0 uses mod version `0.1.10`; Factorio 2.1 uses mod version `0.2.10`. Both builds require the Space Age expansion for belt stacking and quality support.
+The source supports two builds: Factorio 2.0 uses mod version `0.1.11`; Factorio 2.1 uses mod version `0.2.11`. Space Age is optional.
 
 ## Mod portal assets
 
