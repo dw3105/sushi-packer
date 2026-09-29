@@ -172,4 +172,92 @@ describe("data extra", function()
       ok(dependencies:find(dependency, 1, true), "missing " .. dependency)
     end
   end)
+
+  local function load_nosa(set)
+    F.reset({ sa = false })
+    if set then F.with_mods(set) end
+    dofile("prototypes/packer.lua")
+    return F.raw
+  end
+  local function logs_for(fn)
+    local logs, saved = {}, _G.log
+    _G.log = function(message) logs[#logs + 1] = message end
+    fn()
+    _G.log = saved
+    return logs
+  end
+
+  it("nosa no turbo tier", function()
+    local raw = load_nosa()
+    eq(raw.item["turbo-sushi-packer"], nil); eq(raw.recipe["turbo-sushi-packer"], nil); eq(raw.technology["turbo-sushi-packer"], nil)
+    for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("turbo", dir)], nil); eq(raw.container[N.variant("blue", dir)].next_upgrade, nil) end
+  end)
+  it("nosa extras chain after blue", function()
+    load_nosa("ab")
+    local rows = require("prototypes.extra").tiers(F.raw)
+    eq(names(rows), { "ab-elite", "ab-extreme", "ab-supreme", "ab-ultimate" }); eq(rows[1].prev, "blue")
+  end)
+  it("nosa extra recipe bulk inserter processing unit", function()
+    local raw = load_nosa("ab"); require("prototypes.extra").build(raw)
+    eq(ingredient_pairs(raw.recipe[N.item("ab-elite")]), { {"express-sushi-packer",1},{"elite-splitter",1},{"bulk-inserter",2},{"processing-unit",5} })
+    eq(raw.recipe[N.item("ab-elite")].energy_required, 60)
+  end)
+  it("sa extra recipe unchanged", function()
+    local raw = load("arig"); require("prototypes.extra").build(raw)
+    eq(ingredient_pairs(raw.recipe[N.item("planetaris-hyper")]), { {"turbo-sushi-packer",1},{"planetaris-hyper-splitter",1},{"stack-inserter",2},{"quantum-processor",2} })
+    eq(raw.recipe[N.item("planetaris-hyper")].energy_required, 120)
+  end)
+  it("owner missing row skipped", function()
+    local raw = load("arig"); mods["planetaris-arig"] = nil
+    local logs = logs_for(function() eq(require("prototypes.extra").tiers(raw), {}) end)
+    ok(logs[1] and logs[1]:find("planetaris-hyper",1,true))
+  end)
+  it("ab-sa ub-ultimate not live", function()
+    local raw = load("ab-sa"); local rows = require("prototypes.extra").tiers(raw)
+    for _, row in ipairs(rows) do ok(row.key ~= "ub-ultimate") end
+    require("prototypes.extra").build(raw)
+  end)
+  it("ab-sa ab rows after turbo", function()
+    local raw = load("ab-sa"); local rows = require("prototypes.extra").tiers(raw)
+    eq(names(rows), {"ab-extreme","ab-supreme","ab-ultimate"}); eq(rows[1].prev,"turbo")
+  end)
+  it("splitter missing row skipped logged", function()
+    local raw = load("arig"); raw.item["planetaris-hyper-splitter"] = nil; raw.splitter["planetaris-hyper-splitter"] = nil
+    local logs = logs_for(function() eq(require("prototypes.extra").tiers(raw), {}) end)
+    ok(logs[1] and logs[1]:find("planetaris-hyper",1,true))
+  end)
+  it("speed at or below top vanilla skipped", function()
+    local raw = load("ab-sa"); local rows = require("prototypes.extra").tiers(raw)
+    for _, row in ipairs(rows) do ok(row.key ~= "ab-elite") end
+  end)
+  it("own_role keeps slow row", function()
+    local raw = load("ab-sa"); local index
+    for i,row in ipairs(N.EXTRA) do if row.key == "ab-elite" then index=i; break end end
+    local old = N.EXTRA[index].own_role; N.EXTRA[index].own_role = true
+    local rows = require("prototypes.extra").tiers(raw); N.EXTRA[index].own_role = old
+    eq(rows[1].key,"ab-elite"); eq(rows[1].prev,"turbo")
+  end)
+  it("se deep space after blue", function()
+    load_nosa("se")
+    eq(require("prototypes.extra").tiers(F.raw), {{key="se-deep-space",prev="blue",speed=0.1875}})
+  end)
+  it("container allowed in se space", function()
+    local raw = load("se"); require("prototypes.extra").build(raw)
+    for _,tier in ipairs({"yellow","red","blue","turbo","se-deep-space"}) do for _,dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier,dir)].se_allow_in_space,true) end end
+  end)
+  it("ab four rows speed order", function()
+    load_nosa("ab"); local rows=require("prototypes.extra").tiers(F.raw)
+    eq({rows[1].speed,rows[2].speed,rows[3].speed,rows[4].speed},{0.125,0.15625,0.1875,0.21875})
+  end)
+  it("upgrade chain from top vanilla", function()
+    local raw=load("se"); require("prototypes.extra").build(raw)
+    eq(raw.container[N.variant("blue","west")].next_upgrade,N.variant("se-deep-space","west"))
+    raw=load("arig"); require("prototypes.extra").build(raw)
+    eq(raw.container[N.variant("turbo","west")].next_upgrade,N.variant("planetaris-hyper","west"))
+  end)
+  it("info lists space-age as optional", function()
+    local file=assert(io.open("info.json","r")); local content=file:read("*a"); file:close()
+    for _,dep in ipairs({"? space-age","? space-exploration","? AdvancedBeltsUpdated"}) do ok(content:find(dep,1,true)) end
+    ok(not content:find('"space-age"',1,true))
+  end)
 end)
