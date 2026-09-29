@@ -53,7 +53,7 @@ describe("perf", function()
     function belt.get_transport_line() return line end
     local r=cache_rec({find_entities_filtered=function() return {belt} end})
     local calls=0; local got,eta=belt_io.pull(r,{0,0},function() calls=calls+1; return 0 end)
-    eq(got,{0,0}); eq(eta,{8,8}); eq(calls,0)
+    eq(got,{0,0}); eq(eta,{7,7}); eq(calls,0)  -- FND-0030: eta to take window
   end)
 
   local function tick_fixture(tier, unit)

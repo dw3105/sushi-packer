@@ -225,9 +225,11 @@ After: `se` 2.0 modtiers 6/7 (deep space 450/450 per lane, box placeable on `se-
 
 Verified-by: `make test-one T='tests/offline/test_data_extra.lua::data extra > extra box matches resized vanilla box'`; `MODSET=se tools/run_tests.sh 2.0 --modtiers`
 
-## FND-0030 - Yellow, red, blue boxes below belt rate (shipped since v1.x; E-4)
+## FND-0030 - Blue box below belt rate (200 / 225 per lane, shipped since v1.x; E-4)
 
-Measured 2026-09-29 on dev-vm 2.0.77 + space-age, code `f18a795` (vanilla path = v1.10), probe `tests/game/test_probe_v10rate.lua` (NOT in index, SP-10; same rig as `modtiers > box output matches belt rate`: belt stack 1, both lanes saturated, warm-up 180, measure 600 ticks). Per lane got / want: yellow 42 / 75 (56 %), red 140 / 150 (93 %), blue 200 / 225 (89 %), turbo 300 / 300. Same blue 200 / 225 in no-SA sets `nosa` and `se` (first time blue is a measured chain tier, V10-1).
-Not measured before: rate test covered only turbo and faster tiers (chain started at turbo). FND-0024 take-window fix applies only to belts faster than turbo (`speed > 0.125`); yellow/red/blue keep `INTERVAL` 8 / 4 / 2 batch cadence. Cause not proven yet (code read only).
+Measured 2026-09-29 on dev-vm 2.0.77 + space-age, probe `tests/game/test_probe_v10rate.lua` (NOT in index, SP-10; same rig as `modtiers > box output matches belt rate`: belt stack 1, both lanes saturated, 12 front tiles). Base code (= v1.10 path), warm-up 600, measure 600 ticks, per lane got / want: yellow 75 / 75, red 150 / 150, blue 200 / 225, turbo 300 / 300. Same blue 200 / 225 in no-SA sets `nosa` and `se` (blue = first measured chain tier there, V10-1).
+Correction: first report (commit `2bf1a96`) said yellow 42 / 75 and red 140 / 150 - rig artifact, warm-up 180 shorter than 12-tile crossing (yellow 384, red 192 ticks). Only blue is real.
+Cause (experiment, not code read): resting-only take rule for speed <= 0.125; blue item gap 0.25 / 0.09375 = 2.67 ticks vs 2-tick visits. Experiment 1 (take window for all speeds) -> all four tiers full; experiments 2 (eta after take) and 3 (retry push next tick) changed nothing, reverted.
+Fix (V10-7): `belt_io.pull` take window (position <= belt_speed) for all speeds; `modtiers > box output matches belt rate` always measures blue (red on base with SA: blue 200 / 225, green after). Old-rule offline expectations updated: eta to window ({4,7}->{3,6}, {8,8}->{7,7}), turbo takes item at 0.063.
 
-Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v10rate.lua::probe v10 rate > vanilla box output vs belt rate'` (temporary index entry)
+Verified-by: `make test-one FV=2.0 T='tests/game/test_modtiers.lua::modtiers > box output matches belt rate'`

@@ -157,11 +157,11 @@ function M.pull(rec, budget, sink)
   -- FND-0011: lane that took an item last asks second next time, so a full box hands freed slots to lanes in turn
   -- (no starving lane). All-refused visits keep order (no parity lock with output cadence).
   local first = rec.pull_first == 2 and 2 or 1
-  -- FND-0024: belt faster than turbo (speed > 0.125) must also take items that reach the end within this tick
-  -- (position <= belt_speed); resting-only rule caps every such belt at 0.5 item/lane/tick = 60/s. Vanilla keeps
-  -- the cheap resting-item check (PERF-2).
+  -- FND-0024 / FND-0030: take items that reach the belt end within this tick (position <= belt_speed), not only
+  -- resting ones. Resting-only capped belts faster than turbo at 60/s and blue at 200/225 per lane (item gap 2.67
+  -- ticks vs 2-tick visits). All speeds: detailed read only while the front item is still moving.
   local speed = belt_speed(belt) or 0
-  local fast = speed > 0.125
+  local fast = speed > 0
   for i = 0, 1 do
     local lane = i == 0 and first or 3 - first
     local line = belt.get_transport_line(map[lane])

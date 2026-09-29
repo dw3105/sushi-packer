@@ -13,7 +13,7 @@ describe("probe v10 rate", function()
   it("vanilla box output vs belt rate", function()
     -- Per tier (turbo = control): 3 own belts behind, box, 12 own belts in front, north. Belt stack 1 = every item
     -- leaves at once (C-2). Both lanes saturated from far behind; last front tile emptied each tick and counted.
-    -- Warm-up 180 ticks, measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
+    -- Warm-up 600 ticks (> yellow 12-tile crossing 384), measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
     force.belt_stack_size_bonus = 0
     local rigs = {}
     for i, key in ipairs(chain()) do
@@ -39,11 +39,11 @@ describe("probe v10 rate", function()
             line.insert_at_back({ name = names[n % #names + 1], count = 1 })
           end
           local out = r.last.get_transport_line(lane)
-          if t > 180 then for _, s in ipairs(out.get_contents()) do r.got[lane] = r.got[lane] + s.count end end
+          if t > 600 then for _, s in ipairs(out.get_contents()) do r.got[lane] = r.got[lane] + s.count end end
           out.clear()
         end
       end
-      if t >= 780 then
+      if t >= 1200 then
         local report = {}
         for _, r in ipairs(rigs) do
           for lane = 1, 2 do

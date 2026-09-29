@@ -35,7 +35,7 @@ describe("belt_io", function()
   it("pull reports eta of front item per lane", function()
     local a,b=eta_line({name="iron",count=1},false,0.1),eta_line({name="copper",count=1},false,0.2)
     local got,eta=require("scripts.belt_io").pull(eta_rec({a,b}),{0,0},function() return 0 end)
-    eq(got,{0,0}); eq(eta,{4,7})
+    eq(got,{0,0}); eq(eta,{3,6})  -- FND-0030: eta to take window (pos - speed), all speeds
   end)
   it("eta zero when item at exit, nil when lane empty", function()
     local a,b=eta_line({name="iron",count=1},true),eta_line(nil,false)

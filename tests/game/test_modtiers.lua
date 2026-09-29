@@ -143,7 +143,10 @@ describe("modtiers", function()
     -- Warm-up 180 ticks, measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
     force.belt_stack_size_bonus = 0
     local rigs = {}
-    for i, key in ipairs(chain()) do
+    -- FND-0030: blue always measured (was only a chain tier without space-age; 200/225 per lane before fix).
+    local tiers = chain()
+    if tiers[1] ~= "blue" then table.insert(tiers, 1, "blue") end
+    for i, key in ipairs(tiers) do
       local x, belt = (i - 1) * 4, N.TIER[key].belt
       local behind = {}
       for j = 1, 3 do behind[j] = surface.create_entity({ name = belt, position = { x + 0.5, 0.5 + j }, direction = NORTH, force = force }) end
