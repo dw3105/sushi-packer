@@ -233,3 +233,9 @@ Cause (experiment, not code read): resting-only take rule for speed <= 0.125; bl
 Fix (V10-7): `belt_io.pull` take window (position <= belt_speed) for all speeds; `modtiers > box output matches belt rate` always measures blue (red on base with SA: blue 200 / 225, green after). Old-rule offline expectations updated: eta to window ({4,7}->{3,6}, {8,8}->{7,7}), turbo takes item at 0.063.
 
 Verified-by: `make test-one FV=2.0 T='tests/game/test_modtiers.lua::modtiers > box output matches belt rate'`
+
+## FND-0031 - v10 bench slower than v1.10 (yellow boxes, V10-7 take window)
+
+Measured 2026-09-29 on dev-vm 2.0.77, `make bench FV=2.0` (200 yellow boxes, 3600 ticks), alternating `int/v10` (`ae7ea4c`) vs v1.10 code (`~/wt-sushi-packer-v9`, `edd66f0`), script ms avg: r1 9.481 (load 28.45) vs 8.600 (21.12); r2 7.073 (17.28) vs 5.390 (14.51); r3 14.517 (18.26) vs 6.965 (14.76). v10 slower in 3 of 3 pairs (x1.10, x1.31, x2.08); host load uncontrolled. Suspect (not proven): V10-7 take window for all speeds adds `get_detailed_contents` reads on yellow boxes, which reached full rate without it (FND-0030 75/75). Author 2026-09-29 (Q16 c): ship v1.11 as is; narrowing to speed > 0.0625 is the known next step.
+
+Verified-by: `make bench FV=2.0` in both worktrees (log `~/.cache/sushi-packer/v10/logs/bench-v10-vs-v110.txt`)

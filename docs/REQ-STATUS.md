@@ -4,12 +4,12 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 
 | ID | 2.0 | 2.1 | Proof |
 |---|---|---|---|
-| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.8 = 2.0, 0.2.8 = 2.1) load headless; full suites green on both (131 game each, 191 offline, dev-vm 2026-09-28) |
+| T-1 | PASS | PASS | `LOAD-2.0`, `LOAD-2.1`, `FULL-2.0`, `FULL-2.1` — two zips (0.1.8 = 2.0, 0.2.8 = 2.1) load headless; full suites green on both (131 game each, 191 offline, dev-vm 2026-09-28); v10 (dev-vm 2026-09-29): space-age optional — sets `nosa`/`se`/`ab` (builtin_off, harness guard) `modtiers > box releases stacks at research bonus` + load-check 2.0/2.1 nosa/se ok; zips 0.1.11 / 0.2.11; full 139 game each |
 | T-2 | NOT-TESTED | NOT-TESTED |  — NOT-TESTED: no save/load or multiplayer desync run; design: all state in `storage` (`core > box is plain data`), no pairs-order logic |
 | E-1 | PASS | PASS | `belt_io > works in all four directions`, `lifecycle > placer becomes variant facing its direction` |
 | E-2 | PASS | PASS | `data > variants are 48 slot not rotatable containers` |
 | E-3 | PASS | PASS | `belt_io > behind finds belt moving into box`, `belt_io > push returns zero without front belt`, `tick > full box flushes oldest partial and loses nothing` |
-| E-4 | PASS | PASS | `data > every tier has item placer variants and remnant`, `tick > red tier twice yellow throughput` |
+| E-4 | PASS | PASS | `data > every tier has item placer variants and remnant`, `tick > red tier twice yellow throughput`; v10: `modtiers > box output matches belt rate` always measures blue (FND-0030 fixed, 225/225) + every chain tier every set |
 | E-5 | PASS | PASS | `lifecycle > mining returns contents and hold to player`, `lifecycle > mining with full inventory spills rest`, `lifecycle > died box spills contents and hold` |
 | E-6 | PASS | PASS | `tick > player removal reconciles next tick`, `tick > opened box reconciles next tick` — GUI shows contents: native container GUI |
 | E-7 | PASS | PASS | `lifecycle > swap keeps inventory and settings`, `lifecycle > rotate input turns selected box`, `probe > rotated blueprint turns placer ghost` — Q-8: 4 variants + placer |
@@ -30,14 +30,14 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | F-4 | PASS | PASS | v8: `core > all ready refuses input`, `quota > old box over quota drains` |
 | O-1 | PASS | PASS | `belt_io > push inserts stacked item on matching lane` |
 | O-2 | PASS | PASS | `tick > sushi in sorted stacks out`, `core > hold waits while stack run started` |
-| O-3 | PASS | PASS | `belt_io > belt stack follows research up to engine max`, `belt_io > belt stack size follows research capped at engine max`, `tick > releases at modded belt stack 20` (test env mod max 20) |
+| O-3 | PASS | PASS | `belt_io > belt stack follows research up to engine max`, `belt_io > belt stack size follows research capped at engine max`, `tick > releases at modded belt stack 20` (test env mod max 20); v10 (V10-6): no stacking research → N = 1 unchanged; `modtiers > box releases stacks at research bonus` with and without space-age |
 | O-4 | PASS | PASS | `tick > output never faster than tier`, `perf > credits per visit keep tier rate over 800 ticks`, `tick > rate cap holds with early wakes`, `tick > front item never rests at exit` (FND-0013) |
 | O-5 | PASS | PASS | `tick > output stacked to research size` (50 ore → 12×4 out, 2 held), `sim > scene makes stacked output`; offline `tick > adopt uses belt stack` — v6 |
 | S-1 | PASS | PASS | `tick > custom timeout flushes partial`, `core > timeout flushes old partial only` |
 | S-2 | PASS | PASS | `data > timeout setting defaults to off`, `gui > custom timeout written to settings`, `tick > timeout ticks custom and global` |
 | S-3 | PASS | PASS | `gui > opening box shows three sections`, `gui > item picked in slot saved as filter`, `gui > clearing slot writes false`, `tick > filtered item passes between stacks`; offline `gui > *` (15) — v6 |
 | S-4 | PASS (undo/redo NOT-TESTED) | PASS (undo/redo NOT-TESTED) | `lifecycle > paste settings copies settings`, `lifecycle > blueprint stores placer with tags`, `lifecycle > rotated blueprint builds rotated box with settings`, `lifecycle > clone copies settings and box state` — undo/redo NOT-TESTED (no headless undo driver) |
-| P-1 | PASS | PASS | `gui > editor sets comparator and quality on selected slot`; offline `filter > ≥ uncommon matches rare not normal`, `filter > all six comparators`, `tick > filter uses quality rule` — v6 |
+| P-1 | PASS | PASS | `gui > editor sets comparator and quality on selected slot`; offline `filter > ≥ uncommon matches rare not normal`, `filter > all six comparators`, `tick > filter uses quality rule` — v6; v10: `gui > one quality hides picker`, `one quality filter saves item only`, `quality mod shows picker` |
 | P-2 | PASS | PASS | `core > passthrough uses hold not slots` |
 | P-3 | PASS | PASS | `core > hold busy refuses second passthrough`, `tick > filtered item passes between stacks` |
 | N-1 | PASS | PASS | `circuit > wire connects to box` |
@@ -45,9 +45,9 @@ Filled by integrator after full suites. One row per requirement ID. Status per v
 | N-3 | PASS | PASS | `circuit > condition false disables`, `tick > circuit disable stops both ways and hides led`, `gui > circuit condition and flush written` |
 | N-4 | PASS | PASS | `circuit > flush fires once per rising edge`, `gui > circuit condition and flush written` |
 | U-1 | PASS | PASS | `data > every ingredient unlocked by prereq closure`, `data > tech cost is belt tech x 1.5`, `data > tech unlocks its recipe`; offline `data > tech prereqs include ingredient unlock techs`, `data > tech ingredients are union over prereqs` |
-| U-2 | PASS | PASS | `data > recipes match table` (names, amounts, craft 30/45/60/120 s, crafting category) — Q-1 answered v5 |
+| U-2 | PASS | PASS | `data > recipes match table` (names, amounts, craft 30/45/60/120 s, crafting category) — Q-1 answered v5; v10: turbo tier only with space-age (`data extra > nosa no turbo tier`) |
 | U-3 | PASS | PASS | `lifecycle > upgrade keeps state` (robot upgrade: settings, hold, items, wire, LED), `data > upgrade chain weight and no surface limit`, `probe > upgrade events`; offline `registry > *` (9) |
-| U-4 | PASS | PASS | `data > upgrade chain weight and no surface limit` (20 kg, no `surface_conditions`), `data > recycling recipe exists` |
+| U-4 | PASS | PASS | `data > upgrade chain weight and no surface limit` (20 kg, no `surface_conditions`), `data > recycling recipe exists`; v10: `modtiers > box placeable in se space` (SE scaffold, control belt blocked), `data extra > container allowed in se space` |
 | U-5 | PASS | PASS | offline `locale > every prototype has name and description`, `locale > recipes and setting described`, `locale > tips entry has locale and prototype`, `locale > mod name and description`; `LOAD-2.0`, `LOAD-2.1` load tips prototype |
 | U-6 | PASS | PASS | offline `stage > release info has no test dependency`, `stage > thumbnail is 144 by 144 png`, `stage > changelog format valid`, `stage > release ships thumbnail and changelog`; zip listing: deps `base >= 2.0.0`, `space-age` only |
 | U-7 | PASS | PASS | `data > tiers sort yellow red blue turbo in own row`; offline `data > own subgroup row after belts`, `locale > vanilla style names`, `migration > maps every old name to new` — old-save load NOT-TESTED in engine (mapping tested offline) |
@@ -86,14 +86,14 @@ Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bo
 
 | ID | 2.0 | 2.1 | Evidence |
 |---|---|---|---|
-| M-1 | PASS | PASS | `modtiers > active tiers match installed mods` (every set); arig-off (2.0): no hyper tier, no error; offline `data extra > hidden belt skipped`, `belt tech without unit skipped`, `missing tech skipped`, `k2so hidden advanced belt ignored` |
-| M-2 | PASS | PASS | offline `data extra > vanilla prototypes identical to v8` (golden at `lanes-base-v9`); vanilla full suites incl. `data > *`; `modtiers > active tiers match installed mods` vanilla = 4 |
+| M-1 | PASS | PASS | `modtiers > active tiers match installed mods` (every set); arig-off (2.0): no hyper tier, no error; offline `data extra > hidden belt skipped`, `belt tech without unit skipped`, `missing tech skipped`, `k2so hidden advanced belt ignored`; v10: owner gate + splitter check (`data extra > owner missing row skipped`, `ab-sa ub-ultimate not live`, `splitter missing row skipped logged`); sets `se`, `ab`, `ab-sa` green (FND-0027 fixed) |
+| M-2 | PASS | PASS | offline `data extra > vanilla prototypes identical to v8` (golden at `lanes-base-v9`); vanilla full suites incl. `data > *`; `modtiers > active tiers match installed mods` vanilla = 4; v10: golden regenerated once (+ `se_allow_in_space` x16 only); no-SA = yellow/red/blue (`data extra > nosa no turbo tier`) |
 | M-3 | PASS | PASS | `data-final-fixes.lua` -> `prototypes/extra.lua`; `data extra > info lists belt mods as visible optional deps` (author 2026-09-28: visible, shown on portal) |
-| M-4 | PASS | PASS | `modtiers > upgrade chain follows belt speed` (every set; arig-k2so turbo -> hyper -> superior; ubsa 5 tiers); `modtiers > upgrade turbo to next tier keeps state`; offline `data extra > all mods sorted by speed tie by row order` |
-| M-5 | PASS | PASS | `modtiers > tech unlocks recipe and every ingredient reachable`; offline `data extra > recipe chains previous tier`, `tech prereqs belt tech previous tier and ingredient unlocks`, `tech cost belt count x 1.5 and pack union` |
+| M-4 | PASS | PASS | `modtiers > upgrade chain follows belt speed` (every set; arig-k2so turbo -> hyper -> superior; ubsa 5 tiers); `modtiers > upgrade turbo to next tier keeps state`; offline `data extra > all mods sorted by speed tie by row order`; v10: chain after top vanilla (`data extra > nosa extras chain after blue`, `se deep space after blue`, `speed at or below top vanilla skipped`); `modtiers > upgrade top vanilla to next tier keeps state`; FND-0029 box copy |
+| M-5 | PASS | PASS | `modtiers > tech unlocks recipe and every ingredient reachable`; offline `data extra > recipe chains previous tier`, `tech prereqs belt tech previous tier and ingredient unlocks`, `tech cost belt count x 1.5 and pack union`; v10: no-SA recipe (`data extra > nosa extra recipe bulk inserter processing unit`, `sa extra recipe unchanged`); `modtiers > tech unlocks recipe...` 60 s without SA |
 | M-6 | PASS | PASS | `modtiers > box output matches belt rate` per lane over 600 ticks: turbo 300/300, hyper 375/375, superior 450/450, bob 375/375, ub 450/675/900/1125/1350 exact, bb 478/480 (2.0); FND-0022, FND-0024; offline `tick extra > *`, `belt_io fast > *` |
 | M-7 | PASS | PASS | author approved preview 2026-09-28 ("art ok"): 9 tiers, paint from mod underground icons calibrated to G-2, wear 0.40; files load in `load-check` both builds |
-| M-8 | PASS | PASS | offline `locale extra > names mirror belt names`, `descriptions name source mod`; `modtiers > upgrade chain follows belt speed` (item order after turbo) |
+| M-8 | PASS | PASS | offline `locale extra > names mirror belt names`, `descriptions name source mod`; `modtiers > upgrade chain follows belt speed` (item order after turbo); v10: 5 new names (`locale extra > names mirror belt names`) |
 | M-9 | PASS (existing rule) | PASS | `lifecycle > configuration changed drops invalid recs` (engine removes entities of missing prototypes); no removed-mod save load run — NOT-TESTED end to end |
 | R-1 | over budget under load | NOT-TESTED | v9 A/B same load (avg ~21, 21:53-21:58): v8 10.837 / 7.617 ms, v9 7.798 / 7.257 ms -> no regression; clean rerun pending |
 
