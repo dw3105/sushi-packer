@@ -88,3 +88,27 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 **2026-09-28, v9 S1.** `for l in 024 025 027; do lane.py launch ...; done` blocks per lane (foreground until lane ends); only 024 started. Killed loop shell, relaunched 025 + 027 as separate background calls (~5 min lost). `--deadline 80m` refused (plain seconds). Bucket: tooling. Proposed: `lane launch --help` says it blocks; parallel lanes = one background call each (memory `lane-launch-blocks`).
 
 **Applied 2026-09-28 (author: "all 4"):** FRC-0015 -> `codex-tasks:CX-33` + SP-02 v0.5; FRC-0017 -> `shared-host:SH-31`; FRC-0018 -> `talking-to-operator:OP-57`, `OP-58` (token box also broke existing `OP-50`: asked secret via `read -s`); FRC-0019 -> `shipping-and-integration:SI-16`. Ids renumbered 2026-09-29 after `agent-skills` #50 took OP-52..56, CX-31..32, SI-14..15; estate rules on `~/skills` branch `ledger/sushi-v19-0929` (PR #53 superseded).
+
+## FRC-0021 - Argued a player request away on a wrong premise (space-age)
+
+**2026-09-29, grill.** Portal request (SE + Advanced Belts 2.0). I read `! space-age` in both mods and concluded "no belt stacking, player gains nothing"; author: "they took time to leave feedback. something is wrong in your assumption" / "why did you assume they don't use space age?". Probe FND-0025: stacking is engine, not the `space-age` mod. Bucket: evidence (claim from dependency text, not probe). Root cause: treated mod dependency as feature availability; request that looked pointless was not taken as a sign my model was wrong. Proposed rule: before telling author a player request cannot be served, run a probe on the engine fact the "no" rests on (memory `space-age-mod-vs-engine` added).
+
+## FRC-0022 - Temp files in ~/share; cleanup then broke the test runner
+
+**2026-09-29.** Wrote logs, renders, fetched zips, `post_v10.py` into `~/share/sushi-packer`; author: "DO NOT STORE TEMP FILES IN ~/share !!!!" + "clean the shit". Cleanup moved `factorio-test_*.zip`, which `tools/run_tests.sh` read from `~/share` by default -> INT round 1 all mod sets failed at setup (`cp: cannot stat .../share/sushi-packer/factorio-test_3.0.1.zip`). Bucket: shared-host. Root cause: no rule for what `~/share` is for; tool default pointed at it; moved files without grepping tool references first. Proposed rule: before moving/removing anything in a shared dir, `grep -rn` repo tools for that path (ruling + memory `share-dir-present-only` added; runner default now `~/.cache/sushi-packer/factorio-test`).
+
+## FRC-0023 - "No-SA proven" claimed while harness ran with space-age ON
+
+**2026-09-29, INT.** Reported `nosa` modtiers 7/7 as "no-SA game works, proven headless"; FactorioTest `--mods` list hard-coded `space-age quality elevated-rails`, `builtin_off` never reached the harness mod-list; SE set exposed it (`Incompatible with space-age`). Bucket: proving (test ran, environment not checked). Root cause: trusted the set name, never read the harness `mod-list.json`. Proposed rule: a test that claims an environment (mods on/off, settings) asserts that environment in the run itself (guard added: `FAIL harness space-age enabled=..., set wants ...`, red on planted old behaviour).
+
+## FRC-0024 - Rate probe artifact reported as finding (yellow/red "slow")
+
+**2026-09-29, INT.** First FND-0030 said yellow 42/75, red 140/150; rig warm-up 180 ticks < 12-tile crossing (yellow 384, red 192). Two fix experiments ran on a measurement bug before I checked the rig. Author was told a v1.x bug covered three tiers; only blue was real. Bucket: evidence. Root cause: new probe copied an existing test rig built for fast tiers, no control that the rig can reach "want" on a known-good tier at that speed. Proposed rule: rate/timing probe first shows warm-up >= transit time for every tier measured (or a known-good control per speed class) before its numbers become a finding.
+
+## FRC-0025 - Heavy work started without watching what it blocked; edited running scripts
+
+**2026-09-29.** (1) Blender render at 2 cores queued lane 029 single tests behind it; stopped after ~1 min, orphan `blender` jobs survived the wrapper kill (xargs children). (2) Edited `tools/run_tests.sh` while INT round 2 was executing it; round stopped and restarted. (3) First probe wrap uncalibrated -> whole-box weight (known FRC-0017 repeated). Bucket: shared-host. Root cause: no check of gateslot queue after starting own heavy work; no freeze of files a running job reads. Proposed rule: after starting any heavy wrap, read `gateslot status` once for "waiting behind it"; never edit a script while a background job runs it (stop job first).
+
+## FRC-0026 - Publish box 1 silently failed: guessed origin URL
+
+**2026-09-29, PUB.** Box 1 checked `origin = git@github.com:...`; laptop origin is `https://github.com/dw3105/sushi-packer.git`; `test` failed with no output, author pasted a blank result; one extra round trip plus three hook-driven re-sends (placeholders "..." / banner). Bucket: operator-blocks. Root cause: laptop remote URL never read (memory said "ssh fails for private clones", I inferred ssh for this repo). Proposed rule: a guard `test` in an operator box echoes what it compared on failure (`|| echo "SP-GUARD origin=$(git remote get-url origin)"`), and laptop facts (remote URLs) go into memory once read.

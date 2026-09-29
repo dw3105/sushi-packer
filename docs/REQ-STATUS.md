@@ -97,3 +97,4 @@ Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bo
 | M-9 | PASS (existing rule) | PASS | `lifecycle > configuration changed drops invalid recs` (engine removes entities of missing prototypes); no removed-mod save load run — NOT-TESTED end to end |
 | R-1 | over budget under load | NOT-TESTED | v9 A/B same load (avg ~21, 21:53-21:58): v8 10.837 / 7.617 ms, v9 7.798 / 7.257 ms -> no regression; clean rerun pending |
 
+| R-1 | FAIL (v10) | NOT-TESTED | v10 A/B vs v1.10 (dev-vm 2026-09-29, loads 14-28, `make bench FV=2.0`): v10 9.481 / 7.073 / 14.517 ms vs v1.10 8.600 / 5.390 / 6.965 ms -> regression (FND-0031, V10-7 take window on yellow). Shipped by author (V10-8). UNMET Done-when #8 (plan v10): "bench no regression vs v1.10". Deferred by ruling 2026-09-29 until dev-vm free. |
