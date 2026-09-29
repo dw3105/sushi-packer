@@ -186,7 +186,7 @@ Verified-by: `make test-one FV=2.0 MODSET=arig-k2so T='tests/game/test_modtiers.
 
 ## FND-0025 - Stacked belt items need no space-age mod; script stack size ignores force research
 
-Measured 2026-09-29 on dev-vm, 2.0.77 + 2.1.20, standalone probe mod `sp-probe` (`tools/probe_nosa/`, not sushi-packer), log `~/share/sushi-packer/v10/fnd25.txt`. One `transport-belt` per case, `insert_at_back({iron-plate x4}, 4)`, then `get_detailed_contents()`:
+Measured 2026-09-29 on dev-vm, 2.0.77 + 2.1.20, standalone probe mod `sp-probe` (`tools/probe_nosa/`, not sushi-packer), log `~/.cache/sushi-packer/v10/logs/fnd25.txt`. One `transport-belt` per case, `insert_at_back({iron-plate x4}, 4)`, then `get_detailed_contents()`:
 - `base` only (space-age, quality, elevated-rails, recycler disabled), bonus 0: `belt_items=[4]`; bonus 3: `[4]`. Both versions.
 - space-age on (control), bonus 0: `[4]`; bonus 3: `[4]`. Both versions.
 - `belt_stack_size_bonus` writable without space-age (bonus 3 set, read back 3).
@@ -197,13 +197,13 @@ Verified-by: `gateslot --label sushi-packer/heavy --weight-mib 768 --weight-core
 
 ## FND-0026 - No-SA game: sushi-packer refuses to load (hard dependency)
 
-Measured 2026-09-29 on dev-vm, code `e5e8e7f` (= v1.10 mod files), `tools/load_check.sh` with sets `nosa` (2.0, 2.1), `ab` (2.0), `se` (2.0 SE 0.7.57, 2.1 SE 0.7.62), all `builtin_off`. Every case: `Error Util.cpp:81: Failed to load mod "sushi-packer": ... Missing required dependency space-age`. Logs `~/share/sushi-packer/v10/load-<FV>-<set>.log`. Data stage never runs, so the turbo `strict` error in `prototypes/packer.lua` (turbo belt tech lives in space-age) is still unseen behind it.
+Measured 2026-09-29 on dev-vm, code `e5e8e7f` (= v1.10 mod files), `tools/load_check.sh` with sets `nosa` (2.0, 2.1), `ab` (2.0), `se` (2.0 SE 0.7.57, 2.1 SE 0.7.62), all `builtin_off`. Every case: `Error Util.cpp:81: Failed to load mod "sushi-packer": ... Missing required dependency space-age`. Logs `~/.cache/sushi-packer/v10/logs/load-<FV>-<set>.log`. Data stage never runs, so the turbo `strict` error in `prototypes/packer.lua` (turbo belt tech lives in space-age) is still unseen behind it.
 
 Verified-by: `MODSET=nosa tools/load_check.sh 2.0` (under `gateslot --label sushi-packer/heavy --weight-mib 1536 --weight-cores 1`)
 
 ## FND-0027 - Advanced Belts 2.0 + Space Age: shipped 0.1.10 crashes on load (row name clash)
 
-Measured 2026-09-29 on dev-vm 2.0.77, code `e5e8e7f` (= v1.10 mod files), set `ab-sa` (AdvancedBeltsUpdated 2.4.0 + space-age on; AB declares no `! space-age`, so players can load this): `Error in assignID: item with name 'original-ultimate-splitter' does not exist. Source: ub-ultimate-sushi-packer (recipe).` Log `~/share/sushi-packer/v10/load-2.0-ab-sa.log`.
+Measured 2026-09-29 on dev-vm 2.0.77, code `e5e8e7f` (= v1.10 mod files), set `ab-sa` (AdvancedBeltsUpdated 2.4.0 + space-age on; AB declares no `! space-age`, so players can load this): `Error in assignID: item with name 'original-ultimate-splitter' does not exist. Source: ub-ultimate-sushi-packer (recipe).` Log `~/.cache/sushi-packer/v10/logs/load-2.0-ab-sa.log`.
 Cause (log + code): AB defines `ultimate-belt` + tech `ultimate-logistics`, same names as UBSA row `ub-ultimate`. `prototypes/extra.lua` M-1 guard checks belt + tech only, not owner mod, not splitter -> UBSA row goes live on AB belt, recipe asks UBSA splitter. Fix by design: Q11 owner gate + splitter check (v10).
 
 Verified-by: `MODSET=ab-sa tools/load_check.sh 2.0`
@@ -216,4 +216,4 @@ Read 2026-09-29 on dev-vm from portal zips (sha1 = portal API): AdvancedBeltsUpd
 - SE `prototypes/phase-3/space-collision.lua`: every `container` without `se_allow_in_space` (and name without chest/warehouse/...) gets space collision layer -> sushi-packer boxes blocked in SE space today.
 - `grep belt.stack` over both mods: 0 hits (no belt stack research from SE or AB).
 
-Verified-by: `unzip` of `~/share/sushi-packer/{AdvancedBeltsUpdated_2.4.0,space-exploration_0.7.57,space-exploration_0.7.62}.zip` + read of files above
+Verified-by: `unzip` of `~/.cache/sushi-packer-mods/2.0/{AdvancedBeltsUpdated_2.4.0,space-exploration_0.7.57}.zip` + `~/.cache/sushi-packer-mods/2.1/space-exploration_0.7.62.zip` + read of files above

@@ -1,7 +1,7 @@
 #!/bin/sh
 # FND-0025. usage: tools/probe_nosa/run.sh <2.0|2.1> <nosa|sa>  (wrap in gateslot --weight-mib 768 --weight-cores 1)
 set -u
-S=$(dirname "$0"); FV=$1; C=$2; F=$HOME/factorio-$FV/factorio; O=${OUT:-$HOME/share/sushi-packer/v10/probe}/$FV-$C
+S=$(dirname "$0"); FV=$1; C=$2; F=$HOME/factorio-$FV/factorio; O=${OUT:-$HOME/.cache/sushi-packer/v10/probe}/$FV-$C
 rm -rf "$O"; mkdir -p "$O/mods/sp-probe_0.0.1" "$O/write"
 cp "$S/control.lua" "$O/mods/sp-probe_0.0.1/"
 cat > "$O/mods/sp-probe_0.0.1/info.json" <<J
