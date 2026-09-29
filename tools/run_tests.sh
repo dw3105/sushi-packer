@@ -9,7 +9,7 @@ T=${2:?usage: tools/run_tests.sh <2.0|2.1> '<file>::<name>' | --full}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 FACTORIO=${FACTORIO_ROOT:-$HOME/factorio-$FV/factorio}
-FT_ZIP_DIR=${FT_ZIP_DIR:-$HOME/share/sushi-packer}
+FT_ZIP_DIR=${FT_ZIP_DIR:-$HOME/.cache/sushi-packer/factorio-test}  # never ~/share (author 2026-09-29)
 case "$FV" in 2.0) FT_VER=3.0.1 ;; 2.1) FT_VER=3.1.0 ;; *) echo "FV must be 2.0 or 2.1" >&2; exit 2 ;; esac
 # FactorioTest CLI 3.6.0 for both versions (3.0.1 tries to download builtin mods, FND-0003).
 # Installed once in main checkout; worktrees share it. CLI shells out to `npx fmtk`, which resolves
