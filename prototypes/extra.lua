@@ -50,7 +50,7 @@ function M.tiers(raw, mods)
       skip(row.key, "belt speed not above top vanilla tier")
     else
       candidates[#candidates + 1] = { key = row.key, speed = belt.speed, row_index = row_index, after = row.after,
-        root = row.key == "se-space" and row.own_role and not row.after }
+        root = row.own_role and not row.after or nil }
     end
   end
   table.sort(candidates, function(a, b)
@@ -81,19 +81,13 @@ end
 function M.build(raw)
   local rows = M.tiers(raw)
   local tier = require("prototypes.tier")
-  local successor = {}
-  local main = {}; for _, row in ipairs(rows) do
-    local meta; for _, r in ipairs(N.EXTRA) do if r.key == row.key then meta=r; break end end
-    if meta and not meta.after and not (meta.key == "se-space" and meta.own_role) then main[#main+1]=row end
-    if meta and meta.after then successor[meta.after]=row.key end
-  end
-  for i=1,#main-1 do successor[main[i].key]=main[i+1].key end
+  -- v11 (U-3): next_upgrade stays inside one chain; `prev` links each row to its chain (tiers() sets it).
+  local successor, first_main = {}, nil
+  local top = M.top_vanilla(raw)
   for _, row in ipairs(rows) do
-    local meta; for _, r in ipairs(N.EXTRA) do if r.key == row.key then meta=r; break end end
-    if meta and meta.key == "se-space" and meta.own_role and not meta.after then
-      for _, r in ipairs(N.EXTRA) do if r.after==row.key and successor[row.key]==nil then successor[row.key]=r.key end end
-    end
+    if row.prev then successor[row.prev] = successor[row.prev] or row.key end
   end
+  first_main = top and successor[top]
   for position, row in ipairs(rows) do
     data:extend(tier.make(row.key, {
       prev = row.prev,
@@ -102,12 +96,6 @@ function M.build(raw)
     }))
   end
   if #rows > 0 then
-    local top = M.top_vanilla(raw)
-    local first_main
-    for _, row in ipairs(rows) do
-      local meta; for _, r in ipairs(N.EXTRA) do if r.key == row.key then meta=r; break end end
-      if meta and not meta.after and not (meta.key == "se-space" and meta.own_role) then first_main=row.key; break end
-    end
     for _, dir in ipairs(N.DIRS) do
       local base = top and raw.container[N.variant(top, dir)]
       if base then

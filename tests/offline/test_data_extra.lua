@@ -235,7 +235,8 @@ describe("data extra", function()
     for i,row in ipairs(N.EXTRA) do if row.key == "ab-elite" then index=i; break end end
     local old = N.EXTRA[index].own_role; N.EXTRA[index].own_role = true
     local rows = require("prototypes.extra").tiers(raw); N.EXTRA[index].own_role = old
-    eq(rows[1].key,"ab-elite"); eq(rows[1].prev,"turbo")
+    -- v11 (M-4): own_role without `after` = root tier (prev nil), not main chain; ab-extreme keeps main chain after turbo
+    eq(rows[1].key,"ab-elite"); eq(rows[1].prev,nil); eq(rows[2].key,"ab-extreme"); eq(rows[2].prev,"turbo")
   end)
   it("se chain space root then deep space", function()
     -- v11 (V11-2, M-4): space own-role root (prev nil), deep space after space; blue leads nowhere
