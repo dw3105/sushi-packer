@@ -35,6 +35,7 @@ local names = {
   ["ab-elite"] = "Elite sushi packer", ["ab-extreme"] = "Extreme sushi packer",
   ["ab-supreme"] = "Supreme sushi packer", ["ab-ultimate"] = "Ultimate sushi packer",
   ["se-deep-space"] = "Deep space sushi packer",
+  ["se-space"] = "Space sushi packer",
 }
 local function entity_keys(row)
   local out = { N.placer(row.key) }
@@ -102,5 +103,21 @@ describe("locale extra", function()
     local v111, v110 = log:find("Version: 0.1.11\nDate: 2026%-09%-29"), log:find("Version: 0.1.10", 1, true)
     assert(v211 and v210 and v211 < v210, "0.2.11 must precede 0.2.10")
     assert(v111 and v110 and v111 < v110, "0.1.11 must precede 0.1.10")
+  end)
+  it("se space name", function()
+    assert(value("item-name", "se-space-sushi-packer") == "Space sushi packer")
+  end)
+  it("changelog has 0.2.12 and 0.1.12", function()
+    local log = read("changelog.txt")
+    local v212, v211 = log:find("Version: 0.2.12\nDate: 2026%-09%-29"), log:find("Version: 0.2.11", 1, true)
+    local v112, v111 = log:find("Version: 0.1.12\nDate: 2026%-09%-29"), log:find("Version: 0.1.11", 1, true)
+    assert(v212 and v211 and v212 < v211, "0.2.12 must precede 0.2.11")
+    assert(v112 and v111 and v112 < v111, "0.1.12 must precede 0.1.11")
+  end)
+  it("readme lists space tier", function()
+    local expected = "| Space sushi packer | Space Exploration | 45/s |"
+    for _, path in ipairs({ "README.md", "portal/description.md" }) do
+      assert(read(path):find(expected, 1, true), path .. " missing space tier")
+    end
   end)
 end)
