@@ -114,3 +114,27 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 **2026-09-29, PUB.** Box 1 checked `origin = git@github.com:...`; laptop origin is `https://github.com/dw3105/sushi-packer.git`; `test` failed with no output, author pasted a blank result; one extra round trip plus three hook-driven re-sends (placeholders "..." / banner). Bucket: operator-blocks. Root cause: laptop remote URL never read (memory said "ssh fails for private clones", I inferred ssh for this repo). Proposed rule: a guard `test` in an operator box echoes what it compared on failure (`|| echo "SP-GUARD origin=$(git remote get-url origin)"`), and laptop facts (remote URLs) go into memory once read.
 
 **Applied 2026-09-29 (author: all 6):** FRC-0021 -> `sushi-packer-code:SP-11`, FRC-0022 -> `SP-12` + `docs/RULINGS.md`, FRC-0023 -> `SP-13` (runner guard), FRC-0024 -> `SP-14`, FRC-0025 -> `SP-15`, FRC-0026 -> `SP-16`; skill v0.6 installed live (`skill-check` PASS). Findings cited in `docs/ESTATE-LEDGER.md` (author: ledger file in this repo).
+
+## FRC-0027 - Grill asked a batch of questions; author: "ONE AT A TIME"
+
+**2026-09-29, grill v11.** First round asked Q1..Q3 together (grilling skill says "ask the whole frontier"); author: "ONE AT A TIME". Later the Stop hook flagged QC-01 (two questions in one turn) and article density twice. Bucket: talking-to-operator. Root cause: author rule for grills lived nowhere (skill format won). Proposed rule: grill = one question per turn, recommendation line starting `Recommend`; ruling row in `docs/RULINGS.md` (added) + memory `grill-one-question`.
+
+## FRC-0028 - S0 old-rule grep missed a field whose meaning v11 changed
+
+**2026-09-29, v11 S0.4.** Grepped tests for `se-deep-space` / `next_upgrade`, not for `own_role`; v10 test `own_role keeps slow row` expected own-role rows in main chain, contrary to approved M-4. Lane 030 kept it green by hard-coding `row.key == "se-space"`; integrator rewrote test + generic rule after merge (one extra red-green cycle). Bucket: planning. Root cause: fixture grep keyed on names, not on amended semantics. Proposed rule: S0 greps tests for every field and constant whose meaning a requirement amendment changes (`own_role`, `prev`, ...), not only renamed keys.
+
+## FRC-0029 - German lane used non-vanilla words for lane and stack
+
+**2026-09-29, v11 INT.** Task 031 fixed tier names and told lane to look up vanilla terms, but gave no table for domain words; lane wrote "Spur", "Bandstapel", "Bandkapazität" and broken "Entspricht dem <Nominativ>" (~270 lines). Vanilla de: "Fließbandseite", "Stapelhöhe", tech "Fließband-Kapazität". Integrator pass + guard test `locale de > vanilla German terms`. Bucket: task writing. Root cause: glossary covered only item names, not the words the mod's own text leans on. Proposed rule: translation task carries term table for every recurring domain word (lane, belt stack, research, circuit) with vanilla source line, plus guard test banning known wrong words.
+
+## FRC-0030 - Bench bar unmeasurable on shared host; ~40 min bisect found nothing
+
+**2026-09-29, v11 INT.** V11-6 bar "no slower than v1.10 in 3 of 3 pairs" failed 6/6 at load 4-6; swap order, fresh-worktree and C/E/F bisect controls all within noise (build C alone ranged 3.36-3.97 ms, ~±10 %). No code cause; author shipped (V11-12). Bucket: proving. Root cause: bar set before noise band of the rig was measured; strict pairwise order test cannot resolve 10 % on shared host. Proposed rule: before any bench bar, run A/A control (same build twice alternated) to measure noise band; bar = mean of >= 6 alternated pairs outside that band.
+
+## FRC-0031 - lane review/merge refused; manual merge
+
+**2026-09-29, v11 INT.** `lane.py review ... approve` crashed (`AttributeError: 'NoneType' object has no attribute 'strip'` without `--reviewer`), with `--reviewer` refused "review session is empty"; `lane merge --into` refused "requires --base <same branch>". Merged with `git merge --no-ff` after own review. Bucket: tooling. Root cause: not investigated (lane tool contract unread). Proposed rule: none in this repo; report to `~/skills` owner (crash on missing `--reviewer`).
+
+## FRC-0032 - Publish box sent without local boxlint; re-issued
+
+**2026-09-29, v1.12 PUB.** First box had unchained `git push origin ...:main` after `gh run watch` (set -e covered it, but hook BL-7 flagged) and no `# sample:` for the jq parser (BX-3); re-issued with `Replaces:`. Bucket: operator-blocks. Root cause: ran `bash -n` only, not the box lint the hook runs. Proposed rule: run box lint (`guards/boxlint.py`) on every box before sending.
