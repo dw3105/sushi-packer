@@ -66,7 +66,7 @@ Each tier has its own technology after its belt technology. Upgrade planner swap
 ## Requirements
 
 - **Space Age** is optional; belt stacking research can also come from Stack Inserters or Infinite Belt Stacking.
-- Factorio 2.0 → mod version **0.1.11**; Factorio 2.1 → mod version **0.2.11**. Same features in both.
+- Factorio 2.0 → mod version **0.1.12**; Factorio 2.1 → mod version **0.2.12**. Same features in both.
 
 ## Source and bug reports
 
