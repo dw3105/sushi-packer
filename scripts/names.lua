@@ -72,16 +72,16 @@ N.EXTRA = {
   { key = "ub-ultimate", owners = { "UltimateBeltsSpaceAge" }, paint = { 12, 162, 138 }, wear = 0.40, belt = "ultimate-belt", splitter = "original-ultimate-splitter",
     tech = "ultimate-logistics", mod = "Ultimate Belts Space Age", fv = { "2.0" } },
   -- v10 (author 2026-09-29, FND-0028 names from real zips): Advanced Belts 2.0 (no SA) + Space Exploration deep space.
-  -- paint = placeholder G-2 blue until v10 graphics (M-7).
-  { key = "ab-elite", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "elite-belt", splitter = "elite-splitter",
+  -- paint (M-7): AB underground icon median calibrated to G-2; SE deep space body grey (icon has no hue). Author "art ok" 2026-09-29.
+  { key = "ab-elite", owners = { "AdvancedBeltsUpdated" }, paint = { 139, 179, 72 }, wear = 0.40, belt = "elite-belt", splitter = "elite-splitter",
     tech = "elite-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
-  { key = "ab-extreme", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "extreme-belt", splitter = "extreme-splitter",
+  { key = "ab-extreme", owners = { "AdvancedBeltsUpdated" }, paint = { 85, 189, 172 }, wear = 0.40, belt = "extreme-belt", splitter = "extreme-splitter",
     tech = "extreme-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
-  { key = "ab-supreme", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "supreme-belt", splitter = "supreme-splitter",
+  { key = "ab-supreme", owners = { "AdvancedBeltsUpdated" }, paint = { 178, 98, 169 }, wear = 0.40, belt = "supreme-belt", splitter = "supreme-splitter",
     tech = "supreme-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
-  { key = "ab-ultimate", owners = { "AdvancedBeltsUpdated" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "ultimate-belt", splitter = "ultimate-splitter",
+  { key = "ab-ultimate", owners = { "AdvancedBeltsUpdated" }, paint = { 192, 111, 61 }, wear = 0.40, belt = "ultimate-belt", splitter = "ultimate-splitter",
     tech = "ultimate-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
-  { key = "se-deep-space", owners = { "space-exploration" }, paint = { 60, 150, 200 }, wear = 0.40, belt = "se-deep-space-transport-belt-black",
+  { key = "se-deep-space", owners = { "space-exploration" }, paint = { 52, 52, 52 }, wear = 0.40, belt = "se-deep-space-transport-belt-black",
     splitter = "se-deep-space-splitter-black", tech = "se-deep-space-transport-belt", mod = "Space Exploration", fv = { "2.0", "2.1" } },
 }
 -- Extra tier recipe (M-5): previous tier box 1 + own splitter 1 + inserter 2 + circuits, craft_s.
