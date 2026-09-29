@@ -76,9 +76,17 @@ function M.build(raw)
     }))
   end
   if #rows > 0 then
+    local top = M.top_vanilla(raw)
     for _, dir in ipairs(N.DIRS) do
-      local top = M.top_vanilla(raw)
-      if top then raw.container[N.variant(top, dir)].next_upgrade = N.variant(rows[1].key, dir) end
+      local base = top and raw.container[N.variant(top, dir)]
+      if base then
+        base.next_upgrade = N.variant(rows[1].key, dir)
+        -- FND-0029: other mods may resize our containers before this runs (aai-containers resize-1x1);
+        -- upgrade chain needs one bounding box, so extras copy the top vanilla box.
+        for _, row in ipairs(rows) do
+          raw.container[N.variant(row.key, dir)].collision_box = table.deepcopy(base.collision_box)
+        end
+      end
     end
   end
 end

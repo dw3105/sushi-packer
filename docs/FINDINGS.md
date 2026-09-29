@@ -217,3 +217,10 @@ Read 2026-09-29 on dev-vm from portal zips (sha1 = portal API): AdvancedBeltsUpd
 - `grep belt.stack` over both mods: 0 hits (no belt stack research from SE or AB).
 
 Verified-by: `unzip` of `~/.cache/sushi-packer-mods/2.0/{AdvancedBeltsUpdated_2.4.0,space-exploration_0.7.57}.zip` + `~/.cache/sushi-packer-mods/2.1/space-exploration_0.7.62.zip` + read of files above
+
+## FND-0029 - SE game: upgrade chain refused, aai-containers shrinks our 1x1 container box
+
+Measured 2026-09-29 on dev-vm 2.0.77, set `se` (SE 0.7.57, aai-containers 0.3.2), code `ec8e801` + runner fix: map create fails `Error while running setup for entity prototype "express-sushi-packer-east" (container): next_upgrade target (se-deep-space-sushi-packer-east) must have the same bounding box. Modifications: Sushi Packer › AAI Containers & Warehouses › Sushi Packer`. Cause (log + aai-containers `data-final-fixes.lua`): setting `aai-containers-resize-1x1` shrinks every 1x1 container with box +-0.35 to +-0.3; aai-containers sorts before sushi-packer, so vanilla boxes are shrunk before our `data-final-fixes` builds extra tiers at +-0.35. Fix: `extra.build` copies top vanilla container `collision_box` into every extra container. Also on the way: test harness ran `nosa`/`se` with space-age ON (FactorioTest `--mods` list hard-coded built-ins; `builtin_off` ignored) -> runner passes `name=false` and a guard fails the run when harness space-age state differs from the set (planted old behaviour -> `FAIL harness space-age enabled=True, set wants False`); SE universe build prints nothing > 15 s -> `--output-timeout 180`.
+After: `se` 2.0 modtiers 6/7 (deep space 450/450 per lane, box placeable on `se-space-platform-scaffold`); only red = blue rate (FND-0030).
+
+Verified-by: `make test-one T='tests/offline/test_data_extra.lua::data extra > extra box matches resized vanilla box'`; `MODSET=se tools/run_tests.sh 2.0 --modtiers`

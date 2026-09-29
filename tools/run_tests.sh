@@ -33,12 +33,14 @@ game() {  # game <pattern|""> -> runs FactorioTest, writes build/<FV>/results.js
   test -d "$staged/sushi-packer-test-settings_0.0.1" && cp -r "$staged/sushi-packer-test-settings_0.0.1" "$data/mods/"
   test -x "$CLI" || { echo "run_tests: FactorioTest CLI missing: (cd $FT && npm ci)" >&2; exit 2; }
   FT_DIR="$FT" "$ROOT/tools/ft/patch-cli.sh" >/dev/null  # FND-0005: 10 s startup watchdog -> 120 s
-  mods="space-age quality elevated-rails sushi-packer-test-env"
-  test -d "$FACTORIO/data/recycler" && mods="$mods recycler"
+  # v10: builtin_off set (stage.sh wrote mods/.builtin_off) = no-SA game; FactorioTest `name=false` disables.
+  if [ -f "$staged/.builtin_off" ]; then on=false; else on=true; fi
+  mods="space-age=$on quality=$on elevated-rails=$on sushi-packer-test-env"
+  test -d "$FACTORIO/data/recycler" && mods="$mods recycler=$on"
   mods="$mods $extra"
   rm -f "$ROOT/build/$FV/results.json"
   set -- run -p "$mod" --factorio-path "$FACTORIO/bin/x64/factorio" -d "$data" --no-reorder-failed-first \
-    --output-file "$ROOT/build/$FV/results.json" --mods $mods
+    --output-file "$ROOT/build/$FV/results.json" --output-timeout 180 --mods $mods  # v10: SE universe build silent > 15 s (FND-0029 run)
   if [ -n "$pattern" ]; then set -- "$@" --test-pattern "$pattern"; fi
   if [ -n "${FT_VERBOSE:-}" ]; then set -- "$@" -v; fi  # pipe Factorio stdout (script errors of other mods)
   (cd "$FT" && "$CLI" "$@")
@@ -64,8 +66,13 @@ fi
 if [ "$T" = --modtiers ]; then
   test -n "${MODSET:-}" || { echo "run_tests: --modtiers needs MODSET" >&2; exit 2; }
   game '^tests%.game%.test_modtiers >' || true
-  python3 - "$ROOT/build/$FV/results.json" <<'PY'
-import json, sys
+  python3 - "$ROOT/build/$FV/results.json" "$ROOT/build/$FV/ftdata-$MODSET/mods/mod-list.json" "$ROOT/build/$FV/mods/.builtin_off" <<'PY'
+import json, os, sys
+# v10 guard: the game really ran with space-age on/off as the set says (harness once ignored builtin_off).
+want_sa = not os.path.exists(sys.argv[3])
+got_sa = any(m["name"] == "space-age" and m["enabled"] for m in json.load(open(sys.argv[2]))["mods"])
+if got_sa != want_sa:
+    print(f"FAIL harness space-age enabled={got_sa}, set wants {want_sa}"); sys.exit(1)
 d = json.load(open(sys.argv[1]))
 hits = [t for t in d["tests"] if t["path"].startswith("tests.game.test_modtiers >")]
 bad = [t for t in hits if t["result"] != "passed"]

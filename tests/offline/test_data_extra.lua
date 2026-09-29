@@ -260,4 +260,16 @@ describe("data extra", function()
     for _,dep in ipairs({"? space-age","? space-exploration","? AdvancedBeltsUpdated"}) do ok(content:find(dep,1,true)) end
     ok(not content:find('"space-age"',1,true))
   end)
+  it("extra box matches resized vanilla box", function()
+    -- FND-0029: aai-containers (SE dep, setting aai-containers-resize-1x1) shrinks 1x1 container boxes to +-0.3 in its
+    -- data-final-fixes, before ours; next_upgrade target must have the same bounding box or the game refuses to load.
+    local raw = load("se")
+    for _, tier in ipairs({ "yellow", "red", "blue" }) do
+      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_box = { { -0.3, -0.3 }, { 0.3, 0.3 } } end
+    end
+    require("prototypes.extra").build(raw)
+    for _, dir in ipairs(N.DIRS) do
+      eq(raw.container[N.variant("se-deep-space", dir)].collision_box, { { -0.3, -0.3 }, { 0.3, 0.3 } })
+    end
+  end)
 end)
