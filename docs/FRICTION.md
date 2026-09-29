@@ -112,3 +112,5 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0026 - Publish box 1 silently failed: guessed origin URL
 
 **2026-09-29, PUB.** Box 1 checked `origin = git@github.com:...`; laptop origin is `https://github.com/dw3105/sushi-packer.git`; `test` failed with no output, author pasted a blank result; one extra round trip plus three hook-driven re-sends (placeholders "..." / banner). Bucket: operator-blocks. Root cause: laptop remote URL never read (memory said "ssh fails for private clones", I inferred ssh for this repo). Proposed rule: a guard `test` in an operator box echoes what it compared on failure (`|| echo "SP-GUARD origin=$(git remote get-url origin)"`), and laptop facts (remote URLs) go into memory once read.
+
+**Applied 2026-09-29 (author: all 6):** FRC-0021 -> `sushi-packer-code:SP-11`, FRC-0022 -> `SP-12` + `docs/RULINGS.md`, FRC-0023 -> `SP-13` (runner guard), FRC-0024 -> `SP-14`, FRC-0025 -> `SP-15`, FRC-0026 -> `SP-16`; skill v0.6 installed live (`skill-check` PASS). Findings cited in `docs/ESTATE-LEDGER.md` (author: ledger file in this repo).
