@@ -159,9 +159,11 @@ function M.pull(rec, budget, sink)
   local first = rec.pull_first == 2 and 2 or 1
   -- FND-0024 / FND-0030: take items that reach the belt end within this tick (position <= belt_speed), not only
   -- resting ones. Resting-only capped belts faster than turbo at 60/s and blue at 200/225 per lane (item gap 2.67
-  -- ticks vs 2-tick visits). All speeds: detailed read only while the front item is still moving.
+  -- ticks vs 2-tick visits). Detailed read only while the front item is still moving.
+  -- FND-0031 / V11-7: window only above red (0.0625); yellow/red reach full rate on resting items (FND-0030), and
+  -- the read cost 200 yellow boxes x1.05..x1.50 script time (bench 2026-09-29).
   local speed = belt_speed(belt) or 0
-  local fast = speed > 0
+  local fast = speed > 0.0625
   for i = 0, 1 do
     local lane = i == 0 and first or 3 - first
     local line = belt.get_transport_line(map[lane])

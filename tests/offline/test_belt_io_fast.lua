@@ -61,6 +61,17 @@ describe("belt_io fast", function()
     local rec2 = rig("turbo-b", 0.125, { 0, 0.25 })
     eq(belt_io.pull(rec2, { 2, 0 }, function(_, _, _, c) return c end)[1], 1)
   end)
+  it("yellow and red take resting items only", function()
+    -- FND-0031 / V11-7: take window only for speed > 0.0625 (bench cost on 200 yellow boxes); slow belts reach full
+    -- rate taking resting items only (FND-0030: yellow 75/75, red 150/150 without window)
+    for _, speed in ipairs({ 0.03125, 0.0625 }) do
+      local rec, items = rig("slow-" .. speed, speed, { 0.02, 0.27 })
+      eq(belt_io.pull(rec, { 2, 0 }, function(_, _, _, c) return c end)[1], 0)
+      eq(#items, 2)
+      local rec2 = rig("slow-rest-" .. speed, speed, { 0, 0.25 })
+      eq(belt_io.pull(rec2, { 2, 0 }, function(_, _, _, c) return c end)[1], 1)
+    end
+  end)
   it("fast belt eta counts to take window not belt end", function()
     -- hyper 0.15625: probe t=182 front item 0.188 -> takeable next tick (0.031 <= speed); eta to end = 2 overslept
     local rec = rig("fast-e", 0.15625, { 0.188, 0.438 })
