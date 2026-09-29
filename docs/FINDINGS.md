@@ -143,7 +143,7 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_repro.lua::repro > box hol
 
 ## FND-0021 - Leak report: sushi-packer state flat; author save dominated by RRC-Fork storage
 
-Reported 2026-09-28 by author (RAM grows, UPS drops over time; perf CSV = `--output-perf-stats` renderer dump, no Lua memory data). Soak probe `tests/game/test_probe_soak.lua` (NOT in index, SP-10), dev-vm 2.0.77, code `e5dfff1`: 200 yellow boxes full flow, churn every 600 ticks (destroy+rebuild, rotate x4, die+rebuild, clone+destroy), 108 000 ticks. Every 3600 ticks: recs = live = 200, render objects 400, upgrade_stash 0, `storage.boxes` tables 4 592 (t=3600) -> 4 506 (t=108000), `collectgarbage("count")` after collect 2 997..3 715 KB, no trend (log `~/share/sushi-packer/soak-2.0.txt`). Verdict: no growth in sushi-packer state or render objects.
+Reported 2026-09-28 by author (RAM grows, UPS drops over time; perf CSV = `--output-perf-stats` renderer dump, no Lua memory data). Soak probe `tests/game/test_probe_soak.lua` (NOT in index, SP-10), dev-vm 2.0.77, code `e5dfff1`: 200 yellow boxes full flow, churn every 600 ticks (destroy+rebuild, rotate x4, die+rebuild, clone+destroy), 108 000 ticks. Every 3600 ticks: recs = live = 200, render objects 400, upgrade_stash 0, `storage.boxes` tables 4 592 (t=3600) -> 4 506 (t=108000), `collectgarbage("count")` after collect 2 997..3 715 KB, no trend (log `~/.cache/sushi-packer/share-archive/soak-2.0.txt`). Verdict: no growth in sushi-packer state or render objects.
 Author save `SA_D0.zip` (2026-09-28): `script.dat` 30 334 631 B parsed per mod block: `mod-RRC-Fork` 30 030 288 B (~99 %), machine-upgrades 201 522 B, sushi-packer 51 580 B (9 boxes). RRC-Fork block = cache of ~41 553 records (`status`, `selected`, `consumer`, `beacons`, `modules`). Growth unproven (one save; second save asked). Handed to RRC session `rrc_fixer_3` (author pasted, 2026-09-28). No sushi-packer code change (lane L not spawned).
 
 Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_probe_soak.lua::probe > soak storage and render objects bounded'` (temporary index entry)
@@ -161,7 +161,7 @@ Verified-by: `tools/run_tests.sh 2.0 'tests/game/test_probe_push.lua::probe v9 >
 
 ## FND-0023 - P1: real belt-family prototypes per mod set (v9 table rows verified)
 
-Measured 2026-09-28 on dev-vm, 2.0.77 + 2.1.20, packer v1.8 + v9 seam (`tests/game/test_probe_modset.lua`, NOT in index, SP-10; dumps `~/share/sushi-packer/v9-p1/<FV>-<set>.txt`, versions `tests/mods.lock.json`). Every `N.EXTRA` row name verified (belt / splitter / tech, speed x 480):
+Measured 2026-09-28 on dev-vm, 2.0.77 + 2.1.20, packer v1.8 + v9 seam (`tests/game/test_probe_modset.lua`, NOT in index, SP-10; dumps `~/.cache/sushi-packer/share-archive/v9-p1/<FV>-<set>.txt`, versions `tests/mods.lock.json`). Every `N.EXTRA` row name verified (belt / splitter / tech, speed x 480):
 - `planetaris-hyper-transport-belt` 0.15625 = 75/s, splitter `planetaris-hyper-splitter`, tech `planetaris-hyper-transport-belt` (unit 3000; prereq `planetaris-compression-science` + `turbo-transport-belt`; with Hyarion prereq `planetaris-polishing-science-pack` + turbo). 2.0 + 2.1.
 - `kr-superior-transport-belt` 0.1875 = 90/s, `kr-superior-splitter`, tech `kr-logistic-5` (unit 2000). 2.0 (K2SO standalone) + 2.1 (K2SO on Krastorio2). `kr-advanced-*` 60/s `hidden=true` both.
 - `bob-ultimate-transport-belt` 0.15625 = 75/s, `bob-ultimate-splitter`, tech `logistics-5` (unit 300). Bob also adds `bob-basic-*` 7.5/s below yellow (no tier). Default `bobmods-logistics-beltoverhaulspeed=false`.
@@ -170,7 +170,7 @@ Measured 2026-09-28 on dev-vm, 2.0.77 + 2.1.20, packer v1.8 + v9 seam (`tests/ga
 - `arig-off` (startup `disable-hyper-belts=true`): 2.0 belt + splitter + tech `hidden=true`. 2.1: Arig 1.1.47 itself fails load: `Error while running setup for entity prototype "turbo-transport-belt" (transport-belt): next_upgrade target (planetaris-hyper-transport-belt) must have an item that builds it that isn't hidden.` -> set 2.0 only (upstream bug, not ours).
 - All sets load with packer v1.8 (4 vanilla sushi items only).
 
-Verified-by: `~/share/sushi-packer/v9-p1/run.sh` (temporary index entry), per set `make test-one FV=<fv> MODSET=<set> T='tests/game/test_probe_modset.lua::probe v9 modset > dump belts splitters techs'`
+Verified-by: `~/.cache/sushi-packer/share-archive/v9-p1/run.sh` (temporary index entry), per set `make test-one FV=<fv> MODSET=<set> T='tests/game/test_probe_modset.lua::probe v9 modset > dump belts splitters techs'`
 
 ## FND-0024 - Boxes on belts faster than turbo capped at 60/s (pull rule + eta wake)
 
