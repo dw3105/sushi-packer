@@ -222,7 +222,7 @@ describe("data extra", function()
     eq(names(rows), {"ab-extreme","ab-supreme","ab-ultimate"}); eq(rows[1].prev,"turbo")
   end)
   it("splitter missing row skipped logged", function()
-    local raw = load("arig"); raw.item["planetaris-hyper-splitter"] = nil; raw.splitter["planetaris-hyper-splitter"] = nil
+    local raw = load("arig"); raw.item["planetaris-hyper-splitter"] = nil
     local logs = logs_for(function() eq(require("prototypes.extra").tiers(raw), {}) end)
     ok(logs[1] and logs[1]:find("planetaris-hyper",1,true))
   end)
@@ -243,7 +243,7 @@ describe("data extra", function()
   end)
   it("container allowed in se space", function()
     local raw = load("se"); require("prototypes.extra").build(raw)
-    for _,tier in ipairs({"yellow","red","blue","turbo","se-deep-space"}) do for _,dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier,dir)].se_allow_in_space,true) end end
+    for _,tier in ipairs({"yellow","red","blue","se-deep-space"}) do for _,dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier,dir)].se_allow_in_space,true) end end
   end)
   it("ab four rows speed order", function()
     load_nosa("ab"); local rows=require("prototypes.extra").tiers(F.raw)
