@@ -73,4 +73,16 @@ describe("locale de", function()
       end
     end
   end)
+  it("vanilla German terms", function()
+    -- integrator review v11: vanilla de says Fließbandseite (lane), Stapelhöhe (belt stack), tech Fließband-Kapazität;
+    -- no per-entity remnant names in vanilla -> "Überreste: <Name>" avoids adjective declension.
+    local de = entries("locale/de/locale.cfg")
+    for key, v in pairs(de) do
+      for _, bad in ipairs({ "Spur", "spur", "Bandstapel", "Bandkapazität", "Entspricht dem" }) do
+        ok(not v:find(bad, 1, true), key .. " uses non-vanilla term " .. bad)
+      end
+      if key:match("^entity%-name/.*%-remnants$") then ok(v:sub(1, #"Überreste: ") == "Überreste: ", key .. " remnant pattern") end
+    end
+    ok(de["tips-and-tricks-item-description/sushi-packer-tips"]:find("Fließbandseiten", 1, true), "tips use Fließbandseiten")
+  end)
 end)
