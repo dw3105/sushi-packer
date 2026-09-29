@@ -50,6 +50,8 @@ N.FAST_REPLACE_GROUP = "sushi-packer"
 -- row order (M-4). Names verified from real prototypes per mod set (FND-0023). paint/wear = G-2 for graphics.
 -- v10 (Q11): owners = internal mod names; row live only if one is loaded (clash guard, FND-0027). own_role (Q7) =
 -- keep row even when not faster than top vanilla tier; unset everywhere in v10.
+-- v11 (M-4): `after` = key of previous row (separate chain; target inactive -> row skipped). own_role without
+-- `after` = root tier: no previous box, no previous tech.
 -- Row: key (tier key = internal prefix), paint RGB + wear (M-7: mod underground icon median, calibrated to G-2
 -- hue kept, V x1.21, S +0.06; hyper = whole-metal median, part is grey), belt, splitter, tech, mod (display), fv.
 N.EXTRA = {
@@ -81,13 +83,21 @@ N.EXTRA = {
     tech = "supreme-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
   { key = "ab-ultimate", owners = { "AdvancedBeltsUpdated" }, paint = { 192, 111, 61 }, wear = 0.40, belt = "ultimate-belt", splitter = "ultimate-splitter",
     tech = "ultimate-logistics", mod = "Advanced Belts 2.0", fv = { "2.0" } },
+  -- v11 (V11-1..V11-4, author 2026-09-29): SE space belt (45/s ties blue) = own-role root tier; deep space follows it
+  -- (`after`), separate SE chain. Paint = SE underground icon light-body median, no V boost (M-7 v11).
+  { key = "se-space", owners = { "space-exploration" }, paint = { 215, 215, 215 }, wear = 0.40, belt = "se-space-transport-belt",
+    splitter = "se-space-splitter", tech = "se-space-belt", mod = "Space Exploration", fv = { "2.0", "2.1" }, own_role = true },
   { key = "se-deep-space", owners = { "space-exploration" }, paint = { 52, 52, 52 }, wear = 0.40, belt = "se-deep-space-transport-belt-black",
-    splitter = "se-deep-space-splitter-black", tech = "se-deep-space-transport-belt", mod = "Space Exploration", fv = { "2.0", "2.1" } },
+    splitter = "se-deep-space-splitter-black", tech = "se-deep-space-transport-belt", mod = "Space Exploration", fv = { "2.0", "2.1" },
+    after = "se-space" },
 }
 -- Extra tier recipe (M-5): previous tier box 1 + own splitter 1 + inserter 2 + circuits, craft_s.
 N.EXTRA_RECIPE = { inserter = "stack-inserter", inserters = 2, circuit = "quantum-processor", circuits = 2, craft_s = 120 }
 -- v10 (Q6): game without stack-inserter / quantum-processor (no space-age) -> blue tier set.
 N.EXTRA_RECIPE_NOSA = { inserter = "bulk-inserter", inserters = 2, circuit = "processing-unit", circuits = 5, craft_s = 60 }
+-- v11 (M-5, V11-3): root tier (own_role, no `after`) replaces previous box with `base` and multiplies inserters +
+-- circuits of the recipe set in use (SE space: steel-chest 1, bulk-inserter 4, processing-unit 10, 60 s).
+N.EXTRA_RECIPE_ROOT = { base = "steel-chest", mult = 2 }
 -- v10 (T-1, Q6): vanilla tiers built only when own belt + tech exist (turbo lives in space-age). Others strict.
 N.OPTIONAL_VANILLA = { turbo = true }
 N.ALL = {}

@@ -32,26 +32,39 @@ local function expected_extras()
     { "ab-extreme", ab, "extreme-belt" },
     { "ab-supreme", ab, "supreme-belt" },
     { "ab-ultimate", ab, "ultimate-belt" },
-    { "se-deep-space", m["space-exploration"], "se-deep-space-transport-belt-black" },
+    -- v11 (V11-1, V11-2): SE space = own-role root (kept at 45/s), deep space after it (separate chain)
+    { "se-space", m["space-exploration"], "se-space-transport-belt", { root = true } },
+    { "se-deep-space", m["space-exploration"], "se-deep-space-transport-belt-black", { after = "se-space" } },
   }
   local top = prototypes.entity[top_vanilla() == "turbo" and "turbo-transport-belt" or "express-transport-belt"].belt_speed
-  local out = {}
+  local out, kept = {}, {}
   for i, r in ipairs(rows) do
-    if r[2] then
+    local o = r[4] or {}
+    if r[2] and (o.after == nil or kept[o.after]) then
       local speed = prototypes.entity[r[3]].belt_speed
-      if speed > top then out[#out + 1] = { key = r[1], speed = speed, i = i } end
+      if speed > top or o.root then out[#out + 1] = { key = r[1], speed = speed, i = i, o = o }; kept[r[1]] = true end
     end
   end
   table.sort(out, function(x, y) if x.speed == y.speed then return x.i < y.i end return x.speed < y.speed end)
-  for i, r in ipairs(out) do out[i] = r.key end
-  return out
+  local keys, opts = {}, {}
+  for i, r in ipairs(out) do keys[i] = r.key; opts[r.key] = r.o end
+  return keys, opts
 end
 
-local function chain()
-  local c = { top_vanilla() }
-  for _, k in ipairs(expected_extras()) do c[#c + 1] = k end
-  return c
+-- v11 (M-4, U-3): chains. Main = top vanilla + plain extras by speed; root row starts own chain; `after` row
+-- joins chain of its target. First chain = main.
+local function chains()
+  local keys, opts = expected_extras()
+  local list, where = { { top_vanilla() } }, {}
+  for _, k in ipairs(keys) do
+    local o, c = opts[k], nil
+    if o.after then c = where[o.after] elseif o.root then c = {}; list[#list + 1] = c else c = list[1] end
+    c[#c + 1] = k; where[k] = c
+  end
+  return list
 end
+
+local function chain() return chains()[1] end
 
 local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -60, -60 }, { 60, 60 } } })) do
@@ -86,7 +99,7 @@ describe("modtiers", function()
   end)
 
   it("upgrade chain follows belt speed", function()
-    local c = chain()
+    for _, c in ipairs(chains()) do
     for i, key in ipairs(c) do
       local nxt = c[i + 1]
       for _, dir in ipairs(N.DIRS) do
@@ -99,10 +112,33 @@ describe("modtiers", function()
         assert.is_true(prototypes.item[N.item(nxt)].order > prototypes.item[N.item(key)].order, nxt .. " sorts after " .. key)
       end
     end
+    end
+  end)
+
+  it("root tier recipe and tech have no previous box", function()
+    -- v11 (M-5, U-1, V11-3): root = first of a non-main chain. Recipe: steel-chest 1 + own splitter 1 + inserters and
+    -- circuits x2, no box item; tech: no sushi-packer tech prereq.
+    local list = chains()
+    for ci = 2, #list do
+      local key = list[ci][1]
+      local recipe = prototypes.recipe[N.item(key)]
+      local got = {}
+      for _, ing in ipairs(recipe.ingredients) do got[ing.name] = ing.amount end
+      assert.are_equal(1, got["steel-chest"], key .. " steel-chest")
+      assert.are_equal(1, got[N.TIER[key].splitter], key .. " splitter")
+      for name in pairs(got) do assert.is_nil(name:find("sushi-packer", 1, true), key .. " no box in recipe: " .. name) end
+      if key == "se-space" then
+        assert.are_equal(4, got["bulk-inserter"]); assert.are_equal(10, got["processing-unit"]); assert.are_equal(60, recipe.energy)
+      end
+      local tech = prototypes.technology[N.tech(key)]
+      assert.is_not_nil(tech.prerequisites[N.TIER[key].tech], "belt tech prereq " .. key)
+      for p in pairs(tech.prerequisites) do assert.is_nil(p:find("sushi-packer", 1, true), key .. " no tier tech prereq: " .. p) end
+      assert.are_equal(prototypes.technology[N.TIER[key].tech].research_unit_count * 1.5, tech.research_unit_count, key .. " count")
+    end
   end)
 
   it("tech unlocks recipe and every ingredient reachable", function()
-    local c = chain()
+    for _, c in ipairs(chains()) do
     for i = 2, #c do
       local key, prev = c[i], c[i - 1]
       local tech = prototypes.technology[N.tech(key)]
@@ -135,6 +171,7 @@ describe("modtiers", function()
         assert.is_true(reach, key .. " ingredient " .. ing.name .. " unlocked in prereq closure")
       end
     end
+    end
   end)
 
   it("box output matches belt rate", function()
@@ -144,7 +181,8 @@ describe("modtiers", function()
     force.belt_stack_size_bonus = 0
     local rigs = {}
     -- FND-0030: blue always measured (was only a chain tier without space-age; 200/225 per lane before fix).
-    local tiers = chain()
+    local tiers = {}
+    for _, c in ipairs(chains()) do for _, k in ipairs(c) do tiers[#tiers + 1] = k end end  -- v11: every chain
     if tiers[1] ~= "blue" then table.insert(tiers, 1, "blue") end
     for i, key in ipairs(tiers) do
       local x, belt = (i - 1) * 4, N.TIER[key].belt

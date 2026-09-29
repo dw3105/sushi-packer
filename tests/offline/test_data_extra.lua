@@ -237,13 +237,14 @@ describe("data extra", function()
     local rows = require("prototypes.extra").tiers(raw); N.EXTRA[index].own_role = old
     eq(rows[1].key,"ab-elite"); eq(rows[1].prev,"turbo")
   end)
-  it("se deep space after blue", function()
+  it("se chain space root then deep space", function()
+    -- v11 (V11-2, M-4): space own-role root (prev nil), deep space after space; blue leads nowhere
     load_nosa("se")
-    eq(require("prototypes.extra").tiers(F.raw), {{key="se-deep-space",prev="blue",speed=0.1875}})
+    eq(require("prototypes.extra").tiers(F.raw), {{key="se-space",speed=0.09375},{key="se-deep-space",prev="se-space",speed=0.1875}})
   end)
   it("container allowed in se space", function()
     local raw = load("se"); require("prototypes.extra").build(raw)
-    for _,tier in ipairs({"yellow","red","blue","se-deep-space"}) do for _,dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier,dir)].se_allow_in_space,true) end end
+    for _,tier in ipairs({"yellow","red","blue","se-space","se-deep-space"}) do for _,dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier,dir)].se_allow_in_space,true) end end
   end)
   it("ab four rows speed order", function()
     load_nosa("ab"); local rows=require("prototypes.extra").tiers(F.raw)
@@ -251,7 +252,9 @@ describe("data extra", function()
   end)
   it("upgrade chain from top vanilla", function()
     local raw=load("se"); require("prototypes.extra").build(raw)
-    eq(raw.container[N.variant("blue","west")].next_upgrade,N.variant("se-deep-space","west"))
+    eq(raw.container[N.variant("blue","west")].next_upgrade,nil)  -- v11 (U-3): no upgrade across chains
+    eq(raw.container[N.variant("se-space","west")].next_upgrade,N.variant("se-deep-space","west"))
+    eq(raw.container[N.variant("se-deep-space","west")].next_upgrade,nil)
     raw=load("arig"); require("prototypes.extra").build(raw)
     eq(raw.container[N.variant("turbo","west")].next_upgrade,N.variant("planetaris-hyper","west"))
   end)

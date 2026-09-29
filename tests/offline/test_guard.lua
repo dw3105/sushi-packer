@@ -68,6 +68,18 @@ describe("guard", function()
     -- v10 (Q6, T-1)
     eq(N.EXTRA_RECIPE_NOSA, { inserter = "bulk-inserter", inserters = 2, circuit = "processing-unit", circuits = 5, craft_s = 60 })
     eq(N.OPTIONAL_VANILLA, { turbo = true })
+    -- v11 (V11-1..V11-3, M-4, M-5): SE space own-role root, deep space after it, root recipe set
+    eq(N.EXTRA_RECIPE_ROOT, { base = "steel-chest", mult = 2 })
+    local by_key = {}
+    for _, row in ipairs(N.EXTRA) do by_key[row.key] = row end
+    ok(by_key["se-space"] and by_key["se-space"].own_role == true and by_key["se-space"].after == nil, "se-space root row")
+    eq(by_key["se-space"].belt, "se-space-transport-belt")
+    eq(by_key["se-space"].splitter, "se-space-splitter")
+    eq(by_key["se-space"].tech, "se-space-belt")
+    eq(by_key["se-deep-space"].after, "se-space")
+    for _, row in ipairs(N.EXTRA) do
+      ok(row.after == nil or (by_key[row.after] and row.after ~= row.key), "extra row after target " .. row.key)
+    end
     for _, row in ipairs(N.EXTRA) do
       ok(N.TIER[row.key] and N.TIER[row.key].belt == row.belt and N.TIER[row.key].lane_rate == nil, "extra tier row " .. row.key)
       ok(row.splitter and row.tech and row.mod and #row.paint == 3 and row.wear and row.fv, "extra row fields " .. row.key)
