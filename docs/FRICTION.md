@@ -138,3 +138,5 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0032 - Publish box sent without local boxlint; re-issued
 
 **2026-09-29, v1.12 PUB.** First box had unchained `git push origin ...:main` after `gh run watch` (set -e covered it, but hook BL-7 flagged) and no `# sample:` for the jq parser (BX-3); re-issued with `Replaces:`. Bucket: operator-blocks. Root cause: ran `bash -n` only, not the box lint the hook runs. Proposed rule: run box lint (`guards/boxlint.py`) on every box before sending.
+
+**Applied 2026-09-29 (author: approve):** FRC-0027 -> `sushi-packer-code:SP-17` + `docs/RULINGS.md`, FRC-0028 -> `SP-18`, FRC-0029 -> `SP-19`, FRC-0030 -> `SP-20`, FRC-0032 -> `SP-21`; FRC-0031 -> report to `~/skills` owner. Skill v0.7.

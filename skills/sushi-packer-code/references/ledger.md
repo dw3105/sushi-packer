@@ -8,3 +8,4 @@
 | v0.4 | 2026-09-28 | SP-10: long probes report via `log()`, print progress < 15 s apart (FRC-0011, author approved). |
 | v0.5 | 2026-09-28 | SP-02: lane task checks may run lane's own new offline test file whole (`codex-tasks:CX-31`, FRC-0015; author adopted all 4 v9 reflection rules). |
 | v0.6 | 2026-09-29 | SP-11..SP-16 from FRC-0021..0026 (author approved all 6); SP-10 output timeout 180 s. |
+| v0.7 | 2026-09-29 | SP-17..SP-21 from FRC-0027..0030, 0032 (author approved all); FRC-0031 = report to `~/skills` owner (lane review crash), no repo rule. |
