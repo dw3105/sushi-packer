@@ -12,6 +12,8 @@ label = "sushi-packer/agent"
 weight_mib = 1024
 weight_cores = 0.5
 suite_label = "sushi-packer/heavy"
+preflight = true
+max_live_lanes = 4
 
 [verify]
 # lane merge runs this in lane worktree. Offline guard tests only: headless + full suite belong to integrator (SP-02).
