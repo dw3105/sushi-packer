@@ -25,6 +25,7 @@ function M.make(tier, opts)
   local T = N.TIER[tier]
   local recipe = T
   if T.extra and (not data.raw.item["stack-inserter"] or not data.raw.item["quantum-processor"]) then recipe = N.EXTRA_RECIPE_NOSA end
+  local root_recipe = opts.root and T.extra and N.EXTRA_RECIPE_ROOT
   local protos = {}
   local previous_tier = opts.prev
 
@@ -46,10 +47,10 @@ function M.make(tier, opts)
     enabled = false,
     energy_required = recipe.craft_s,
     ingredients = {
-      { type = "item", name = previous_tier and N.item(previous_tier) or N.RECIPE_BASE, amount = 1 },
+      { type = "item", name = root_recipe and root_recipe.base or previous_tier and N.item(previous_tier) or N.RECIPE_BASE, amount = 1 },
       { type = "item", name = T.splitter, amount = 1 },
-      { type = "item", name = recipe.inserter, amount = recipe.inserters or 2 },
-      { type = "item", name = recipe.circuit, amount = recipe.circuits },
+      { type = "item", name = recipe.inserter, amount = (recipe.inserters or 2) * (root_recipe and root_recipe.mult or 1) },
+      { type = "item", name = recipe.circuit, amount = recipe.circuits * (root_recipe and root_recipe.mult or 1) },
     },
     results = { { type = "item", name = N.item(tier), amount = 1 } },
   }
@@ -70,7 +71,7 @@ function M.make(tier, opts)
   end
   if previous_tier then
     add_prerequisite(N.tech(previous_tier))
-  else
+  elseif not opts.root then
     add_prerequisite("steel-processing")
   end
 

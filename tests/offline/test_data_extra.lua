@@ -40,7 +40,7 @@ end
 local function includes(rows, expected)
   local found = {}
   for _, row in ipairs(rows) do found[type(row) == "table" and row[1] or row] = true end
-  for _, name in ipairs(expected) do ok(found[name], "missing " .. name) end
+  for _, name in ipairs(expected) do ok(found[name], "missing " .. tostring(type(name) == "table" and name[1] or name)) end
 end
 
 describe("data extra", function()
@@ -274,5 +274,59 @@ describe("data extra", function()
     for _, dir in ipairs(N.DIRS) do
       eq(raw.container[N.variant("se-deep-space", dir)].collision_box, { { -0.3, -0.3 }, { 0.3, 0.3 } })
     end
+  end)
+  it("se space root recipe", function()
+    local raw = load("se"); require("prototypes.extra").build(raw)
+    eq(ingredient_pairs(raw.recipe[N.item("se-space")]), {{"steel-chest",1},{"se-space-splitter",1},{"bulk-inserter",4},{"processing-unit",10}})
+    eq(raw.recipe[N.item("se-space")].energy_required,60)
+  end)
+  it("se space root tech", function()
+    local raw = load("se"); require("prototypes.extra").build(raw)
+    local tech = raw.technology[N.tech("se-space")]
+    includes(tech.prerequisites,{"se-space-belt"})
+    for _, name in ipairs(tech.prerequisites) do ok(not name:find("^sushi%-packer") and not name:find("%-sushi%-packer$"),name) end
+    eq(tech.unit.count,300)
+    includes(tech.unit.ingredients,{"se-rocket-science-pack"})
+  end)
+  it("se deep space recipe needs space box", function()
+    local raw = load("se"); require("prototypes.extra").build(raw)
+    local recipe = raw.recipe[N.item("se-deep-space")]
+    eq(ingredient_pairs(recipe)[1],{N.item("se-space"),1})
+    for _, ingredient in ipairs(recipe.ingredients) do ok(ingredient.name ~= "express-sushi-packer") end
+    includes(raw.technology[N.tech("se-deep-space")].prerequisites,{N.tech("se-space")})
+    for _, name in ipairs(raw.technology[N.tech("se-deep-space")].prerequisites) do ok(name ~= "express-sushi-packer") end
+  end)
+  it("after target inactive skips row", function()
+    local raw=load("se"); raw["transport-belt"]["se-space-transport-belt"]=nil
+    local logs=logs_for(function()
+      local rows=require("prototypes.extra").tiers(raw)
+      for _, row in ipairs(rows) do ok(row.key ~= "se-space" and row.key ~= "se-deep-space") end
+    end)
+    local found=false; for _,message in ipairs(logs) do if message:find("se-deep-space",1,true) then found=true end end; ok(found)
+  end)
+  it("se plus k2 two chains", function()
+    local raw=load("se")
+    raw["transport-belt"]["kr-superior-transport-belt"]={speed=0.1875}
+    raw["transport-belt"]["kr-advanced-transport-belt"]={speed=0.125,hidden=true}
+    raw.item["kr-superior-splitter"]={}; raw.item["kr-advanced-splitter"]={}
+    raw.recipe["kr-superior-splitter"]={}; raw.recipe["kr-advanced-splitter"]={}
+    raw.technology["kr-logistic-5"]={unit={count=2000,ingredients={{"production-science-pack",1}}},effects={}}
+    raw.technology["kr-logistic-4"]={unit={count=500,ingredients={{"production-science-pack",1}}},effects={}}
+    raw.technology["kr-logistic-5"].prerequisites={"turbo-transport-belt"}
+    mods["Krastorio2-spaced-out"]="0.0.0"
+    local rows=require("prototypes.extra").tiers(raw)
+    eq(names(rows),{"se-space","kr-superior","se-deep-space"})
+    eq({rows[1].prev,rows[2].prev,rows[3].prev},{nil,"blue","se-space"})
+    raw.technology["kr-logistic-5"].prerequisites={}
+    require("prototypes.extra").build(raw)
+    eq(raw.container[N.variant("blue","west")].next_upgrade,N.variant("kr-superior","west"))
+    eq(raw.container[N.variant("se-space","west")].next_upgrade,N.variant("se-deep-space","west"))
+    eq(raw.container[N.variant("kr-superior","west")].next_upgrade,nil)
+    eq(raw.container[N.variant("se-deep-space","west")].next_upgrade,nil)
+  end)
+  it("yellow recipe unchanged by root rule", function()
+    F.reset(); dofile("prototypes/packer.lua")
+    eq(ingredient_pairs(F.raw.recipe[N.item("yellow")]),{{"steel-chest",1},{"splitter",1},{"inserter",2},{"electronic-circuit",5}})
+    eq(F.raw.recipe[N.item("yellow")].energy_required,30)
   end)
 end)
