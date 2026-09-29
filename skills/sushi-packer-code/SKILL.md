@@ -47,7 +47,7 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 - **SP-18** **S0 greps semantics, not only names.** Before lanes, grep offline + game tests for every field and constant whose meaning requirement amendment changes (`own_role`, `prev`, ...); fix old-rule tests in S0 (v11: lane hard-coded `se-space` around stale `own_role` test).
 - **SP-19** **Translation task carries term table.** Every recurring domain word (lane, belt stack, research, circuit) with vanilla locale source line, plus guard test banning known wrong words (v11: "Spur", "Bandstapel" ~270 lines).
 - **SP-20** **Bench bar needs measured noise.** Before any bench bar, run A/A control (same build twice, alternated) for noise band; bar = mean of >= 6 alternated pairs outside that band (v11: build C alone ranged 3.36-3.97 ms).
-- **SP-21** **Box lint before send.** Run `guards/boxlint.py` on every operator box before sending, not only `bash -n` (v1.12 box re-issued for BL-7 / BX-3).
+- **SP-21** **Box lint before send.** Run `guards/boxlint.py` on every operator box before sending, not only `bash -n` (v1.12 box re-issued: unchained main push, no parser sample).
 
 | Reference | Read when |
 |---|---|
