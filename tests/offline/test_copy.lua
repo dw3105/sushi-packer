@@ -12,7 +12,80 @@ local function setup(entities, mapping)
   return written
 end
 
+local function fake_record(fields)
+  fields = fields or {}
+  fields.object_name = "LuaRecord"
+  return setmetatable(fields, { __index = function(_, k)
+    error("LuaRecord doesn't contain key " .. tostring(k) .. ".", 2)
+  end })
+end
+
+local function blueprint_api(entities)
+  local written, reads, writes = nil, 0, 0
+  return {
+    get_blueprint_entities = function() reads = reads + 1; return entities end,
+    set_blueprint_entities = function(list) writes = writes + 1; written = list end,
+    result = function() return written end,
+    calls = function() return reads, writes end,
+  }
+end
+
 describe("copy", function()
+  it("library record does not crash", function()
+    storage = { boxes = {} }
+    defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
+    local api = blueprint_api({ { entity_number = 1, name = N.variant("red", "west"), direction = 0 } })
+    local rec = fake_record({ valid = true, valid_for_write = true, type = "blueprint",
+      get_blueprint_entities = api.get_blueprint_entities, set_blueprint_entities = api.set_blueprint_entities })
+    require("scripts.copy").on_setup_blueprint({ record = rec, mapping = { get = function() return {} end } })
+    eq(api.result()[1].name, N.placer("red"))
+    eq(api.result()[1].direction, 12)
+  end)
+
+  it("library record gets tags", function()
+    local settings = { circuit = { enable = true } }
+    storage = { boxes = { [42] = { settings = settings } } }
+    defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
+    local api = blueprint_api({ { entity_number = 1, name = N.variant("blue", "east") } })
+    local rec = fake_record({ valid = true, valid_for_write = true, type = "blueprint",
+      get_blueprint_entities = api.get_blueprint_entities, set_blueprint_entities = api.set_blueprint_entities })
+    require("scripts.copy").on_setup_blueprint({ record = rec,
+      mapping = { get = function() return { [1] = { unit_number = 42, valid = true } } end } })
+    eq(api.result()[1].tags.sushi_packer, settings)
+    eq(api.result()[1].name, N.placer("blue"))
+  end)
+
+  it("read-only record skipped", function()
+    local api = blueprint_api({})
+    local rec = fake_record({ valid = true, valid_for_write = false, type = "blueprint",
+      get_blueprint_entities = api.get_blueprint_entities, set_blueprint_entities = api.set_blueprint_entities })
+    require("scripts.copy").on_setup_blueprint({ record = rec })
+    local reads, writes = api.calls()
+    eq(writes, 0)
+  end)
+
+  it("non-blueprint record skipped", function()
+    local api = blueprint_api({})
+    local rec = fake_record({ valid = true, valid_for_write = true, type = "deconstruction-planner",
+      get_blueprint_entities = api.get_blueprint_entities, set_blueprint_entities = api.set_blueprint_entities })
+    require("scripts.copy").on_setup_blueprint({ record = rec })
+    local reads, writes = api.calls()
+    eq(reads, 0)
+    eq(writes, 0)
+  end)
+
+  it("stack still read as stack", function()
+    storage = { boxes = {} }
+    defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
+    local api = blueprint_api({ { entity_number = 1, name = N.variant("red", "west"), direction = 0 } })
+    local stack = setmetatable({ object_name = "LuaItemStack", valid_for_read = true, is_blueprint = true,
+      get_blueprint_entities = api.get_blueprint_entities, set_blueprint_entities = api.set_blueprint_entities },
+      { __index = function(_, k) error("LuaItemStack doesn't contain key " .. tostring(k) .. ".", 2) end })
+    require("scripts.copy").on_setup_blueprint({ stack = stack, mapping = { get = function() return {} end } })
+    eq(api.result()[1].name, N.placer("red"))
+    eq(api.result()[1].direction, 12)
+  end)
+
   it("blueprint renames variant to placer without mapping", function()
     local result = setup({ { entity_number = 1, name = N.variant("red", "west"), direction = 0 } })
     eq(result[1].name, N.placer("red"))
