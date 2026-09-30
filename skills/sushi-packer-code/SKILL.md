@@ -3,7 +3,7 @@ name: sushi-packer-code
 description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking box mod: requirements contract, frozen seams, lanes run single offline mock-based Lua tests only, headless Factorio only at integrator merge and release, API in both versions only, no push from VM. Read before editing prototypes/, scripts/, tests/, control.lua, data.lua, or claiming anything about this repo."
 ---
 
-**v0.7 - 29 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
+**v0.8 - 30 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
 
 **Canonical copy is `skills/sushi-packer-code/` in this repo.** Live copy `~/.claude/skills/sushi-packer-code` installed by `make skill-install` from clean `main` only. Edit live copy and SessionStart audit report drift. Shape copied from `local-transcriber-code`; lane rules follow shared `codex-tasks`. Requirements file in docs outranks this skill; when they disagree, requirements win and this skill gets fixed on next round by integrator.
 
@@ -12,7 +12,7 @@ description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking bo
 | State | Rules |
 |---|---|
 | Machine check | SP-01 (`tests/offline/test_guard.lua`, `tests/game/test_guard.lua`), SP-02 (`tools/run_tests.sh` refuses non-test `T`, and refuses `tests/game/*` and `--full` when `LANE_RUN_ID` is set) |
-| Human checklist | SP-03 .. SP-21 |
+| Human checklist | SP-03 .. SP-24 |
 
 SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which calls it): refuses file or dir, one-test mode fails unless exactly one test ran and passed, and under `LANE_RUN_ID` (set by `lane_run` for engine and checks) refuses every headless run. Lane calling Factorio binary or `lua5.2 tests/offline/run.lua <file>` direct meets no stop, only task-file ban and reviewer read of lane log. Integrator greps lane log for `factorio`, `make test ` and bare runner calls before merge. Green lint prove copy match only, never rule read or obeyed.
 
@@ -47,7 +47,13 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 - **SP-18** **S0 greps semantics, not only names.** Before lanes, grep offline + game tests for every field and constant whose meaning requirement amendment changes (`own_role`, `prev`, ...); fix old-rule tests in S0 (v11: lane hard-coded `se-space` around stale `own_role` test).
 - **SP-19** **Translation task carries term table.** Every recurring domain word (lane, belt stack, research, circuit) with vanilla locale source line, plus guard test banning known wrong words (v11: "Spur", "Bandstapel" ~270 lines).
 - **SP-20** **Bench bar needs measured noise.** Before any bench bar, run A/A control (same build twice, alternated) for noise band; bar = mean of >= 6 alternated pairs outside that band (v11: build C alone ranged 3.36-3.97 ms).
-- **SP-21** **Box lint before send.** Run `guards/boxlint.py` on every operator box before sending, not only `bash -n` (v1.12 box re-issued: unchained main push, no parser sample).
+- **SP-21** **Box lint before send.** Run `guards/boxlint.py --file <box>` on every operator box before sending, not only `bash -n`; bare path argument lints path string, false BL-1/BL-2 (v1.12 box re-issued: unchained main push, no parser sample; v1.13 path argument).
+
+## Plans, bumps, reports (v0.8, friction log 2026-09-30 v12/v13, author approved)
+
+- **SP-22** **Plan checklist first.** Every build plan opens with: very simple what + why it works first try, `Done =` list, lanes (max parallel, no needless lane; lanes single offline tests only), integrator loop (full suite once all merged, fix reds one test at a time, rerun, then main + boxes). Bug plan names headless red repro step (or author in-game error text) before any fix step (`docs/RULINGS.md` 2026-09-30; v1.13 plan rejected twice). Lanes launch with `lane.py --repo <int worktree> launch` (task file lives on int branch only).
+- **SP-23** **Version bump by grep.** Before bump, `grep -rn '<old ver>'` over `tests/ tools/ README.md portal/ info.json`; every hit bumped or named as history. Never sed by line numbers (v1.13: missed pin cost one full-suite round).
+- **SP-24** **Portal thread = text + images.** Reading player report lists every `<img>` in thread HTML and reads each (screenshot often holds full error + mod list) before first grill question (v1.14 them8: screenshot missed, wrong question asked).
 
 | Reference | Read when |
 |---|---|

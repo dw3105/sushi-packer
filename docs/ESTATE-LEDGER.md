@@ -17,4 +17,4 @@ Cross-repo citation of findings raised in this repo (session-lifecycle CL-07). O
 | FND-0033 | 2026-09-30 | dev-vm | Library blueprint "select new contents" crashed (`LuaRecord doesn't contain key valid_for_read`, shipped since blueprint support) | fixed v1.13 (author in-game check) |
 | FND-0034 | 2026-09-30 | dev-vm | Mining Drones + Arig: load refused, hyper box mask nil vs turbo `mining_drone` layer (shipped since v9 extras) | fixed v1.14 (`them8` regression set) |
 | FND-0031 | 2026-09-30 | dev-vm | Residual bench gap v1.12 vs v1.10 | OPEN, third deferral (RULINGS 2026-09-29: box not free); cost to meet: quiet dev-vm ~1 h (A/A band + >= 6 alternated pairs, SP-20) |
-| FRC-0033..0038 | 2026-09-30 | dev-vm | v12/v13 session reflection | proposed, author decides |
+| FRC-0033..0038 | 2026-09-30 | dev-vm | v12/v13 session reflection; rules SP-22..SP-24 + SP-21 text (author) | applied (skill v0.8) |

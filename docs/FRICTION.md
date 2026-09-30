@@ -164,3 +164,5 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0038 - Stale wait loops left running
 
 **2026-09-30, v12/v13.** Two `until grep ...` wait loops waited on strings that never came (lane log had no end marker; foreground loop moved to background) and needed TaskStop. Bucket: tooling. Root cause: waited on log text, not on job's own completion notification. Proposed rule: none new (SS-07 already: wait on job notification; no parallel poll loop).
+
+**Applied 2026-09-30 (author: all 4):** FRC-0033 + FRC-0034 -> `sushi-packer-code:SP-22`, FRC-0035 -> `SP-23`, FRC-0036 -> `SP-24`, FRC-0037 -> `SP-21` text; FRC-0038 no rule. Skill v0.8.
