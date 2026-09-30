@@ -140,3 +140,27 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 **2026-09-29, v1.12 PUB.** First box had unchained `git push origin ...:main` after `gh run watch` (set -e covered it, but hook BL-7 flagged) and no `# sample:` for the jq parser (BX-3); re-issued with `Replaces:`. Bucket: operator-blocks. Root cause: ran `bash -n` only, not the box lint the hook runs. Proposed rule: run box lint (`guards/boxlint.py`) on every box before sending.
 
 **Applied 2026-09-29 (author: approve):** FRC-0027 -> `sushi-packer-code:SP-17` + `docs/RULINGS.md`, FRC-0028 -> `SP-18`, FRC-0029 -> `SP-19`, FRC-0030 -> `SP-20`, FRC-0032 -> `SP-21`; FRC-0031 -> report to `~/skills` owner. Skill v0.7.
+
+## FRC-0033 - First v1.13 plan rejected twice for format; skipped known plan rules
+
+**2026-09-30, v12 plan.** First plan lacked simple opening, Done-definition, lane layout and headless testing; author rejected ("plan to be written in caveman full ...", "plan must include headless factorio testing"), then again ("before fixing the bug must be reproduced by headless factorio"). Rules were already in memory `plan-format` and `no-root-cause-without-repro`. Bucket: planning. Root cause: plan written from grill answers without re-reading plan memories; offline fake counted as repro. Proposed rule: every plan opens with checklist from `plan-format` (opening, Done =, lanes, integrator loop) and names headless red repro step before any fix step (or author's in-game repro text).
+
+## FRC-0034 - Lane launch refused: task file only on int branch (CX-26)
+
+**2026-09-30, v12 S0.** `lane.py launch <wt> docs/tasks/032_copy.md` from main checkout refused `task file must live under .../sushi-packer-mod/docs/tasks` — task committed on `int/v12` only. Relaunch with `--repo ~/wt-sushi-packer-int-v12` worked. Cost ~1 min. Bucket: tooling. Root cause: launch repo root = cwd repo, not integrator worktree. Proposed rule: launch lanes with `--repo <int worktree>` (add to memory `lane-launch-blocks`).
+
+## FRC-0035 - Version bump missed second pin; one extra full-suite round
+
+**2026-09-30, v1.13 INT.** Bump edited `test_stage.lua` lines 11-18, 35 by line range; pin at line 50 (`portal logo and description in repo`) stayed `0.1.12` -> both full suites red on one offline test, second round needed (~12 min dev-vm). v1.14 bump grepped every old version string first: green round 1. Bucket: proving. Root cause: sed by line numbers instead of grep for old version. Proposed rule: version bump = `grep -rn <old ver>` over tests/ tools/ README portal first; every hit either bumped or listed as history.
+
+## FRC-0036 - Portal thread scrape dropped screenshot; wrong grill question asked
+
+**2026-09-30, v13 grill.** Text scrape of them8 thread showed only "I think it has to do with the arig implementation"; screenshot (imgur, full error + mod list) missed. Asked author about wide mod matrix; author: "why not try 4 mods from the screenshot first?". Bucket: evidence. Root cause: HTML stripped to text, `<img>` dropped. Proposed rule: portal thread read lists every `<img>` and reads each image before first grill question.
+
+## FRC-0037 - boxlint called with path as COMMAND
+
+**2026-09-30, v1.13 PUB.** `boxlint.py <file>` linted the path string (false BL-1/BL-2); `--file <path>` needed. Bucket: tooling. Root cause: usage not read. Proposed rule: SP-21 text names `guards/boxlint.py --file <box>`.
+
+## FRC-0038 - Stale wait loops left running
+
+**2026-09-30, v12/v13.** Two `until grep ...` wait loops waited on strings that never came (lane log had no end marker; foreground loop moved to background) and needed TaskStop. Bucket: tooling. Root cause: waited on log text, not on job's own completion notification. Proposed rule: none new (SS-07 already: wait on job notification; no parallel poll loop).
