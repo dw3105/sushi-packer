@@ -1,5 +1,5 @@
 {
-  "_doc": "v9 headless mod sets (REQUIREMENTS \u00a717). mods = top-level; required deps resolved by tools/fetch_mods.py into tests/mods.lock.json. settings = startup overrides. v10: builtin_off = true disables space-age, quality, elevated-rails, recycler in mod-list (no-SA game).",
+  "_doc": "v9 headless mod sets (REQUIREMENTS §17). mods = top-level; required deps resolved by tools/fetch_mods.py into tests/mods.lock.json. settings = startup overrides. v10: builtin_off = true disables space-age, quality, elevated-rails, recycler in mod-list (no-SA game).",
   "arig": {
     "fv": [
       "2.0",
@@ -109,5 +109,18 @@
     "mods": [
       "AdvancedBeltsUpdated"
     ]
+  },
+  "them8": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "planetaris-arig",
+      "Mining_Drones_Remastered",
+      "aai-containers",
+      "panglia_planet"
+    ],
+    "_note": "FND-0034: portal them8 2026-09-30, screenshot 0.1.12 + MD 2.1.5 + aai-containers 0.3.2 + panglia 0.5.8"
   }
 }

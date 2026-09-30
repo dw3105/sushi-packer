@@ -18,6 +18,12 @@
       "url": "/download/ChangeInserterDropLane/68e9386d4a859387912fe409",
       "version": "1.2.0"
     },
+    "Cloning-vat-building": {
+      "file": "Cloning-vat-building_1.0.4.zip",
+      "sha1": "8bb8ebf24d0a5b74e67709061f9cf6a5b1f896d7",
+      "url": "/download/Cloning-vat-building/68b01b3a26557832a0573837",
+      "version": "1.0.4"
+    },
     "Krastorio2-spaced-out": {
       "file": "Krastorio2-spaced-out_1.6.21.zip",
       "sha1": "09b50767f7a140dadfb44df4f03e7cd382b27188",
@@ -35,6 +41,24 @@
       "sha1": "61b4aac582cb271cc081d1395585367ab181855d",
       "url": "/download/Krastorio2MenuSimulations/689f86a5d6d62e707879d63b",
       "version": "2.0.2"
+    },
+    "Mining_Drones_Remastered": {
+      "file": "Mining_Drones_Remastered_2.1.5.zip",
+      "sha1": "189613363b310fa489608c698bcf7fb40f656e0a",
+      "url": "/download/Mining_Drones_Remastered/6851b83a7a9296ffdc55b3ab",
+      "version": "2.1.5"
+    },
+    "Moshine": {
+      "file": "Moshine_1.1.4.zip",
+      "sha1": "f463192a9cfa0f7088baa96e60126456c6105a2b",
+      "url": "/download/Moshine/6a2f1a94c7ce38a47153126b",
+      "version": "1.1.4"
+    },
+    "Moshine-assets": {
+      "file": "Moshine-assets_0.4.0.zip",
+      "sha1": "bc051835b46480ac7adffb6d0adb2414ce7bc64d",
+      "url": "/download/Moshine-assets/68e9a00f9eee4d33ba615f45",
+      "version": "0.4.0"
     },
     "PlanetsLib": {
       "file": "PlanetsLib_1.18.0.zip",
@@ -126,6 +150,42 @@
       "url": "/download/lamp-post/6a9c00ed6ad12f110f02541e",
       "version": "1.0.5"
     },
+    "long_stack_inserter": {
+      "file": "long_stack_inserter_1.0.1.zip",
+      "sha1": "772c1c98b83d749e2bb38f936738e2c7c8a03757",
+      "url": "/download/long_stack_inserter/67c3293ab8975c422b24167e",
+      "version": "1.0.1"
+    },
+    "matter_printer": {
+      "file": "matter_printer_0.2.1.zip",
+      "sha1": "8c0887e612cad7233f05290ba13f0f3f49e6e3d3",
+      "url": "/download/matter_printer/6a37f5f83d7667ecbea2fe97",
+      "version": "0.2.1"
+    },
+    "minimalist-rails": {
+      "file": "minimalist-rails_2.0.6.zip",
+      "sha1": "8d90fcb2cc838131b38c09f9196f0d344740226c",
+      "url": "/download/minimalist-rails/6a2f12c1567ecb5062eec201",
+      "version": "2.0.6"
+    },
+    "module-category-defaults": {
+      "file": "module-category-defaults_1.3.0.zip",
+      "sha1": "14359e5c77f68a5ee4919191896a9dbe44f6d294",
+      "url": "/download/module-category-defaults/6a2584bf38fcc28b63d02e01",
+      "version": "1.3.0"
+    },
+    "panglia_planet": {
+      "file": "panglia_planet_0.5.8.zip",
+      "sha1": "cdcf6f0f3ab9220a2ee8b02a8bcfa193d848889b",
+      "url": "/download/panglia_planet/6a37ffcc63768ca99f14e91b",
+      "version": "0.5.8"
+    },
+    "panglia_planet_assets": {
+      "file": "panglia_planet_assets_0.1.3.zip",
+      "sha1": "4e4d9f2bea2efb877576d2f7edd5f45f23816d9c",
+      "url": "/download/panglia_planet_assets/68ea3ff809d8ec7941aa865f",
+      "version": "0.1.3"
+    },
     "planetaris-arig": {
       "file": "planetaris-arig_1.1.46.zip",
       "sha1": "a3214c0cd1d7d5c632c282f77a7088d7cd779ec3",
@@ -144,11 +204,53 @@
       "url": "/download/robot_attrition/6a00a2fe888659f6aa24fc87",
       "version": "0.6.6"
     },
+    "se-space-trains": {
+      "file": "se-space-trains_1.0.12.zip",
+      "sha1": "362fa0b65a54d407e5fb84973c62ec39da7b545f",
+      "url": "/download/se-space-trains/6a09a8c5b45f34dd88bc7c03",
+      "version": "1.0.12"
+    },
     "shield-projector": {
       "file": "shield-projector_0.2.2.zip",
       "sha1": "b38f2d3efa04d91550bef133dd103bf6c015f091",
       "url": "/download/shield-projector/67343483e72dc5b3454f9ee2",
       "version": "0.2.2"
+    },
+    "snouz-big-accumulator": {
+      "file": "snouz-big-accumulator_1.0.5.zip",
+      "sha1": "696a52477953a5a35fa0135a386a52884816a206",
+      "url": "/download/snouz-big-accumulator/689db5685f1e17711f5c260f",
+      "version": "1.0.5"
+    },
+    "snouz-big-solar-panel": {
+      "file": "snouz-big-solar-panel_1.0.6.zip",
+      "sha1": "9cc40ada1cae86c0a7dd524dabf928ab4b943d8a",
+      "url": "/download/snouz-big-solar-panel/689db57774d4905259e03be6",
+      "version": "1.0.6"
+    },
+    "snouz_better_asteroid_collector": {
+      "file": "snouz_better_asteroid_collector_1.0.3.zip",
+      "sha1": "146228862ef0a442139cd87bc8d0a7d07433add6",
+      "url": "/download/snouz_better_asteroid_collector/68cb2fda9dbca653ffd5bc07",
+      "version": "1.0.3"
+    },
+    "snouz_better_substation": {
+      "file": "snouz_better_substation_1.2.1.zip",
+      "sha1": "930c036e849670c44fc420d6c1251386ee2dd512",
+      "url": "/download/snouz_better_substation/689db4d974d4905259e03be4",
+      "version": "1.2.1"
+    },
+    "snouz_long_electric_gun_turret": {
+      "file": "snouz_long_electric_gun_turret_1.0.8.zip",
+      "sha1": "d6b87bd0118ade9e68228387b6166d17376748f7",
+      "url": "/download/snouz_long_electric_gun_turret/68d9552ab50c3ec66cca6295",
+      "version": "1.0.8"
+    },
+    "snouz_space_platform_hull": {
+      "file": "snouz_space_platform_hull_1.0.1.zip",
+      "sha1": "17a4acc26ed69f76ef7b332a75aa8bf9ac3d0e93",
+      "url": "/download/snouz_space_platform_hull/68e430a62274f8bdef759a50",
+      "version": "1.0.1"
     },
     "space-exploration": {
       "file": "space-exploration_0.7.57.zip",
@@ -197,6 +299,12 @@
       "sha1": "d6ecccfc3205a0cdac647f127d71969317eea06f",
       "url": "/download/space-exploration-postprocess/69e5238ce47d8455bd3cfb6a",
       "version": "0.7.5"
+    },
+    "thinking_brain": {
+      "file": "thinking_brain_1.2.4.zip",
+      "sha1": "69ec5f6801ba694219a1bbbd07bce64e1d06a459",
+      "url": "/download/thinking_brain/68b0249025ebfa7de8695348",
+      "version": "1.2.4"
     }
   },
   "2.1": {
@@ -205,6 +313,12 @@
       "sha1": "d1e0f6728f93564bbb623e5ea15b19ea55117a15",
       "url": "/download/ChangeInserterDropLane/6a3da0182020ee94ff46cf38",
       "version": "1.3.0"
+    },
+    "Cloning-vat-building": {
+      "file": "Cloning-vat-building_1.0.7.zip",
+      "sha1": "03c8db803ace9502b946d8aa62c3f3f5ba9c6569",
+      "url": "/download/Cloning-vat-building/6aa522a561eaaa789f42bb0a",
+      "version": "1.0.7"
     },
     "Krastorio2": {
       "file": "Krastorio2_2.1.3.zip",
@@ -229,6 +343,24 @@
       "sha1": "ead8df6d63241e8cb6f0f0def3894d5efa1de3b2",
       "url": "/download/Krastorio2MenuSimulations/6a3d9eab10acfc28e4c66c1f",
       "version": "2.1.0"
+    },
+    "Mining_Drones_Remastered": {
+      "file": "Mining_Drones_Remastered_2.3.0.zip",
+      "sha1": "a6067a065e39131501138aef4ff4c347550e11a9",
+      "url": "/download/Mining_Drones_Remastered/6a9d3822d5ee63acab6ed0f6",
+      "version": "2.3.0"
+    },
+    "Moshine": {
+      "file": "Moshine_1.2.11.zip",
+      "sha1": "57094e74ffdc41190589dc1842e4288e6fab3f16",
+      "url": "/download/Moshine/6ab2a20eb8062ae04dc059de",
+      "version": "1.2.11"
+    },
+    "Moshine-assets": {
+      "file": "Moshine-assets_1.0.2.zip",
+      "sha1": "992305e8d3b2acb65862421814579cc06525fb26",
+      "url": "/download/Moshine-assets/6a8d6e424e2327746bc8b4c5",
+      "version": "1.0.2"
     },
     "PlanetsLib": {
       "file": "PlanetsLib_2.0.6.zip",
@@ -314,6 +446,42 @@
       "url": "/download/lamp-post/6a9c00fcd64f464787f77210",
       "version": "1.0.6"
     },
+    "long_stack_inserter": {
+      "file": "long_stack_inserter_1.1.1.zip",
+      "sha1": "c0f35119e6ea0da24b67ec9dae13025d839af168",
+      "url": "/download/long_stack_inserter/6a3a8aafe68e5d26a9367480",
+      "version": "1.1.1"
+    },
+    "matter_printer": {
+      "file": "matter_printer_0.2.5.zip",
+      "sha1": "87a55a48e177f076ac3cdfa34fa947b06d628384",
+      "url": "/download/matter_printer/6aa522be2f8c707cce5358e7",
+      "version": "0.2.5"
+    },
+    "minimalist-rails": {
+      "file": "minimalist-rails_2.0.9.zip",
+      "sha1": "5ea23e41c2067d3357befd0ad021d9261943a76b",
+      "url": "/download/minimalist-rails/6ab2a56dc7e67e10f219c327",
+      "version": "2.0.9"
+    },
+    "module-category-defaults": {
+      "file": "module-category-defaults_2.2.0.zip",
+      "sha1": "ea74b614e13fcb71c270a776ff771055a94c34d8",
+      "url": "/download/module-category-defaults/6a711016b01ca1c572477a05",
+      "version": "2.2.0"
+    },
+    "panglia_planet": {
+      "file": "panglia_planet_0.7.2.zip",
+      "sha1": "34cd213ca0ca16fe58c8cbe06fcb9641dbbe6111",
+      "url": "/download/panglia_planet/6abd0493e8efdd3232c1c071",
+      "version": "0.7.2"
+    },
+    "panglia_planet_assets": {
+      "file": "panglia_planet_assets_0.7.0.zip",
+      "sha1": "1ee77d0a141f1987c76e15d9b8e688b2d31636ab",
+      "url": "/download/panglia_planet_assets/6abad3e5dc923b99eba74b0a",
+      "version": "0.7.0"
+    },
     "planetaris-arig": {
       "file": "planetaris-arig_1.1.47.zip",
       "sha1": "4661d0aaefa1e6a9820e942e5aa4a8691f0514c8",
@@ -332,11 +500,53 @@
       "url": "/download/robot_attrition/6a3b931539f8ab4048ac8904",
       "version": "0.7.0"
     },
+    "se-space-trains": {
+      "file": "se-space-trains_1.1.4.zip",
+      "sha1": "ea8a012a4184d7ef407716f13fd3bb9c0b7bb9b8",
+      "url": "/download/se-space-trains/6ab8dab42051ffc94bea45b8",
+      "version": "1.1.4"
+    },
     "shield-projector": {
       "file": "shield-projector_0.3.0.zip",
       "sha1": "81c142b4d3d20e211e07008112a88a72c0c8b42f",
       "url": "/download/shield-projector/6a3b92f586ba470d8520dbe8",
       "version": "0.3.0"
+    },
+    "snouz-big-accumulator": {
+      "file": "snouz-big-accumulator_1.2.1.zip",
+      "sha1": "188f26ef2c30caad39adbb1a19bdbbfa78592af8",
+      "url": "/download/snouz-big-accumulator/6aa522dd2f6b5d955ed33f29",
+      "version": "1.2.1"
+    },
+    "snouz-big-solar-panel": {
+      "file": "snouz-big-solar-panel_1.2.2.zip",
+      "sha1": "e21fc4fc765b6ed53d61357903adf63a97997199",
+      "url": "/download/snouz-big-solar-panel/6aa522f09552a9007bda2a9a",
+      "version": "1.2.2"
+    },
+    "snouz_better_asteroid_collector": {
+      "file": "snouz_better_asteroid_collector_1.0.4.zip",
+      "sha1": "f60a2f7d656dec414ffd4285e8d20c7795a2847e",
+      "url": "/download/snouz_better_asteroid_collector/6a3a94cbbb86c16dfe567147",
+      "version": "1.0.4"
+    },
+    "snouz_better_substation": {
+      "file": "snouz_better_substation_1.2.2.zip",
+      "sha1": "5ea60fe0749cf0ebf662911d001cb09930e40329",
+      "url": "/download/snouz_better_substation/6a3a8b08e68e5d26a9367481",
+      "version": "1.2.2"
+    },
+    "snouz_long_electric_gun_turret": {
+      "file": "snouz_long_electric_gun_turret_1.0.9.zip",
+      "sha1": "1da2c02d139fd58267d7cdefb5298ef76c227da6",
+      "url": "/download/snouz_long_electric_gun_turret/6a3a93ee9245f1b9ed0cd405",
+      "version": "1.0.9"
+    },
+    "snouz_space_platform_hull": {
+      "file": "snouz_space_platform_hull_1.0.3.zip",
+      "sha1": "933dc0a5cae2f128df55a76f189e58cf0507f591",
+      "url": "/download/snouz_space_platform_hull/6a85a49a8fe34d6eeb1ba852",
+      "version": "1.0.3"
     },
     "space-exploration": {
       "file": "space-exploration_0.7.62.zip",
@@ -385,6 +595,18 @@
       "sha1": "e400b86014cdc3c4d3d1e1097c3a688c74c12bcd",
       "url": "/download/space-exploration-postprocess/6a549dbc20094db02ee637d2",
       "version": "0.7.6"
+    },
+    "sun_heat_and_cooling": {
+      "file": "sun_heat_and_cooling_1.3.9.zip",
+      "sha1": "5f337c1eda1d6f7a001b4fcd099d8e5390428a4c",
+      "url": "/download/sun_heat_and_cooling/6ab2a15a41a585544643cf83",
+      "version": "1.3.9"
+    },
+    "thinking_brain": {
+      "file": "thinking_brain_1.2.7.zip",
+      "sha1": "d749fa726a662be59bee2280ac1aa87da518d1eb",
+      "url": "/download/thinking_brain/6aa522c32f6b5d955ed33f28",
+      "version": "1.2.7"
     }
   }
 }
