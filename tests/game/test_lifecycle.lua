@@ -169,7 +169,7 @@ describe("lifecycle", function()
     local inv = game.create_inventory(1); inv[1].set_stack({ name = "blueprint" })
     inv[1].create_blueprint({ surface = surface, force = force, area = { { -1, -1 }, { 1, 1 } } })
     local mapping = { get = function() return { [1] = e } end }
-    copy.on_setup_blueprint({ record = inv[1], mapping = mapping })
+    copy.on_setup_blueprint({ stack = inv[1], mapping = mapping })  -- stack, never fake record (FND-0033)
     local be = inv[1].get_blueprint_entities()[1]
     assert.are_equal(N.placer("yellow"), be.name)
     assert.are_equal(defines.direction.east, be.direction)
@@ -182,7 +182,7 @@ describe("lifecycle", function()
     local rec = registry.new_rec(e); rec.settings.timeout_s = 19
     local inv = game.create_inventory(1); inv[1].set_stack({ name = "blueprint" })
     inv[1].create_blueprint({ surface = surface, force = force, area = { { -1, -1 }, { 1, 1 } } })
-    copy.on_setup_blueprint({ record = inv[1], mapping = { get = function() return { [1] = e } end } })
+    copy.on_setup_blueprint({ stack = inv[1], mapping = { get = function() return { [1] = e } end } })
     local ghosts = inv[1].build_blueprint({ surface = surface, force = force, position = { 5.5, 5.5 }, direction = defines.direction.east })
     assert.are_equal(1, #ghosts)
     ghosts[1].revive({ raise_revive = true })

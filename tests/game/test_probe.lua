@@ -325,5 +325,15 @@ describe("probe", function()
       end)
     end
   end)
+  it("library record reachable", function()
+    -- FND-0033 S0 (2.0.77 + 2.1.20, 2026-09-30): test game has empty libraries, no cursor record; no API creates
+    -- a LuaRecord. So library-record tests use offline fake (tests/offline/test_copy.lua). Red here = real record
+    -- became reachable: move repro to game test.
+    assert.are_equal(0, #game.blueprints)
+    for _, pl in pairs(game.players) do
+      assert.are_equal(0, #pl.blueprints)
+      assert.is_nil(pl.cursor_record)
+    end
+  end)
 end)
 
