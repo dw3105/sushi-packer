@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.14
+Date: 2026-09-30
+  Bugfixes:
+    - Fixed a load error with Mining Drones Remastered and Planetaris: Arig ("next_upgrade target must have the same collision mask").
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.14
+Date: 2026-09-30
+  Bugfixes:
+    - Fixed a load error with Mining Drones Remastered and Planetaris: Arig ("next_upgrade target must have the same collision mask").
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.13
 Date: 2026-09-30
   Bugfixes:

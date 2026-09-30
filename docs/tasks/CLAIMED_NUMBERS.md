@@ -34,3 +34,4 @@
 | `030` | `sushi-packer/agent` | v11 data: SE space root tier, chains by after, root recipe | 2026-09-29 |
 | `031` | `sushi-packer/agent` | v11 locale: SE space text, German locale | 2026-09-29 |
 | `032` | `sushi-packer/agent` | v12 copy: library record guard (FND-0033) | 2026-09-30 |
+| `033` | `sushi-packer/agent` | v13 extra: copy collision mask to extra tiers (FND-0034) | 2026-09-30 |
