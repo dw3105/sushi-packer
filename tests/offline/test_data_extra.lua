@@ -276,6 +276,35 @@ describe("data extra", function()
       eq(raw.container[N.variant("se-deep-space", dir)].collision_box, { { -0.3, -0.3 }, { 0.3, 0.3 } })
     end
   end)
+  it("extra box matches mask of vanilla box", function()
+    local raw = load("arig")
+    local mask = { layers = { item = true, object = true, player = true, water_tile = true, is_object = true, is_lower_object = true, mining_drone = true } }
+    for _, tier in ipairs({ "yellow", "red", "blue", "turbo" }) do
+      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_mask = mask end
+    end
+    require("prototypes.extra").build(raw)
+    for _, dir in ipairs(N.DIRS) do
+      local copied = raw.container[N.variant("planetaris-hyper", dir)].collision_mask
+      eq(copied, mask)
+      ok(copied ~= raw.container[N.variant("turbo", dir)].collision_mask, "mask must be deep-copied")
+    end
+  end)
+  it("extra mask copied into every chain", function()
+    local raw = load("se")
+    local mask = { layers = { item = true, object = true, player = true, water_tile = true, is_object = true, is_lower_object = true, mining_drone = true } }
+    for _, tier in ipairs({ "yellow", "red", "blue" }) do
+      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_mask = mask end
+    end
+    require("prototypes.extra").build(raw)
+    for _, tier in ipairs({ "se-space", "se-deep-space" }) do
+      for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier, dir)].collision_mask, mask) end
+    end
+  end)
+  it("nil mask stays nil", function()
+    local raw = load("arig")
+    require("prototypes.extra").build(raw)
+    for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("planetaris-hyper", dir)].collision_mask, nil) end
+  end)
   it("se space root recipe", function()
     local raw = load("se"); require("prototypes.extra").build(raw)
     eq(ingredient_pairs(raw.recipe[N.item("se-space")]), {{"steel-chest",1},{"se-space-splitter",1},{"bulk-inserter",4},{"processing-unit",10}})
