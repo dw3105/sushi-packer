@@ -38,7 +38,12 @@ end
 
 function M.on_setup_blueprint(e)
   local bp = e.record or e.stack
-  if not bp or not bp.valid_for_read or not bp.is_blueprint then return end
+  if not bp then return end
+  if bp.object_name == "LuaRecord" then
+    if not bp.valid or bp.type ~= "blueprint" or not bp.valid_for_write then return end
+  elseif not bp.valid_for_read or not bp.is_blueprint then
+    return
+  end
   local entities = bp.get_blueprint_entities()
   if not entities then return end
   local mapping = e.mapping and e.mapping.get and e.mapping.get() or {}
