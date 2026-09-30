@@ -104,6 +104,8 @@ function M.build(raw)
         -- upgrade chain needs one bounding box, so extras copy the top vanilla box.
         for _, row in ipairs(rows) do
           raw.container[N.variant(row.key, dir)].collision_box = table.deepcopy(base.collision_box)
+          -- FND-0034: mods may edit masks before this runs (Mining Drones adds mining_drone layer); chain needs one mask.
+          raw.container[N.variant(row.key, dir)].collision_mask = table.deepcopy(base.collision_mask)
         end
       end
     end
