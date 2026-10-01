@@ -121,6 +121,24 @@ function M.skip(rec, lane, kinds)
   rec.skip[lane] = signature
 end
 
+-- F-1: does an arm of this lane hold an item whose kind has no slot in the lane store yet?
+function M.need_slot(rec, lane, contents)
+  for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do
+    if _valid(arm) then
+      local held = arm.held_stack
+      if held and held.valid_for_read then
+        local name, quality, found = held.name, held.quality.name, false
+        for i = 1, #contents do
+          local c = contents[i]
+          if c.name == name and c.quality == quality then found = true; break end
+        end
+        if not found then return true end
+      end
+    end
+  end
+  return false
+end
+
 function M.ensure(rec)
   local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
   local broken = false

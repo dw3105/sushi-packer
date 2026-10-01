@@ -78,7 +78,8 @@ function M.plan(state, lane, contents, opts)
     end
   end
 
-  if not priority_output and not timed_output and not flush_all and opts.slots_used >= opts.slots then
+  -- F-1: only when an arriving item needs a slot (caller may say need_slot = false: nothing new waits).
+  if not priority_output and not timed_output and not flush_all and opts.slots_used >= opts.slots and opts.need_slot ~= false then
     -- Store pressure flushes one oldest leftover, but never competes with a full/skip/timed flush.
     for _, i in ipairs(indices) do
       if not (opts.skip and opts.skip(names[i], qualities[i])) then
@@ -93,12 +94,16 @@ function M.plan(state, lane, contents, opts)
   return out
 end
 
-function M.hoard(contents, stack_size)
+-- C-6: kinds a lane must stop taking. Arms that already hold items still drop them, so block `slack` items before
+-- one inventory stack is reached; never below `floor` (one belt stack), else a kind could never fill a stack to leave.
+function M.hoard(contents, stack_size, slack, floor)
   local names, qualities, counts = {}, {}, {}
   local indices = {}
   for i = 1, #contents do
     local item = contents[i]
-    if item.count >= stack_size(item.name) then
+    local limit = stack_size(item.name) - (slack or 0)
+    if limit < (floor or 1) then limit = floor or 1 end
+    if item.count >= limit then
       names[i], qualities[i], counts[i] = item.name, item.quality, item.count
       indices[#indices + 1] = i
     end

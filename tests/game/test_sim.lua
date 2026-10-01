@@ -68,8 +68,11 @@ describe("sim", function()
           for lane = 1, 2 do out = out + #belt.get_transport_line(lane) end
         end
         local rec = storage.boxes[box.unit_number]
-        local r = string.format("out belt items=%d stored=%d bss=%s ready=%d/%d partials=%d", out, rec.box.stored_count,
-          tostring(storage.belt_stack[force.index]), #rec.box.ready[1], #rec.box.ready[2], #rec.box.partials)
+        assert.is_not_nil(rec, "box registered")
+        -- v15 arms box: state = two lane stores
+        local r = string.format("out belt items=%d bss=%s lane stores=%d/%d items, %d/%d slots", out,
+          tostring(storage.belt_stack[force.index]), rec.invs[1].get_item_count(), rec.invs[2].get_item_count(),
+          #rec.invs[1] - rec.invs[1].count_empty_stacks(), #rec.invs[2] - rec.invs[2].count_empty_stacks())
         force.belt_stack_size_bonus = 0; storage.belt_stack = {}
         assert.is_true(out > 0, r)
         done()
@@ -84,11 +87,15 @@ describe("sim", function()
     storage.boxes = {}
     sim.scene("tips")
     local behind = surface.find_entity("transport-belt", { -0.5, 0.5 })
-    local run, max, seen, start = { 0, 0 }, 0, 0, game.tick
+    local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+    assert.is_not_nil(box, "box built east")
+    local rec = storage.boxes[box.unit_number]
+    local run, max, seen, start = { 0, 0 }, 0, { 0, 0 }, game.tick
     on_tick(function()
       for lane = 1, 2 do
         local line = behind.get_transport_line(lane)
-        if #line > 0 then seen = seen + 1 end
+        -- v15 arms box: arms empty the tile behind the box at once; "reached box" = seen in that lane's store
+        seen[lane] = seen[lane] + rec.invs[lane].get_item_count()
         if #line > 0 and not line.can_insert_at(0) then
           run[lane] = run[lane] + 1
           if run[lane] > max then max = run[lane] end
@@ -98,8 +105,14 @@ describe("sim", function()
       end
       if game.tick - start >= 1500 then
         force.belt_stack_size_bonus = 0
-        assert.is_true(seen > 0, "items reached box")
+        assert.is_true(seen[1] > 0 and seen[2] > 0, "items reached box on both lanes")
         assert.is_true(max <= 2, "item rested at exit " .. max .. " ticks")
+        local out = 0
+        for x = 1, 11 do
+          local belt = surface.find_entity("transport-belt", { x + 0.5, 0.5 })
+          for lane = 1, 2 do out = out + #belt.get_transport_line(lane) end
+        end
+        assert.is_true(out > 0, "box output moves")
         return false
       end
     end)

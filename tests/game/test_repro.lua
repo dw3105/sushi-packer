@@ -3,7 +3,9 @@
 -- Recyclers above belt row 0 face south (drop 0.2 north of centre -> left lane), below row 1 face north (-> right lane).
 local N = require("scripts.names")
 local belt_io = require("scripts.belt_io")
-local core = require("scripts.core")
+
+-- v15 arms box: per-lane state = lane store inventory (rec.invs[lane]).
+local function used(rec, lane) return #rec.invs[lane] - rec.invs[lane].count_empty_stacks() end
 local D = defines.direction
 
 local function clear(surface)
@@ -38,7 +40,7 @@ describe("repro", function()
     local sink = surface.create_entity({ name = "infinity-chest", position = { 32.5, -14.5 }, force = force })
     sink.remove_unfiltered_items = true
     surface.create_entity({ name = N.placer("turbo"), position = { 32.5, -0.5 }, direction = D.north, force = force, raise_built = true })
-    local box = surface.find_entities_filtered({ position = { 32.5, -0.5 }, type = "container" })[1]
+    local box = surface.find_entities_filtered({ position = { 32.5, -0.5 }, name = N.variant("turbo", "north") })[1]
     assert.is_not_nil(box, "box built")
     for _, x in ipairs({ 2, 16, 30 }) do
       surface.create_entity({ name = "substation", position = { x, -9 }, force = force })
@@ -66,12 +68,6 @@ describe("repro", function()
       if n > 0 then pushes.ok[lane] = pushes.ok[lane] + 1; pushes.items[lane] = pushes.items[lane] + n end
       return n
     end
-    local real_accept, accepts = core.accept, { calls = { 0, 0 }, sizes = {} }
-    core.accept = function(b, name, q, lane, count, stack, tick, hold)
-      accepts.calls[lane] = accepts.calls[lane] + 1
-      accepts.sizes[count] = (accepts.sizes[count] or 0) + 1
-      return real_accept(b, name, q, lane, count, stack, tick, hold)
-    end
     local watch = front[#front - 1]  -- tile before loader: count items leaving per lane by unique_id
     local seen, out = { {}, {} }, { 0, 0 }
     local windows, last, start = {}, { 0, 0 }, game.tick
@@ -88,25 +84,18 @@ describe("repro", function()
       end
       local t = game.tick - start
       if t % 600 == 0 and t > 0 then
-        local b = rec.box
-        local pl = { 0, 0 }
-        for _, p in ipairs(b.partials) do pl[p.lane] = pl[p.lane] + 1 end
         local kinds = {}
-        for _, x in ipairs(box.get_inventory(defines.inventory.chest).get_contents()) do kinds[#kinds + 1] = x.name .. "=" .. x.count end
+        for lane = 1, 2 do
+          for _, x in ipairs(rec.invs[lane].get_contents()) do kinds[#kinds + 1] = "L" .. lane .. ":" .. x.name .. "=" .. x.count end
+        end
         table.sort(kinds)
-        local line = string.format("REPRO t=%d outL=+%d outR=+%d used=%d partialsL=%d partialsR=%d readyL=%d readyR=%d holdL=%s holdR=%s behindL=%d behindR=%d poll=%s stored=%s",
-          t, out[1] - last[1], out[2] - last[2], b.used_slots, pl[1], pl[2], #b.ready[1], #b.ready[2],
-          tostring(b.hold[1] and b.hold[1].name), tostring(b.hold[2] and b.hold[2].name), behind_lanes[1], behind_lanes[2],
+        local line = string.format("REPRO t=%d outL=+%d outR=+%d slotsL=%d slotsR=%d itemsL=%d itemsR=%d box=%d led=%s behindL=%d behindR=%d poll=%s stored=%s",
+          t, out[1] - last[1], out[2] - last[2], used(rec, 1), used(rec, 2), rec.invs[1].get_item_count(), rec.invs[2].get_item_count(),
+          box.get_inventory(defines.inventory.chest).get_item_count(), tostring(rec.led and rec.led.state), behind_lanes[1], behind_lanes[2],
           tostring(rec.next_poll), table.concat(kinds, ","))
-        local rs = {}
-        for _, q in ipairs(b.ready[1]) do rs[#rs + 1] = q.count end
-        local sz = {}
-        for c, n in pairs(accepts.sizes) do sz[#sz + 1] = c .. "x" .. n end
-        table.sort(sz)
-        line = line .. string.format(" | push calls %d/%d ok %d/%d items %d/%d | accept calls %d/%d sizes %s | readyL counts %s",
-          pushes.calls[1], pushes.calls[2], pushes.ok[1], pushes.ok[2], pushes.items[1], pushes.items[2],
-          accepts.calls[1], accepts.calls[2], table.concat(sz, ","), table.concat(rs, ",", 1, math.min(#rs, 12)))
-        pushes = { calls = { 0, 0 }, ok = { 0, 0 }, items = { 0, 0 } }; accepts = { calls = { 0, 0 }, sizes = {} }
+        line = line .. string.format(" | push calls %d/%d ok %d/%d items %d/%d",
+          pushes.calls[1], pushes.calls[2], pushes.ok[1], pushes.ok[2], pushes.items[1], pushes.items[2])
+        pushes = { calls = { 0, 0 }, ok = { 0, 0 }, items = { 0, 0 } }
         print(line)
         if t == 600 then
           local r1 = recyclers[1]
@@ -121,7 +110,7 @@ describe("repro", function()
       if t >= LIMIT then
         local l, r = 0, 0
         for i = #windows - 11, #windows do l = l + windows[i][1]; r = r + windows[i][2] end
-        belt_io.push = real_push; core.accept = real_accept
+        belt_io.push = real_push
         force.belt_stack_size_bonus = 3; storage.belt_stack = {}
         assert.is_true(l > 0 and r > 0, "last 2 min out L=" .. l .. " R=" .. r)
         done()
@@ -178,8 +167,8 @@ describe("repro", function()
         end end
       end
       if game.tick % 1200 == 0 then
-        local b = rec.box
-        print(string.format("BP t=%d stacked L=%d R=%d stored=%d used=%d splitters %s", game.tick, stacked[1], stacked[2], b.stored_count, b.used_slots, table.concat(report, " ")))
+        print(string.format("BP t=%d stacked L=%d R=%d stored=%d/%d used=%d/%d splitters %s", game.tick, stacked[1], stacked[2],
+          rec.invs[1].get_item_count(), rec.invs[2].get_item_count(), used(rec, 1), used(rec, 2), table.concat(report, " ")))
       end
       if stacked[1] > 3 and stacked[2] > 3 then return false end
     end)
@@ -253,14 +242,15 @@ describe("repro", function()
         local function window(a, b) local s = 0; for _, d in ipairs(drained) do if d.t >= a and d.t < b then s = s + d.count end end; return s end
         local early, late = window(600, 2400), window(5400, 7200)
         local rec = storage.boxes[box.unit_number]
-        local lane_slots = { 0, 0 }
-        for _, p in ipairs(rec.box.partials) do lane_slots[p.lane] = lane_slots[p.lane] + 1 end
-        for l = 1, 2 do lane_slots[l] = lane_slots[l] + #rec.box.ready[l] end
+        local lane_slots = { used(rec, 1), used(rec, 2) }
         local r = string.format("FND-0019 right drained early=%d late=%d fed L=%d R=%d used=%d slotsL=%d slotsR=%d",
-          early, late, fed[1], fed[2], rec.box.used_slots, lane_slots[1], lane_slots[2])
+          early, late, fed[1], fed[2], lane_slots[1] + lane_slots[2], lane_slots[1], lane_slots[2])
         print(r)
         force.belt_stack_size_bonus = 3; storage.belt_stack = {}
         assert.is_true(early > 0 and late >= 0.8 * early, r)
+        -- left lane really was blocked the whole time: its items sit on the dead-end belt and in its lane store only
+        assert.are_equal(0, rec.invs[2].get_item_count("iron-plate") + rec.invs[2].get_item_count("copper-plate"), "lanes kept: " .. r)
+        assert.are_equal(0, rec.invs[1].get_item_count("coal") + rec.invs[1].get_item_count("stone"), "lanes kept: " .. r)
         done()
         return false
       end
@@ -288,13 +278,20 @@ describe("repro", function()
       end
       if game.tick - start >= 3600 then
         local rec = storage.boxes[box.unit_number]
-        local per_lane = { 0, 0 }
-        for _, p in ipairs(rec.box.partials) do if p.name == "iron-ore" then per_lane[p.lane] = per_lane[p.lane] + p.count end end
-        for l = 1, 2 do for _, p in ipairs(rec.box.ready[l]) do if p.name == "iron-ore" then per_lane[l] = per_lane[l] + p.count end end end
+        -- v15 arms box: per-lane count = lane store inventory; box container takes nothing from the belt.
+        local per_lane = { rec.invs[1].get_item_count("iron-ore"), rec.invs[2].get_item_count("iron-ore") }
         local chest = box.get_inventory(defines.inventory.chest).get_item_count("iron-ore")
-        local r = string.format("FND-0020 stack=%d chest=%d laneL=%d laneR=%d used=%d", cap, chest, per_lane[1], per_lane[2], rec.box.used_slots)
+        local waiting = { 0, 0 }
+        for _, b in ipairs(surface.find_entities_filtered({ name = "transport-belt", area = { { 0, 10 }, { 2, 11 } } })) do
+          for l = 1, 2 do waiting[l] = waiting[l] + b.get_transport_line(l).get_item_count("iron-ore") end
+        end
+        local r = string.format("FND-0020 stack=%d chest=%d laneL=%d laneR=%d usedL=%d usedR=%d waitL=%d waitR=%d", cap, chest,
+          per_lane[1], per_lane[2], used(rec, 1), used(rec, 2), waiting[1], waiting[2])
         print(r)
-        assert.is_true(per_lane[1] <= cap and per_lane[2] <= cap and chest <= 2 * cap, r)
+        assert.is_true(per_lane[1] <= cap and per_lane[2] <= cap and chest == 0, r)
+        assert.is_true(used(rec, 1) <= 1 and used(rec, 2) <= 1, "one item stack per lane: " .. r)
+        assert.is_true(per_lane[1] > 0 and per_lane[2] > 0, "both lanes took items: " .. r)
+        assert.is_true(waiting[1] > 0 and waiting[2] > 0, "items over the cap wait on belt: " .. r)
         done()
         return false
       end

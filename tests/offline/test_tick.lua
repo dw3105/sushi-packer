@@ -134,4 +134,31 @@ describe("tick", function()
   it("visit gap follows belt item gap", function()
     tick._reset_intervals(); prototypes={entity=require("tests.offline.belts")}; eq(tick._interval("yellow"),8); eq(tick._interval("red"),4); eq(tick._interval("blue"),1); eq(tick._interval("turbo"),2)
   end)
+  it("full lane store asks arms whether a new kind waits", function()
+    local f=fixture(); local asked={}
+    local old=arms.need_slot; arms.need_slot=function(r,l,contents) asked[#asked+1]=l; return l==1 end
+    local full=inventory({{name="iron",quality="normal",count=2}}); full.count_empty_stacks=function() return 0 end
+    f.invs[1]=full; f.rec.invs=f.invs
+    f.run(1)
+    eq(asked,{1}); eq(f.plans[1].opts.need_slot,true); eq(f.plans[2].opts.need_slot,nil)
+    arms.need_slot=old; f.restore()
+  end)
+  it("hoard gets slack of arms in hand and belt stack floor", function()
+    local f=fixture(); f.rec.arms={{{},{}},{{},{}}}; local got
+    ledger.hoard=function(contents,size,slack,floor) got={slack,floor}; return {} end
+    f.invs[1]=inventory({{name="iron",quality="normal",count=2}}); f.rec.invs=f.invs
+    f.run(1); eq(got,{2*N.ARM_HAND,4}); f.restore()
+  end)
+  it("full lane store needs slot when belt behind carries a new kind", function()
+    -- engine (v15 INT, game test full box flushes oldest): arm does not pick up an item its store cannot take,
+    -- so the waiting kind is seen on the belt behind, not in an arm hand.
+    local f=fixture(); local old_need, old_kinds = arms.need_slot, belt_io.behind_kinds
+    arms.need_slot=function() return false end
+    local behind={ {{name="iron",quality="normal",count=3}}, {{name="copper",quality="normal",count=1}} }
+    belt_io.behind_kinds=function(r,l) return behind[l] end
+    for lane=1,2 do local full=inventory({{name="iron",quality="normal",count=2}}); full.count_empty_stacks=function() return 0 end; f.invs[lane]=full end
+    f.rec.invs=f.invs; f.run(1)
+    eq(f.plans[1].opts.need_slot,false); eq(f.plans[2].opts.need_slot,true)
+    arms.need_slot, belt_io.behind_kinds = old_need, old_kinds; f.restore()
+  end)
 end)

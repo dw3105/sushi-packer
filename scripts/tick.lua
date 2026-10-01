@@ -102,10 +102,21 @@ local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counte
   if filters and filters[1] ~= nil then
     skip = function(name, quality) return filter.match(filters, name, quality, levels()) end
   end
+  local need_slot
+  if slots_used >= N.STORE_SLOTS then  -- rare state: full store. New kind in an arm hand or waiting on belt behind?
+    need_slot = arms.need_slot(rec, lane, contents)
+    if not need_slot then
+      for _, w in ipairs(belt_io.behind_kinds(rec, lane) or {}) do
+        local found = false
+        for i = 1, #contents do if contents[i].name == w.name and contents[i].quality == w.quality then found = true; break end end
+        if not found then need_slot = true; break end
+      end
+    end
+  end
   local opts = { tick=tick, bss=bss, stack_size=stack_size, timeout_ticks=M.timeout_ticks(rec),
-    slots_used=slots_used, slots=N.STORE_SLOTS, skip=skip, flush_all=flush_all }
+    slots_used=slots_used, slots=N.STORE_SLOTS, skip=skip, flush_all=flush_all, need_slot=need_slot }
   local plan = ledger.plan(rec.ledger, lane, contents, opts)
-  local kinds = ledger.hoard(contents, stack_size)
+  local kinds = ledger.hoard(contents, stack_size, #(rec.arms[lane] or {}) * N.ARM_HAND, bss)
   arms.skip(rec, lane, kinds)
   local extra_lane = false
   for _, entry in ipairs(rec.extra or {}) do if entry.lane == lane and entry.count > 0 then extra_lane = true; break end end

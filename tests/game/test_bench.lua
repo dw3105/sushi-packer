@@ -7,6 +7,26 @@ local function clear(surface)
   end
 end
 
+-- v15 arms box: arms empty the belt tile behind the box at once, so "lane fed" is read where items go:
+-- per lane, over `ticks`: items seen in that lane's store, and on that lane of the belt tile in front of the box.
+local function watch_lanes(surface, p, tier, belt, ticks, check)
+  local box = surface.find_entity(N.variant(tier, "west"), p)
+  assert.is_not_nil(box, "box built")
+  local rec = storage.boxes[box.unit_number]
+  assert.is_not_nil(rec, "box registered")
+  local out = surface.find_entities_filtered({ position = { p.x - 1, p.y }, name = belt })
+  assert.are_equal(1, #out)
+  local stored, left, t = { 0, 0 }, { 0, 0 }, 0
+  on_tick(function()
+    t = t + 1
+    for lane = 1, 2 do
+      stored[lane] = stored[lane] + rec.invs[lane].get_item_count()
+      left[lane] = left[lane] + #out[1].get_transport_line(lane)
+    end
+    if t >= ticks then check(stored, left); return false end
+  end)
+end
+
 describe("bench", function()
   local surface, force
   before_each(function()
@@ -27,13 +47,11 @@ describe("bench", function()
 
   it("setup feeds both lanes", function()
     local positions = builder.build(surface, force, 1, { 0, 0 })
-    local box_pos = positions[1]
-    after_ticks(240, function()
-      local input = surface.find_entities_filtered({ position = { box_pos.x + 1, box_pos.y }, type = "transport-belt" })
-      assert.are_equal(1, #input)
-      local lane1, lane2 = input[1].get_transport_line(1).get_contents(), input[1].get_transport_line(2).get_contents()
-      assert.is_true(next(lane1) ~= nil, "left input lane receives items")
-      assert.is_true(next(lane2) ~= nil, "right input lane receives items")
+    watch_lanes(surface, positions[1], "yellow", "transport-belt", 240, function(stored, left)
+      assert.is_true(stored[1] > 0, "left lane store receives items")
+      assert.is_true(stored[2] > 0, "right lane store receives items")
+      assert.is_true(left[1] > 0, "left output lane carries items")
+      assert.is_true(left[2] > 0, "right output lane carries items")
     end)
   end)
   -- v14 (V14-4, FND-0036): tier + stacks flow built by engine-only merge feed. Test env has no bench mod -> sp-test-loader.
@@ -70,12 +88,11 @@ describe("bench", function()
 
   it("single flow on fast tier feeds both lanes", function()
     local positions = builder.build(surface, force, 1, { 0, 0 }, { tier = "blue", loader = "sp-test-loader" })
-    local p = positions[1]
-    after_ticks(240, function()
-      local input = surface.find_entities_filtered({ position = { p.x + 1, p.y }, name = "express-transport-belt" })
-      assert.are_equal(1, #input)
-      assert.is_true(#input[1].get_transport_line(1) > 0, "left input lane receives items")
-      assert.is_true(#input[1].get_transport_line(2) > 0, "right input lane receives items")
+    watch_lanes(surface, positions[1], "blue", "express-transport-belt", 240, function(stored, left)
+      assert.is_true(stored[1] > 0, "left lane store receives items")
+      assert.is_true(stored[2] > 0, "right lane store receives items")
+      assert.is_true(left[1] > 0, "left output lane carries items")
+      assert.is_true(left[2] > 0, "right output lane carries items")
     end)
   end)
 end)

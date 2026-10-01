@@ -2,7 +2,7 @@ local N = require("scripts.names")
 local registry = require("scripts.registry")
 local copy = require("scripts.copy")
 local led = require("scripts.led")
-local core = require("scripts.core")
+local arms = require("scripts.arms")
 
 local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -30, -30 }, { 30, 30 } } })) do
@@ -18,24 +18,29 @@ local function dropped_count(surface, name)
   return count
 end
 
-describe("lifecycle", function()
-  local surface, force, old_new_box
-  local saved_core = {}
-  local function fake(name, fn)
-    if saved_core[name] == nil then saved_core[name] = core[name] end
-    core[name] = fn
+-- v15 arms box: hidden parts (lane stores, arms) on a box tile.
+local function hidden_parts(surface, position)
+  return #surface.find_entities_filtered({ position = position, radius = 0.4, name = N.STORE }),
+    #surface.find_entities_filtered({ position = position, radius = 0.4, name = N.ARM })
+end
+
+-- Wires a player (or blueprint) made on a connector; lane stores hang on the box by script wires (V15-1).
+local function player_wires(connector)
+  local own, script_targets = {}, {}
+  for _, c in ipairs(connector and connector.connections or {}) do
+    if c.origin == defines.wire_origin.script then script_targets[#script_targets + 1] = c.target.owner.name
+    else own[#own + 1] = c end
   end
+  return own, script_targets
+end
+
+describe("lifecycle", function()
+  local surface, force
   before_each(function()
     surface, force = game.surfaces[1], game.forces.player
     clear(surface)
     storage.boxes = {}
     game.players[1].get_main_inventory().clear()
-    old_new_box = core.new_box
-    saved_core = {}
-  end)
-  after_each(function()
-    core.new_box = old_new_box
-    for name, fn in pairs(saved_core) do core[name] = fn end
   end)
 
   it("placer becomes variant facing its direction", function()
@@ -85,8 +90,12 @@ describe("lifecycle", function()
     c1.connect_to(c2, false)
     registry.swap(rec, "east")
     local newc = rec.entity.get_wire_connector(defines.wire_connector_id.circuit_red, false)
-    assert.are_equal(1, #newc.connections)
-    assert.are_equal(e2.unit_number, newc.connections[1].target.owner.unit_number)
+    local own, script_targets = player_wires(newc)
+    assert.are_equal(1, #own, "one player wire, as before swap")
+    assert.are_equal(e2.unit_number, own[1].target.owner.unit_number)
+    assert.are_equal(defines.wire_origin.player, own[1].origin)
+    -- v15: the only other wires are the script wires to the two lane stores
+    assert.are.same({ N.STORE, N.STORE }, script_targets)
   end)
 
   it("rotate input turns selected box", function()
@@ -98,36 +107,49 @@ describe("lifecycle", function()
   end)
 
   it("mining returns contents and hold to player", function()
-    fake("hold_items", function() return { { name = "copper-plate", count = 3 } } end)
-    fake("clear_hold", function() end)
-    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
-    registry.new_rec(e)
+    -- E-5 on v15 arms box (old hold is gone): box container items (extra) + lane store items go to player; no part left.
+    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force, raise_built = true })
+    local rec = registry.get(e)
+    assert.are.same({ 2, 2 * arms.count(prototypes.entity["transport-belt"].belt_speed) }, { hidden_parts(surface, { 0.5, 0.5 }) })
     e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 4 })
+    assert.are_equal(3, rec.invs[1].insert({ name = "copper-plate", count = 3 }))
+    assert.are_equal(5, rec.invs[2].insert({ name = "coal", count = 5 }))
     local player = game.players[1]
     player.mine_entity(e, true)
     assert.are_equal(4, player.get_main_inventory().get_item_count("iron-plate"))
     assert.are_equal(3, player.get_main_inventory().get_item_count("copper-plate"))
+    assert.are_equal(5, player.get_main_inventory().get_item_count("coal"))
+    assert.are.same({ 0, 0 }, { hidden_parts(surface, { 0.5, 0.5 }) }, "lane stores and arms gone with box")
+    assert.is_nil(next(storage.boxes), "rec gone")
+    assert.are_equal(0, dropped_count(surface, "copper-plate") + dropped_count(surface, "coal"), "nothing doubled on ground")
   end)
 
   it("mining with full inventory spills rest", function()
-    fake("hold_items", function() return { { name = "copper-plate", count = 10 } } end)
-    fake("clear_hold", function() end)
     local player = game.players[1]
     local inv = player.get_main_inventory(); inv.clear()
     inv.insert({ name = "iron-plate", count = 50000 })
-    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
-    registry.new_rec(e); player.mine_entity(e, true)
+    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force, raise_built = true })
+    local rec = registry.get(e)
+    assert.are_equal(10, rec.invs[1].insert({ name = "copper-plate", count = 10 }))
+    player.mine_entity(e, true)
     assert.are_equal(10, dropped_count(surface, "copper-plate"))
+    assert.are_equal(0, inv.get_item_count("copper-plate"))
+    assert.are.same({ 0, 0 }, { hidden_parts(surface, { 0.5, 0.5 }) }, "lane stores and arms gone with box")
   end)
 
   it("died box spills contents and hold", function()
-    fake("hold_items", function() return { { name = "copper-plate", count = 3 } } end)
-    fake("clear_hold", function() end)
-    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
-    registry.new_rec(e); e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 4 })
+    -- E-5 on v15 arms box: destroyed box spills box container items + lane store items; no part left.
+    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force, raise_built = true })
+    local rec = registry.get(e)
+    e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 4 })
+    assert.are_equal(3, rec.invs[1].insert({ name = "copper-plate", count = 3 }))
+    assert.are_equal(5, rec.invs[2].insert({ name = "coal", count = 5 }))
     e.die()
     assert.are_equal(4, dropped_count(surface, "iron-plate"))
     assert.are_equal(3, dropped_count(surface, "copper-plate"))
+    assert.are_equal(5, dropped_count(surface, "coal"))
+    assert.are.same({ 0, 0 }, { hidden_parts(surface, { 0.5, 0.5 }) }, "lane stores and arms gone with box")
+    assert.is_nil(next(storage.boxes), "rec gone")
   end)
 
   it("led set writes only on change", function()
@@ -201,15 +223,26 @@ describe("lifecycle", function()
   end)
 
   it("clone copies settings and box state", function()
-    local src = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0, 0 }, force = force })
-    local sr = registry.new_rec(src); sr.settings.timeout_s = 7; sr.box.nested = { count = 8 }
+    -- S-4 on v15 arms box: state = settings + lane store contents. Clone gets its own copy of both, own hidden parts.
+    local src = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force, raise_built = true })
+    local sr = registry.get(src); sr.settings.timeout_s = 7; sr.settings.filters = { { name = "coal" } }
+    sr.invs[1].insert({ name = "iron-plate", count = 8 }); sr.invs[2].insert({ name = "copper-plate", count = 3 })
     surface.clone_entities({ entities = { src }, destination_offset = { 3, 0 } })
-    local found = surface.find_entities_filtered({ name = N.variant("yellow", "north"), area = { { 2, -1 }, { 4, 1 } } })
+    local found = surface.find_entities_filtered({ name = N.variant("yellow", "north"), area = { { 2, -1 }, { 5, 2 } } })
     assert.are_equal(1, #found)
     local dst = found[1]
     local dr = registry.get(dst)
-    assert.are_equal(7, dr.settings.timeout_s); assert.are_equal(8, dr.box.nested.count)
-    dr.box.nested.count = 9; assert.are_equal(8, sr.box.nested.count)
+    assert.is_not_nil(dr, "clone registered")
+    assert.are_equal(7, dr.settings.timeout_s); assert.are_equal("coal", dr.settings.filters[1].name)
+    dr.settings.filters[1].name = "stone"; assert.are_equal("coal", sr.settings.filters[1].name, "settings copied deep")
+    assert.are_equal(8, dr.invs[1].get_item_count("iron-plate")); assert.are_equal(0, dr.invs[2].get_item_count("iron-plate"))
+    assert.are_equal(3, dr.invs[2].get_item_count("copper-plate")); assert.are_equal(0, dr.invs[1].get_item_count("copper-plate"))
+    assert.is_true(dr.stores[1] ~= sr.stores[1] and dr.stores[2] ~= sr.stores[2], "clone owns its lane stores")
+    dr.invs[1].remove({ name = "iron-plate", count = 1 })
+    assert.are_equal(8, sr.invs[1].get_item_count("iron-plate"), "source state untouched")
+    local n = arms.count(prototypes.entity["transport-belt"].belt_speed)
+    assert.are.same({ 2, 2 * n }, { hidden_parts(surface, dst.position) })
+    assert.are.same({ 2, 2 * n }, { hidden_parts(surface, src.position) })
   end)
 
   it("configuration changed drops invalid recs", function()
@@ -230,7 +263,9 @@ describe("lifecycle", function()
     local old = surface.create_entity({ name = N.variant("yellow", "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
     local rec = registry.get(old)
     rec.settings.timeout_s = 33
-    rec.box.hold[1] = { name = "copper-plate", quality = "normal", count = 1 }
+    -- v15: state = settings + lane store contents (old hold is gone) + box container items
+    assert.are_equal(1, rec.invs[1].insert({ name = "copper-plate", count = 1 }))
+    assert.are_equal(6, rec.invs[2].insert({ name = "coal", count = 6 }))
     old.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 7 })
     old.get_wire_connector(defines.wire_connector_id.circuit_red, true)
       .connect_to(chest.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
@@ -242,10 +277,16 @@ describe("lifecycle", function()
       assert.is_not_nil(nr, "rec carried")
       assert.are_equal(33, nr.settings.timeout_s)
       assert.are_equal("red", nr.tier); assert.are_equal("east", nr.dir)
-      assert.are_equal(1, nr.box.hold[1] and nr.box.hold[1].count)
+      assert.are_equal(1, nr.invs[1].get_item_count("copper-plate")); assert.are_equal(1, nr.invs[1].get_item_count())
+      assert.are_equal(6, nr.invs[2].get_item_count("coal")); assert.are_equal(6, nr.invs[2].get_item_count())
       assert.are_equal(7, new.get_inventory(defines.inventory.chest).get_item_count("iron-plate"))
-      local c = new.get_wire_connector(defines.wire_connector_id.circuit_red, false)
-      assert.are_equal(1, c and #c.connections or 0)
+      assert.are_equal(0, dropped_count(surface, "copper-plate") + dropped_count(surface, "coal") + dropped_count(surface, "iron-plate"), "nothing spilled")
+      local own, script_targets = player_wires(new.get_wire_connector(defines.wire_connector_id.circuit_red, false))
+      assert.are_equal(1, #own, "player wire kept")
+      assert.are_equal(chest.unit_number, own[1].target.owner.unit_number)
+      assert.are.same({ N.STORE, N.STORE }, script_targets)
+      -- hidden parts: same two lane stores, arms rebuilt for red belt speed, none left over
+      assert.are.same({ 2, 2 * arms.count(prototypes.entity["fast-transport-belt"].belt_speed) }, { hidden_parts(surface, { 10.5, 18.5 }) })
       assert.is_true(nr.led and nr.led.sprite.valid)
       local n = 0
       for _ in pairs(storage.boxes) do n = n + 1 end

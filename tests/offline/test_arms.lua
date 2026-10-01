@@ -104,4 +104,13 @@ describe("arms", function()
     local f=assert(io.open("scripts/arms.lua")); local src=f:read("*a"); f:close()
     ok(not src:find('type%(part%) == "table"'), "arms.lua must not test engine objects with type() == table")
   end)
+  it("need slot when an arm holds a kind the store lacks", function()
+    local function arm(name, quality) return { valid = true, held_stack = name and { valid_for_read = true, name = name, quality = { name = quality or "normal" } } or { valid_for_read = false } } end
+    local rec = { arms = { { arm(), arm("iron-plate") }, { arm("coal") } } }
+    eq(arms.need_slot(rec, 1, { { name = "iron-plate", quality = "normal", count = 2 } }), false)
+    eq(arms.need_slot(rec, 1, { { name = "copper-plate", quality = "normal", count = 2 } }), true)
+    eq(arms.need_slot(rec, 1, { { name = "iron-plate", quality = "rare", count = 2 } }), true)
+    eq(arms.need_slot(rec, 2, {}), true)
+    eq(arms.need_slot({ arms = { {}, {} } }, 1, {}), false)
+  end)
 end)

@@ -38,12 +38,18 @@ describe("gui", function()
     if f then f.destroy() end
   end)
 
-  it("opening box shows three sections", function()
+  it("opening box shows four sections", function()
+    -- v15 (V14-10, V15-1): lanes section (two lane rows) added on top.
     local f = open()
     assert.is_not_nil(f)
     local names = {}
     for _, c in ipairs(f.children) do names[#names + 1] = c.name end
-    assert.are_same({ "filters_section", "timeout_section", "circuit_section" }, names)
+    assert.are_same({ "lanes_section", "filters_section", "timeout_section", "circuit_section" }, names)
+    local lanes = f.lanes_section
+    for lane = 1, 2 do
+      assert.is_not_nil(lanes["lane_" .. lane], "lane row " .. lane)
+      assert.is_not_nil(lanes["lane_" .. lane]["lane_slot_" .. N.STORE_SLOTS], "lane row " .. lane .. " has 12 slots")
+    end
   end)
 
   it("closing removes frame", function()

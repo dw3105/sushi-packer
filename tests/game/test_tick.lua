@@ -1,7 +1,6 @@
 -- End-to-end behaviour on the real engine: placer -> box, belts behind and in front, real tick glue.
 -- Integrator-owned (SP-02 v0.2): headless only at merge and release.
 local N = require("scripts.names")
-local core = require("scripts.core")
 
 local NORTH = defines.direction.north
 
@@ -9,6 +8,23 @@ local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -40, -40 }, { 40, 40 } } })) do
     if e.valid and e.type ~= "character" then e.destroy() end
   end
+end
+
+-- v15 arms box: box tile also holds 2 lane stores (containers). Box = the container whose name is a box variant.
+local function find_box(surface, position)
+  for _, e in ipairs(surface.find_entities_filtered({ position = position, type = "container" })) do
+    if N.VARIANTS[e.name] then return e end
+  end
+end
+
+-- v15: items a box holds = both lane stores + box container (extra / outside items).
+local function stored(rec, name)
+  return rec.invs[1].get_item_count(name) + rec.invs[2].get_item_count(name)
+    + rec.entity.get_inventory(defines.inventory.chest).get_item_count(name)
+end
+
+local function used_slots(rec, lane)
+  return #rec.invs[lane] - rec.invs[lane].count_empty_stacks()
 end
 
 local function front_belts(surface, force, x, n, belt)
@@ -29,8 +45,9 @@ local function build(surface, force, opts)
   end
   local front = front_belts(surface, force, x, opts.front or 20, belt)
   surface.create_entity({ name = N.placer(opts.tier or "yellow"), position = { x + 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
-  local box = surface.find_entities_filtered({ position = { x + 0.5, 0.5 }, type = "container" })[1]
+  local box = find_box(surface, { x + 0.5, 0.5 })
   assert.is_not_nil(box, "placer became box")
+  assert.are_equal(N.variant(opts.tier or "yellow", "north"), box.name)
   local feed = surface.find_entities_filtered({ position = { x + 0.5, 0.5 + behind }, type = "transport-belt" })[1]
   return box, storage.boxes[box.unit_number], feed, front
 end
@@ -144,16 +161,20 @@ describe("tick", function()
   end)
 
   it("belt stack 1 passes through", function()
-    -- C-2 v6 + author: no belt capacity research -> every item leaves at once, lane and order kept.
+    -- C-2 v6 + author: no belt capacity research -> every item leaves at once, lane kept.
+    -- v15 (V15-1): items leave ordered by kind (first seen), not by single-item arrival -> same items per lane, any order.
     force.belt_stack_size_bonus = 0
-    local _, _, feed, front = build(surface, force, {})
+    local _, rec, feed, front = build(surface, force, {})
     local q = { "iron-ore", "copper-ore", "iron-ore", "coal", "copper-ore" }
     run_until(feeder(feed, { { table.unpack(q) }, {} }), function() return total(output(front, 1)) >= 5 end, 1200, function()
       local seq = output(front, 1)
       local names = {}
-      for _, s in ipairs(seq) do assert.are_equal(1, s.count); names[#names + 1] = s.name end
-      assert.are.same(q, names)
-      assert.are_equal(0, total(output(front, 2)))
+      for _, s in ipairs(seq) do assert.are_equal(1, s.count, "nothing stacked"); names[#names + 1] = s.name end
+      local want = { table.unpack(q) }
+      table.sort(want); table.sort(names)
+      assert.are.same(want, names)
+      assert.are_equal(0, total(output(front, 2)), "lane kept")
+      assert.are_equal(0, stored(rec), "nothing held back")
     end)
   end)
 
@@ -168,7 +189,12 @@ describe("tick", function()
       if phase == 1 then
         marked_ticks = marked_ticks + 1
         if marked_ticks == 400 then
-          assert.are_equal(0, rec.box.stored_count, "no intake while marked")
+          assert.are_equal(0, stored(rec), "no intake while marked")
+          local waiting = 0
+          for _, b in ipairs(surface.find_entities_filtered({ type = "transport-belt", area = { { 0, 1 }, { 1, 4 } } })) do
+            waiting = waiting + b.get_transport_line(1).get_item_count("iron-ore")
+          end
+          assert.are_equal(8, waiting, "fed items wait on belt behind box")
           assert.are_equal(0, total(output(front, 1)), "no output while marked")
           assert.is_false(rec.led.sprite.visible, "LED off while marked")
           box.cancel_deconstruction(force)
@@ -198,15 +224,20 @@ describe("tick", function()
     -- v6: belt stack 4 -> 50 ore = 12 belt items of 4 out, 2 held as partial.
     local _, rec, feed, front = build(surface, force, {})
     run_until(feeder(feed, { rep("iron-ore", 50), {} }),
-      function() return total(output(front, 1)) >= 48 and rec.box.stored_count == 2 end, 3400, function()
+      function() return total(output(front, 1)) >= 48 and rec.invs[1].get_item_count("iron-ore") == 2 end, 3400, function()
       local counts = {}
       for _, s in ipairs(output(front, 1)) do counts[#counts + 1] = s.count end
       assert.are.same(rep(4, 12), counts)
-      assert.are_equal(2, rec.box.stored_count)
+      assert.are_equal(2, rec.invs[1].get_item_count("iron-ore"), "partial held in left lane store")
+      assert.are_equal(2, stored(rec), "nothing else held")
     end)
   end)
   it("full box flushes oldest partial and loses nothing", function()
-    -- no front belt: nothing leaves; 48 distinct partials fill every slot, the 49th item must wait on the belt
+    -- F-1, F-3 on v15 lane stores (V14-10: 12 slots per lane, was 24): no front belt -> nothing leaves; 12 distinct
+    -- partials per lane fill every slot, the 13th kind of left lane must wait on the belt. Front belt appears ->
+    -- oldest partial of each lane leaves first, as one smaller belt item; waiting kind gets its slot; nothing lost.
+    local SLOTS = N.STORE_SLOTS
+    assert.are_equal(12, SLOTS)
     local box, rec, feed = build(surface, force, { front = 0 })
     local names = {}
     for name, p in pairs(prototypes.item) do
@@ -214,26 +245,46 @@ describe("tick", function()
     end
     table.sort(names)
     local q1, q2 = {}, {}
-    for i = 1, 48 do if i % 2 == 1 then q1[#q1 + 1] = names[i] else q2[#q2 + 1] = names[i] end end
+    for i = 1, 2 * SLOTS do if i % 2 == 1 then q1[#q1 + 1] = names[i] else q2[#q2 + 1] = names[i] end end
+    local extra_name = names[2 * SLOTS + 1]
     local feed_step = feeder(feed, { q1, q2 })
-    local extra_sent = false
+    local extra_sent, sent_at = false, nil
+    local function behind_count()
+      local n = 0
+      for _, b in ipairs(surface.find_entities_filtered({ type = "transport-belt", area = { { 0, 1 }, { 1, 4 } } })) do
+        n = n + b.get_transport_line(1).get_item_count() + b.get_transport_line(2).get_item_count()
+      end
+      return n
+    end
     run_until(function()
       feed_step()
-      if not extra_sent and core.used_slots(rec.box) == 48 then
-        extra_sent = feed.get_transport_line(1).insert_at_back({ name = names[49], count = 1 })
+      if not extra_sent and used_slots(rec, 1) == SLOTS and used_slots(rec, 2) == SLOTS then
+        extra_sent = feed.get_transport_line(1).insert_at_back({ name = extra_name, count = 1 })
+        if extra_sent then sent_at = game.tick end
       end
-    end, function() return extra_sent and core.peek_out(rec.box, 1) ~= nil end, 3000, function()
-      after_ticks(60, function()
-        assert.is_true(extra_sent)
-        assert.are_equal(48, core.used_slots(rec.box))
-        assert.are_equal(names[1], core.peek_out(rec.box, 1).name, "oldest partial queued (F-1)")
-        local on_belt = 0
-        for _, b in ipairs(surface.find_entities_filtered({ type = "transport-belt", area = { { 0, 1 }, { 1, 4 } } })) do
-          on_belt = on_belt + b.get_transport_line(1).get_item_count() + b.get_transport_line(2).get_item_count()
-        end
-        assert.are_equal(1, on_belt, "49th item waits on belt (F-3)")
-        assert.are_equal(48, box.get_inventory(defines.inventory.chest).get_item_count(), "nothing lost")
-        assert.are_equal("red", rec.led.state)
+    end, function() return extra_sent and game.tick - sent_at >= 240 end, 3000, function()
+      assert.is_true(extra_sent, "both lane stores filled")
+      assert.are_equal(SLOTS, used_slots(rec, 1)); assert.are_equal(SLOTS, used_slots(rec, 2))
+      assert.are_equal(1, behind_count(), "13th kind waits on belt (F-3)")
+      assert.are_equal(0, rec.invs[1].get_item_count(extra_name) + rec.invs[2].get_item_count(extra_name))
+      assert.are_equal(2 * SLOTS, rec.invs[1].get_item_count() + rec.invs[2].get_item_count(), "nothing lost")
+      assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count(), "box container stays empty")
+      assert.are_equal("red", rec.led.state)
+      local front = front_belts(surface, force, 0, 20, "transport-belt")
+      -- V15-2: flush only where an arriving item needs a slot: left lane (13th kind waits), not right lane.
+      run_until(function() end, function() return rec.invs[1].get_item_count(extra_name) == 1 end, 900, function()
+        after_ticks(120, function()
+          local left, right = output(front, 1), output(front, 2)
+          assert.are_equal(1, rec.invs[1].get_item_count(extra_name), "waiting kind got its slot")
+          assert.are.same({ name = names[1], count = 1 }, left[1], "oldest partial of left lane flushed first (F-1)")
+          assert.are_equal(1, #left, "exactly one partial flushed: one slot was needed")
+          assert.are_equal(0, #right, "right lane full but nothing new waits there: no flush (F-1)")
+          for _, s in ipairs(left) do assert.are_equal(1, s.count, "flushed partial = one smaller belt item") end
+          assert.are_equal(0, rec.invs[2].get_item_count(names[1]) + total(right, names[1]), "lane kept")
+          local kept = rec.invs[1].get_item_count() + rec.invs[2].get_item_count()
+          assert.are_equal(2 * SLOTS + 1, kept + total(left) + total(right) + behind_count(), "nothing lost, nothing made")
+          assert.are_equal(SLOTS, used_slots(rec, 1), "freed slot taken by waiting kind"); assert.are_equal(SLOTS, used_slots(rec, 2))
+        end)
       end)
     end)
   end)
@@ -249,7 +300,10 @@ describe("tick", function()
       for _, s in ipairs(seq) do
         if s.name == "iron-ore" then assert.are_equal(4, s.count, "iron only in full stacks") end
       end
-      assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count("coal"))
+      assert.are_equal(0, stored(rec, "coal"), "coal not kept")
+      assert.are_equal(2, stored(rec), "only iron partial kept")
+      -- P-3: coal is its own belt item, never inside an iron stack run piece
+      for _, s in ipairs(seq) do if s.name == "coal" then assert.are_equal(1, s.count) end end
     end)
   end)
   it("custom timeout flushes partial", function()
@@ -267,9 +321,15 @@ describe("tick", function()
     rec.settings.circuit.enable = true
     rec.settings.circuit.cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 5 }
     run_until(feeder(feed, { rep("iron-ore", 5), {} }), function(t) return t >= 300 end, 400, function()
-      assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count())
+      assert.are_equal(0, stored(rec), "no intake while disabled")
+      local waiting = 0
+      for _, b in ipairs(surface.find_entities_filtered({ type = "transport-belt", area = { { 0, 1 }, { 1, 4 } } })) do
+        waiting = waiting + b.get_transport_line(1).get_item_count("iron-ore")
+      end
+      assert.are_equal(5, waiting, "fed items wait on belt behind box")
       assert.are_equal(0, total(output(front, 1)))
       assert.is_false(rec.led.visible)
+      assert.is_false(rec.led.sprite.visible)
     end)
   end)
 
@@ -286,16 +346,27 @@ describe("tick", function()
   end)
 
   it("player removal reconciles next tick", function()
-    local box, rec, feed = build(surface, force, { front = 0 })  -- v6: no front belt so all 10 stay in chest
+    -- E-6 on v15 arms box (old D-1 reconcile is gone): player takes items out of a lane store by hand; box carries
+    -- on with what is left: pushes only what is really there, loses nothing, makes nothing.
+    local box, rec, feed = build(surface, force, { front = 0 })  -- no front belt so all 10 stay in left lane store
     run_until(feeder(feed, { rep("iron-ore", 10), {} }),
-      function() return box.get_inventory(defines.inventory.chest).get_item_count("iron-ore") >= 10 end, 1200, function()
+      function() return rec.invs[1].get_item_count("iron-ore") >= 10 end, 1200, function()
+      assert.are_equal(10, rec.invs[1].get_item_count("iron-ore"))
       game.players[1].teleport({ 2.5, 0.5 }) -- within reach, or opening is refused
       game.players[1].opened = box
       assert.are_equal(box, game.players[1].opened, "player has box open")
-      box.get_inventory(defines.inventory.chest).remove({ name = "iron-ore", count = 4 })
-      after_ticks(2, function()
-        assert.are.same({ { name = "iron-ore", quality = "normal", count = 6 } }, core.totals(rec.box))
-        game.players[1].opened = nil
+      assert.are_equal(4, rec.invs[1].remove({ name = "iron-ore", count = 4 }))
+      local front = front_belts(surface, force, 0, 20, "transport-belt")
+      run_until(function() end, function() return total(output(front, 1)) >= 4 end, 600, function()
+        after_ticks(120, function()
+          game.players[1].opened = nil
+          local seq = output(front, 1)
+          assert.are.same({ { name = "iron-ore", count = 4 } }, seq, "one full stack of what was left went out")
+          assert.are_equal(2, rec.invs[1].get_item_count("iron-ore"), "rest stays as partial")
+          assert.are_equal(2, stored(rec), "nothing else held")
+          assert.are_equal(0, total(output(front, 2)), "lane kept")
+          assert.are_equal("yellow", rec.led.state)
+        end)
       end)
     end)
   end)
@@ -318,14 +389,14 @@ describe("tick", function()
     local _, rec, feed = build(surface, force, { belt = "turbo-transport-belt", front = 0 })
     local front
     local opened_at
-    -- v8: lane owns 24 slots (L-2), item cap one stack (C-6): backlog 3 items x 32 = 24 pieces of 4, all ready.
+    -- v15: lane store 12 slots, item cap one stack (C-6): backlog 3 items x 32 = 24 pieces of 4 in left lane store.
     -- 100-tick window: yellow cap floor(100 * 0.125) + 2 = 14 < 24, uncapped push would move all 24.
     local q = rep("iron-ore", 32)
     for _, name in ipairs({ "copper-ore", "stone" }) do for _, x in ipairs(rep(name, 32)) do q[#q + 1] = x end end
     local step = feeder(feed, { q, {} })
     run_until(function()
       step()
-      if not front and core.is_idle(rec.box) == false and #q == 0 and core.used_slots(rec.box) >= 3 and core.peek_out(rec.box, 1) then
+      if not front and #q == 0 and rec.invs[1].get_item_count() == 96 then
         front = front_belts(surface, force, 0, 30, "turbo-transport-belt"); opened_at = game.tick
       end
     end, function() return opened_at and game.tick - opened_at >= 100 end, 3400, function()
@@ -337,12 +408,25 @@ describe("tick", function()
   end)
 
   it("red tier twice yellow throughput", function()
-    local _, _, yfeed, yfront = build(surface, force, { x = 0, belt = "turbo-transport-belt" })
-    local _, _, rfeed, rfront = build(surface, force, { x = 6, tier = "red", belt = "turbo-transport-belt" })
-    local ys, rs = feeder(yfeed, { rep("iron-ore", 400), {} }), feeder(rfeed, { rep("iron-ore", 400), {} })
-    run_until(function() ys(); rs() end, function(t) return t >= 1200 end, 1300, function()
+    -- E-4 / O-4 on v15 arms box: tier caps output in belt items per lane. Feed = 4-stacks on turbo belt (120 items/s
+    -- per lane), more than either tier may release, so each box runs at its own cap: yellow 7.5, red 15 belt items/s.
+    -- (Old feed of single items = 30 items/s = 7.5 stacks/s: no longer above yellow cap, both tiers moved the same.)
+    -- 40 front tiles hold 640 items per lane: never full inside the 400-tick window.
+    local _, _, yfeed, yfront = build(surface, force, { x = 0, belt = "turbo-transport-belt", front = 40 })
+    local _, _, rfeed, rfront = build(surface, force, { x = 6, tier = "red", belt = "turbo-transport-belt", front = 40 })
+    local function stacks(feed)
+      return function()
+        local line = feed.get_transport_line(1)
+        if line.can_insert_at_back() then line.insert_at_back({ name = "iron-ore", count = 4 }, 4) end
+      end
+    end
+    local ys, rs = stacks(yfeed), stacks(rfeed)
+    run_until(function() ys(); rs() end, function(t) return t >= 400 end, 500, function()
       local y, r = total(output(yfront, 1)), total(output(rfront, 1))
+      local cap = math.floor(400 * N.TIER.yellow.lane_rate) + 2
       assert.is_true(y > 0, "yellow moved")
+      assert.is_true(#output(yfront, 1) <= cap, "yellow belt items " .. #output(yfront, 1) .. " over tier cap " .. cap)
+      assert.is_true(r < 0.9 * 640, "red front belt (dead end, holds 640) never filled up: " .. r)
       assert.is_true(r >= 1.6 * y, "yellow " .. y .. " red " .. r)
     end)
   end)
@@ -421,7 +505,7 @@ describe("tick", function()
     else
       surface.create_entity({ name = N.placer("turbo"), position = { 0.5, 0.5 }, direction = box_dir, force = force, raise_built = true })
     end
-    assert.is_not_nil(surface.find_entities_filtered({ position = { 0.5, 0.5 }, type = "container" })[1], "box built")
+    assert.is_not_nil(find_box(surface, { 0.5, 0.5 }), "box built")
     local curve = surface.find_entities_filtered({ position = curve_pos, type = "transport-belt" })[1]
     return feed, front, curve
   end
@@ -440,11 +524,13 @@ describe("tick", function()
     local feed, front, curve = curve_case(defines.direction.north, defines.direction.west)
     run_until(feed_stacked(feed, KINDS, 20), function() return false end, 2400, function()
       local l, r = lanes_moved(front)
-      local box = surface.find_entities_filtered({ position = { 0.5, 0.5 }, type = "container" })[1]
-      local stored = {}
-      for _, x in ipairs(box.get_inventory(defines.inventory.chest).get_contents()) do stored[#stored + 1] = x.name .. "=" .. x.count end
+      local rec = storage.boxes[find_box(surface, { 0.5, 0.5 }).unit_number]
+      local kept = {}
+      for lane = 1, 2 do
+        for _, x in ipairs(rec.invs[lane].get_contents()) do kept[#kept + 1] = "lane" .. lane .. " " .. x.name .. "=" .. x.count end
+      end
       force.belt_stack_size_bonus = 3; storage.belt_stack = {}
-      assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r .. " stored " .. table.concat(stored, ","))
+      assert.is_true(l > 0 and r > 0, "left=" .. l .. " right=" .. r .. " stored " .. table.concat(kept, ","))
     end)
   end)
 

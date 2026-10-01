@@ -268,6 +268,14 @@ function M.pull(rec, budget, sink)
   return taken, eta
 end
 
+-- v15 (F-1, V15-2): what waits on one lane of the belt-like entity behind the box: array {name, quality, count} or nil.
+function M.behind_kinds(rec, lane)
+  local belt = cached(rec, "behind", -1)
+  if not belt then return nil end
+  local line = transport_line(rec, "behind", lane)
+  return line and line.get_contents() or nil
+end
+
 function M.push(rec, lane, item, belt_stack_size)
   local counters = storage and storage.sp_counters
   local belt, map = cached(rec, "front", 1)
