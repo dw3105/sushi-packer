@@ -7,7 +7,7 @@ local function setup(speed)
   local function entity(spec)
     local e = { valid = true, name = spec.name, position = spec.position, force = spec.force, writes = {}, filters = {}, links = {} }
     setmetatable(e, { __index = function(t, k) local w = rawget(t, "_watched"); return w and w[k] end, __newindex = function(t, k, v)
-      if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" then
+      if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" or k == "inserter_stack_size_override" then
         writes[k] = (writes[k] or 0) + 1; e.writes[k] = (e.writes[k] or 0) + 1
         e._watched = e._watched or {}; e._watched[k] = v
       else
@@ -30,7 +30,7 @@ local function setup(speed)
       local n=math.min(stack.count,e.inventory.room); e.inventory.room=e.inventory.room-n; return n
     end
     e.held_stack={ valid_for_read=false, clear=function() e.held_stack.valid_for_read=false end }
-    e.pickup_target=nil; e.inserter_stack_size_override=nil
+    e.pickup_target=nil
     created[#created+1] = { spec=spec, entity=e }
     return e
   end
@@ -156,8 +156,11 @@ describe("arms", function()
     arms.pause_out(rec,1,false); eq(writes.disabled_by_script,2*n)
   end)
   it("hand writes only on change", function()
-    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.hand(rec,4); local n=writes.hand
-    eq(n,N.OUT_ARMS*2); eq(rec.out[1][1].inserter_stack_size_override,4); arms.hand(rec,4); eq(writes.hand,n); arms.hand(rec,2); eq(writes.hand,n*2); eq(rec.arms[1][1].inserter_stack_size_override,nil)
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.hand(rec,4)
+    for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,1); eq(a.inserter_stack_size_override,4) end end
+    arms.hand(rec,4); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,1) end end
+    arms.hand(rec,2); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2); eq(a.inserter_stack_size_override,2) end end
+    eq(rec.arms[1][1].inserter_stack_size_override,nil)
     rec.out[1][1].valid=false; arms.hand(rec,3)
   end)
   it("held lists out arm hands", function()
