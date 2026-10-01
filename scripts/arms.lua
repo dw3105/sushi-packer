@@ -35,8 +35,39 @@ function M.create(rec)
   local entity = rec.entity
   local surface, pos, force = entity.surface, entity.position, entity.force
   local old_arms = rec.arms or {}
+  local old_out = rec.out or {}
+  -- Preserve every item in an inserter hand before replacing that inserter.
+  for lane = 1, 2 do
+    for _, group in ipairs({ old_arms[lane] or {}, old_out[lane] or {} }) do
+      for _, arm in ipairs(group) do
+        if _valid(arm) then
+          local held = arm.held_stack
+          if held and held.valid_for_read then
+            local remaining = held.count
+            local stack = { name = held.name, count = remaining, quality = held.quality.name }
+            local inv = rec.invs and rec.invs[lane]
+            if _valid(rec.stores and rec.stores[lane]) and inv then
+              local inserted = inv.insert(stack)
+              remaining = remaining - inserted
+            end
+            if remaining > 0 then
+              stack.count = remaining
+              local box_inv = entity.get_inventory(defines.inventory.chest)
+              local inserted = box_inv.insert(stack)
+              remaining = remaining - inserted
+            end
+            if remaining > 0 then
+              stack.count = remaining
+              surface.spill_item_stack { position = pos, stack = stack }
+            end
+          end
+        end
+      end
+    end
+  end
   for lane = 1, 2 do
     for _, arm in ipairs(old_arms[lane] or {}) do _destroy(arm) end
+    for _, arm in ipairs(old_out[lane] or {}) do _destroy(arm) end
   end
 
   rec.stores = rec.stores or {}
@@ -54,6 +85,7 @@ function M.create(rec)
   local dx, dy = _delta(_opposite(rec.dir))
   local pickup = { x = pos.x + dx, y = pos.y + dy }
   rec.arms = { {}, {} }
+  rec.out = { {}, {} }
   for lane = 1, 2 do
     for _ = 1, n do
       local arm = surface.create_entity { name = N.ARM, position = pos, force = force }
@@ -65,6 +97,17 @@ function M.create(rec)
       arm.drop_target = rec.stores[lane]
       rec.arms[lane][#rec.arms[lane] + 1] = arm
     end
+    local fx, fy = _delta(rec.dir)
+    local s = lane == 1 and 0.25 or -0.25
+    local drop = { x = pos.x + fx + fy * s, y = pos.y + fy - fx * s }
+    for _ = 1, N.OUT_ARMS do
+      local arm = surface.create_entity { name = N.OUT, position = pos, force = force }
+      arm.destructible = false
+      arm.pickup_position = pos
+      arm.pickup_target = rec.stores[lane]
+      arm.drop_position = drop
+      rec.out[lane][#rec.out[lane] + 1] = arm
+    end
   end
   for _, id in ipairs({ defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green }) do
     local box_connector = entity.get_wire_connector(id, true)
@@ -74,13 +117,17 @@ function M.create(rec)
   end
   rec.paused = { false, false }
   rec.skip = { "", "" }
+  rec.out_paused = { false, false }
+  rec.hand = nil
 end
 
 function M.destroy(rec, keep_stores)
   for lane = 1, 2 do
     for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do _destroy(arm) end
+    for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do _destroy(arm) end
   end
   rec.arms = nil
+  rec.out, rec.out_paused, rec.hand = nil, nil, nil
   if not keep_stores then
     for lane = 1, 2 do _destroy(rec.stores and rec.stores[lane]) end
     rec.stores, rec.invs = nil, nil
@@ -140,12 +187,65 @@ function M.need_slot(rec, lane, contents)
   return false
 end
 
--- v16 seam stubs (lane 048 fills): docs/CONTRACT.md "v16 engine output seam".
-function M.pause_out(rec, lane, paused) error("stub: arms.pause_out") end
-function M.hand(rec, bss) error("stub: arms.hand") end
-function M.held(rec, lane) error("stub: arms.held") end
-function M.clear_held(rec, lane, index) error("stub: arms.clear_held") end
-function M.drain_hands(rec) error("stub: arms.drain_hands") end
+function M.pause_out(rec, lane, paused)
+  rec.out_paused = rec.out_paused or {}
+  if rec.out_paused[lane] == paused then return end
+  for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+    if _valid(arm) then arm.disabled_by_script = paused end
+  end
+  rec.out_paused[lane] = paused
+end
+
+function M.hand(rec, bss)
+  if rec.hand == bss then return end
+  for lane = 1, 2 do
+    for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+      if _valid(arm) then arm.inserter_stack_size_override = bss end
+    end
+  end
+  rec.hand = bss
+end
+
+local held_lists = { {}, {} }
+function M.held(rec, lane)
+  local list = held_lists[lane]
+  for i = #list, 1, -1 do list[i] = nil end
+  for i, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+    if _valid(arm) then
+      local hand = arm.held_stack
+      if hand and hand.valid_for_read then
+        list[#list + 1] = { arm = i, name = hand.name, quality = hand.quality.name, count = hand.count }
+      end
+    end
+  end
+  return list
+end
+
+function M.clear_held(rec, lane, index)
+  local arm = rec.out and rec.out[lane] and rec.out[lane][index]
+  if _valid(arm) then
+    local held = arm.held_stack
+    if held and held.valid_for_read then held.clear() end
+  end
+end
+
+function M.drain_hands(rec)
+  local items = {}
+  for lane = 1, 2 do
+    for _, group in ipairs({ (rec.arms and rec.arms[lane]) or {}, (rec.out and rec.out[lane]) or {} }) do
+      for _, arm in ipairs(group) do
+        if _valid(arm) then
+          local held = arm.held_stack
+          if held and held.valid_for_read then
+            items[#items + 1] = { name = held.name, quality = held.quality.name, count = held.count, lane = lane }
+            held.clear()
+          end
+        end
+      end
+    end
+  end
+  return items
+end
 
 function M.ensure(rec)
   local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
@@ -157,6 +257,12 @@ function M.ensure(rec)
       broken = true
     else
       for _, arm in ipairs(lane_arms) do if not _valid(arm) then broken = true; break end end
+    end
+    local outs = rec.out and rec.out[lane]
+    if not outs or #outs ~= N.OUT_ARMS then
+      broken = true
+    else
+      for _, arm in ipairs(outs) do if not _valid(arm) then broken = true; break end end
     end
   end
   if broken then M.create(rec); return true end
