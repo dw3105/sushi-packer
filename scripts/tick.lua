@@ -5,8 +5,23 @@ local led = require("scripts.led")
 local filter = require("scripts.filter")
 local ledger = require("scripts.ledger")
 local arms = require("scripts.arms")
+local gui = require("scripts.gui")
 local M = {}
-local INTERVAL = { yellow = 8, red = 4, blue = 2, turbo = 2 }
+-- Visit gap per tier = ticks between two belt items on one lane (0.25 tile / belt speed) when that is a whole number
+-- of ticks >= 2 (yellow 8, red 4, turbo 2); any other speed -> every tick (blue 2.67: gap 2 lost rate, 200 of 225).
+local intervals = {}
+function M._reset_intervals() intervals = {} end  -- tests only: mocks swap prototypes
+function M._interval(tier)
+  local n = intervals[tier]
+  if n == nil then
+    local proto = prototypes.entity[N.TIER[tier].belt]
+    if not proto then return 2 end  -- offline mocks without belt prototypes
+    local gap = 0.25 / proto.belt_speed
+    n = (gap >= 2 and gap == math.floor(gap)) and gap or 1
+    intervals[tier] = n
+  end
+  return n
+end
 local stack_sizes = {}
 local quality_levels
 
@@ -119,8 +134,36 @@ end
 
 function M.on_tick(e)
   local counters = storage and storage.sp_counters
+  if e.tick % 30 == 0 then  -- open box windows show live lane stores
+    for _, player in pairs(game.connected_players) do
+      if player.opened_gui_type == defines.gui_type.entity then
+        local entity = player.opened
+        local rec = entity and entity.valid and entity.unit_number and storage.boxes[entity.unit_number]
+        if rec then gui._refresh(player, rec) end
+      end
+    end
+  end
   for _, rec in pairs(storage.boxes) do
-    local interval = INTERVAL[rec.tier] or 2
+    local interval = M._interval(rec.tier)
+    -- Once per 60 ticks per box: items someone put into box container (inserter, robot, player) and that are not
+    -- old-save extra yet become extra on lane 1 (D-1 "surplus adopted as left-lane arrival"). Empty container: one call.
+    if rec.stores and not rec.decon and (e.tick + rec.unit_number) % 60 == 0 and rec.entity.valid then
+      local box_inv = rec.entity.get_inventory(defines.inventory.chest)
+      if not box_inv.is_empty() then
+        local known = {}
+        for _, x in ipairs(rec.extra or {}) do local k = x.name .. "\0" .. x.quality; known[k] = (known[k] or 0) + x.count end
+        for _, c in ipairs(box_inv.get_contents()) do
+          local more = c.count - (known[c.name .. "\0" .. c.quality] or 0)
+          if more > 0 then
+            rec.extra = rec.extra or {}
+            local hit
+            for _, x in ipairs(rec.extra) do if x.lane == 1 and x.name == c.name and x.quality == c.quality then hit = x; break end end
+            if hit then hit.count = hit.count + more else rec.extra[#rec.extra + 1] = { name = c.name, quality = c.quality, count = more, lane = 1 } end
+            rec.next_poll = e.tick
+          end
+        end
+      end
+    end
     local staggered = rec.last_poll ~= nil or (e.tick + rec.unit_number) % interval == 0
     local due = not rec.decon and e.tick >= (rec.next_poll or 0) and staggered
     if due and rec.stores then
@@ -141,7 +184,7 @@ function M.on_tick(e)
         end
         rec.last_poll = e.tick
         local idle = empty1 and empty2 and rec.extra == nil
-        rec.next_poll = e.tick + (idle and 15 or math.max(2, interval))
+        rec.next_poll = e.tick + (idle and 15 or interval)
         update_led(rec)
         rec.led_dirty = nil
       end

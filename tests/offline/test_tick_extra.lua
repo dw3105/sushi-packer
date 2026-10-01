@@ -30,7 +30,9 @@ describe("tick extra",function()
     setmetatable(inv,{__len=function() return 12 end})
     local inv2={get_contents=function() return {} end,is_empty=function() return true end,count_empty_stacks=function() return 12 end,remove=function() return 0 end}
     setmetatable(inv2,{__len=function() return 12 end})
-    local rec={entity={valid=true,unit_number=1,force={index=1}},unit_number=1,tier=tier,settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv,inv2},arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
+    local emptybox={is_empty=function() return true end,get_contents=function() return {} end}
+    tick._reset_intervals()
+    local rec={entity={valid=true,unit_number=1,force={index=1},get_inventory=function() return emptybox end},unit_number=1,tier=tier,settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv,inv2},arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
     belt_io.push=function(r,l,p) r.pushed=(r.pushed or 0)+p.count; return p.count end
     circuit.evaluate=function() return true,false end
     ledger.plan=function(state,lane,contents)
@@ -52,10 +54,10 @@ describe("tick extra",function()
   rate_case("planetaris-hyper","planetaris-hyper-transport-belt",0.15625,500,"75 per s tier keeps rate over 800 ticks")
   rate_case("kr-superior","kr-superior-transport-belt",0.1875,600,"90 per s tier keeps rate over 800 ticks")
   rate_case("ub-ultimate","ultimate-belt",0.5625,1800,"270 per s tier keeps rate over 800 ticks")
-  it("extra tier visits at two tick cadence",function()
+  it("extra tier visits every tick",function()  -- v15 INT: 0.25 / 0.1875 = 1.33 ticks per belt item, not whole -> gap 1
     local rec,restore=fixture("kr-superior","kr-superior-transport-belt",0.1875); local visits=0
     local original=ledger.plan; ledger.plan=function(...) visits=visits+1; return original(...) end
     for t=1,10 do tick.on_tick({tick=t}) end
-    eq(visits,10); restore()
+    eq(visits,20); restore()  -- 10 ticks x 2 lanes
   end)
 end)

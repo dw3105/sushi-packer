@@ -111,4 +111,27 @@ describe("tick", function()
   it("on research caches belt stack size", function() local f=fixture(); local old=belt_io.belt_stack_size; belt_io.belt_stack_size=function(x) return x.index+2 end; tick.on_research({force={index=4}}); eq(storage.belt_stack[4],6); belt_io.belt_stack_size=old; f.restore() end)
   it("invalid entity drops rec", function() local f=fixture(); f.rec.entity.valid=false; f.run(1); eq(storage.boxes[1],nil); f.restore() end)
   it("decon stops visits and pauses arms", function() local f=fixture(); tick.on_decon({entity=f.rec.entity},true); f.run(1); eq(#f.pushes,0); eq(f.pauses,{{1,true},{2,true}}); eq(f.ledcalls[#f.ledcalls],{"green",false}); f.restore() end)
+  -- integrator, v15 INT (red first): gaps seen at merge review + first headless run
+  it("decon mark pauses both lanes without a visit", function()
+    local f=fixture(); f.rec.next_poll=1000; f.rec.last_poll=0
+    tick.on_decon({entity=f.rec.entity},true); f.run(5)
+    eq(f.pauses,{{1,true},{2,true}}); f.restore()
+  end)
+  it("items put into box from outside become extra on lane one", function()
+    local f=fixture(); f.rec.unit_number=1; f.rec.next_poll=1000; f.rec.last_poll=0
+    f.boxinv.contents={{name="iron",quality="normal",count=5}}
+    f.block_after(1)  -- front belt blocked: extra stays visible
+    f.run(59)  -- (59 + unit 1) % 60 == 0: slot
+    eq(f.rec.extra,{{name="iron",quality="normal",count=5,lane=1}}); eq(f.pauses[1],{1,true})  -- visited same tick, lane 1 paused
+    f.boxinv.contents={{name="iron",quality="normal",count=7}}; f.rec.next_poll=1000; f.block_after(#f.pushes+1)
+    f.run(119); eq(f.rec.extra,{{name="iron",quality="normal",count=7,lane=1}}); f.restore()
+  end)
+  it("empty box container costs one cheap check per slot", function()
+    local f=fixture(); f.rec.next_poll=1000; f.rec.last_poll=0
+    for t=1,120 do f.run(t) end
+    eq(f.boxinv.reads,0); eq(f.rec.extra,nil); f.restore()
+  end)
+  it("visit gap follows belt item gap", function()
+    tick._reset_intervals(); prototypes={entity=require("tests.offline.belts")}; eq(tick._interval("yellow"),8); eq(tick._interval("red"),4); eq(tick._interval("blue"),1); eq(tick._interval("turbo"),2)
+  end)
 end)

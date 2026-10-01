@@ -10,7 +10,7 @@ function M.count(speed)
 end
 
 local function _valid(part)
-  return type(part) == "table" and part.valid ~= false
+  return part ~= nil and part.valid == true  -- engine objects are userdata (2.0+), never tables
 end
 
 local function _opposite(dir)
