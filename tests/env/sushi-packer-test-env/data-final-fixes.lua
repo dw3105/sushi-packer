@@ -11,7 +11,9 @@ end
 -- Test-only loader (v14 S0 feed probe): 1x1, never slower than any test belt, may stack on belt.
 do
   local l = table.deepcopy(data.raw["loader-1x1"]["loader-1x1"])
-  l.name, l.speed, l.max_belt_stack_size, l.adjustable_belt_stack_size = "sp-test-loader", 1, 4, true
+  l.name, l.speed = "sp-test-loader", 1
+  -- no space-age and no stacking mod: engine refuses stacking loaders ("Belt stacking requires space-travel")
+  if feature_flags.space_travel then l.max_belt_stack_size, l.adjustable_belt_stack_size = 4, true end
   l.minable, l.next_upgrade = nil, nil
   data:extend({ l })
 end
@@ -22,8 +24,9 @@ do
     local l = table.deepcopy(data.raw["loader-1x1"]["loader-1x1"])
     l.name, l.speed, l.minable, l.next_upgrade = name, 1, nil, nil
     l.container_distance = 0
-    l.max_belt_stack_size, l.adjustable_belt_stack_size = 4, true
+    if feature_flags.space_travel then l.max_belt_stack_size, l.adjustable_belt_stack_size = 4, true end
     for k, v in pairs(fields) do l[k] = v end
+    if not feature_flags.space_travel then l.wait_for_full_stack = nil end
     data:extend({ l })
   end
   -- Engine rule (probe 2026-10-01): every belt-connectable must collide with every other one -> one loader per tile.
