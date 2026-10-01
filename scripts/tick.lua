@@ -101,8 +101,10 @@ end
 -- once per SLOW ticks (hoarding rule, LED, timers). Used slots estimated from contents; engine asked only when the
 -- estimate says full.
 local SLOW = 30
+local LOOK = N.LOOK
 local EMPTY = {}
 local opts = {}  -- reused per call: ledger.plan reads it, never keeps it
+local held_piece = {} -- reused for output hands
 local tick_timeout  -- global flush timeout in ticks, read at most once per on_tick
 
 local function timeout_for(rec)
@@ -201,6 +203,86 @@ local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counte
   return false
 end
 
+local function engine_look(rec, tick, bss, flush_all)
+  local stopped = rec.enabled == false or rec.decon == true or not belt_io.front_ok(rec)
+  arms.hand(rec, bss)
+  rec.used = rec.used or { 0, 0 }
+  for lane=1,2 do
+    local extra_lane = lane_has_extra(rec, lane)
+    arms.skip(rec, lane, EMPTY)
+    if extra_lane then
+      local lane_stopped = rec.enabled == false or rec.decon == true
+      arms.pause(rec, lane, true)
+      arms.pause_out(rec, lane, true)
+      local interval = M._interval(rec.tier)
+      local elapsed = tick - (rec.last_poll or (tick - interval))
+      local rate = belt_io.lane_rate(rec.tier)
+      local credit = (rec.out_credit[lane] or 0) + rate * elapsed
+      local remained
+      if not lane_stopped then credit, remained = drain_extra(rec, lane, bss, credit, storage and storage.sp_counters)
+      else remained = true end
+      rec.out_credit[lane] = credit
+      if not remained then arms.pause(rec, lane, stopped); arms.pause_out(rec, lane, stopped) end
+      rec.used[lane] = 0
+    else
+      arms.pause(rec, lane, rec.enabled == false or rec.decon == true)
+      arms.pause_out(rec, lane, stopped)
+      if stopped then
+        rec.used[lane] = 0
+      else
+        local inv = rec.invs[lane]
+        local contents = inv.get_contents()
+        local n = #contents
+        local used = 0
+        for i=1,n do used = used + math.ceil(contents[i].count / stack_size(contents[i].name)) end
+        if used >= N.STORE_SLOTS then
+          if inv.count_empty_stacks() == 0 then
+            used = N.STORE_SLOTS
+            opts.need_slot = arms.need_slot(rec, lane, contents)
+            if not opts.need_slot then
+              for _, w in ipairs(belt_io.behind_kinds(rec, lane) or EMPTY) do
+                local found = false
+                for i=1,n do if contents[i].name == w.name and contents[i].quality == w.quality then found=true; break end end
+                if not found then opts.need_slot=true; break end
+              end
+            end
+          else
+            used = N.STORE_SLOTS - 1
+            opts.need_slot = nil
+          end
+        else
+          opts.need_slot = nil
+        end
+        opts.tick, opts.bss, opts.stack_size, opts.timeout_ticks = tick, bss, stack_size, timeout_for(rec)
+        opts.slots, opts.slots_used, opts.flush_all, opts.n_out = N.STORE_SLOTS, used, flush_all, #rec.out[lane]
+        opts.skip = nil
+        local flush, want = ledger.scan(rec.ledger, lane, contents, opts)
+        for i=1,#flush do
+          local piece=flush[i]
+          local pushed=belt_io.push(rec,lane,piece,bss)
+          if pushed<=0 then break end
+          inv.remove(piece)
+        end
+        if want then
+          local held=arms.held(rec,lane)
+          local indices=ledger.hands(rec.ledger,lane,held,opts)
+          for i=1,#indices do
+            local k=indices[i]
+            local hand
+            for j=1,#held do if held[j].arm==k then hand=held[j]; break end end
+            if hand then
+              held_piece.name, held_piece.quality, held_piece.count = hand.name, hand.quality, hand.count
+              if belt_io.push(rec,lane,held_piece,bss)<=0 then break end
+              arms.clear_held(rec,lane,k)
+            end
+          end
+        end
+        rec.used[lane] = used
+      end
+    end
+  end
+end
+
 local function update_led(rec)
   local used = rec.used
   local state = ledger.led(used and used[1] or 0, used and used[2] or 0, N.STORE_SLOTS)
@@ -247,9 +329,17 @@ function M.on_tick(e)
   for _, rec in pairs(storage.boxes) do
     if rec.stores then
       if not rec.decon and (tick + rec.unit_number) % 60 == 0 then adopt_outside(rec, tick) end
-      if not rec.decon and tick >= (rec.next_poll or 0) then
-        local interval = M._interval(rec.tier)
-        if rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0 then
+      local script_mode = rec.settings.filters and rec.settings.filters[1] ~= nil
+      local interval = M._interval(rec.tier)
+      local due
+      if script_mode then
+        due = not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0)
+      elseif rec.extra ~= nil then
+        due = not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0)
+      else
+        due = (tick + rec.unit_number) % LOOK == 0
+      end
+      if due then
           if not rec.entity.valid then
             storage.boxes[rec.unit_number] = nil
           else
@@ -260,25 +350,30 @@ function M.on_tick(e)
             if fi == nil then fi = rec.entity.force.index; rec.force_index = fi end
             local bss = storage.belt_stack[fi]
             if bss == nil then bss = belt_io.belt_stack_size(rec.entity.force); storage.belt_stack[fi] = bss end
-            local elapsed = tick - (rec.last_poll or (tick - interval))
-            local rate = belt_io.lane_rate(rec.tier)
-            local empty1 = visit_lane(rec, 1, tick, bss, rate, elapsed, flush_now, counters)
-            local empty2 = visit_lane(rec, 2, tick, bss, rate, elapsed, flush_now, counters)
-            rec.last_poll = tick
-            -- Idle sleep only after stores stayed empty 30 ticks: a busy pass-through box (belt stack 1) empties its
-            -- stores on most visits; sleeping 15 ticks there cost 10-25 % of belt rate (rate test, 2026-10-01).
-            local idle = false
-            if empty1 and empty2 and rec.extra == nil then
-              rec.empty_since = rec.empty_since or tick
-              idle = tick - rec.empty_since >= 30
+            if script_mode then
+              arms.pause_out(rec, 1, true); arms.pause_out(rec, 2, true)
+              local elapsed = tick - (rec.last_poll or (tick - interval))
+              local rate = belt_io.lane_rate(rec.tier)
+              local empty1 = visit_lane(rec, 1, tick, bss, rate, elapsed, flush_now, counters)
+              local empty2 = visit_lane(rec, 2, tick, bss, rate, elapsed, flush_now, counters)
+              rec.last_poll = tick
+              local idle = false
+              if empty1 and empty2 and rec.extra == nil then
+                rec.empty_since = rec.empty_since or tick
+                idle = tick - rec.empty_since >= 30
+              else
+                rec.empty_since = nil
+              end
+              rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
             else
+              engine_look(rec, tick, bss, flush_now)
+              rec.last_poll = tick
+              rec.next_poll = tick + interval
               rec.empty_since = nil
             end
-            rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
             update_led(rec)
             rec.led_dirty = nil
           end
-        end
       elseif rec.led_dirty then
         update_led(rec)
         rec.led_dirty = nil
@@ -308,6 +403,7 @@ function M.on_decon(e, marked)
         local has_extra=false
         for _, entry in ipairs(rec.extra or {}) do if entry.lane==lane and entry.count>0 then has_extra=true; break end end
         arms.pause(rec,lane,marked==true or rec.enabled==false or has_extra)
+        arms.pause_out(rec,lane,marked==true or rec.enabled==false or has_extra or not belt_io.front_ok(rec))
       end
     end
   end
