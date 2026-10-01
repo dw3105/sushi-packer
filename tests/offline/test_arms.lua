@@ -37,7 +37,7 @@ local function setup(speed)
   local surface = { create_entity = entity, spills={} }
   function surface.spill_item_stack(spec) surface.spills[#surface.spills+1]=spec end
   local box = entity({ name="box", position={x=10,y=20}, force="force" })
-  box.position={x=10.5,y=20.5}; box.get_inventory=function() return box.inventory end
+  box.get_inventory=function() return box.inventory end
   local rec = { entity=box, tier="turbo", dir="north" }
   prototypes = { entity = { [N.TIER.turbo.belt] = { belt_speed=speed or 0.125 } } }
   defines = { inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={script=3} }
@@ -133,7 +133,7 @@ describe("arms", function()
   it("out arm setup per lane and direction", function()
     local expected={north={{10.25,19.5},{10.75,19.5}},east={{11.5,20.25},{11.5,20.75}},south={{10.75,21.5},{10.25,21.5}},west={{9.5,20.75},{9.5,20.25}}}
     for _,dir in ipairs({"north","east","south","west"}) do
-      local rec,s=setup(); rec.entity.surface=s; rec.dir=dir; arms.create(rec)
+      local rec,s=setup(); rec.entity.position={x=10.5,y=20.5}; rec.dir=dir; arms.create(rec)
       for lane=1,2 do local a=rec.out[lane][1]; eq(a.pickup_position,rec.entity.position); eq(a.pickup_target,rec.stores[lane]); eq(a.drop_position,{x=expected[dir][lane][1],y=expected[dir][lane][2]}) end
     end
   end)
