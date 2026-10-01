@@ -64,7 +64,7 @@ describe("counters", function()
   it("push counts belt item and items", function()
     storage = { boxes = {}, belt_stack = {} }; tick.counters_on(); local rec = belt_rig({}); belt_io.push(rec, 1, { name="iron", quality="normal", count=4 }, 4)
     eq(tick.counters().pushes, 1); eq(tick.counters().items_out, 4)
-    local rec2 = belt_rig({}); local _, _, line = belt_rig({}); function line.can_insert_at_back() return false end
+    local rec2, _, line = belt_rig({}); function line.can_insert_at_back() return false end
     belt_io.push(rec2, 1, { name="iron", quality="normal", count=4 }, 4)
     eq(tick.counters().pushes, 1); eq(tick.counters().items_out, 4)
   end)
