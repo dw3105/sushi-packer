@@ -24,12 +24,20 @@ local function setup(speed)
       function c.connect_to(other, a, origin) c.connections[#c.connections+1] = { other=other, a=a, origin=origin } end
       connectors[#connectors+1] = c; e.wire_connectors[id] = c; return c
     end
-    e.inventory = { tag = spec.name }
+    e.inventory = { tag = spec.name, insert_calls = 0, room = math.huge }
+    function e.inventory.insert(stack)
+      e.inventory.insert_calls=e.inventory.insert_calls+1
+      local n=math.min(stack.count,e.inventory.room); e.inventory.room=e.inventory.room-n; return n
+    end
+    e.held_stack={ valid_for_read=false, clear=function() e.held_stack.valid_for_read=false end }
+    e.pickup_target=nil; e.inserter_stack_size_override=nil
     created[#created+1] = { spec=spec, entity=e }
     return e
   end
-  local surface = { create_entity = entity }
+  local surface = { create_entity = entity, spills={} }
+  function surface.spill_item_stack(spec) surface.spills[#surface.spills+1]=spec end
   local box = entity({ name="box", position={x=10,y=20}, force="force" })
+  box.position={x=10.5,y=20.5}; box.get_inventory=function() return box.inventory end
   local rec = { entity=box, tier="turbo", dir="north" }
   prototypes = { entity = { [N.TIER.turbo.belt] = { belt_speed=speed or 0.125 } } }
   defines = { inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={script=3} }
@@ -112,5 +120,62 @@ describe("arms", function()
     eq(arms.need_slot(rec, 1, { { name = "iron-plate", quality = "rare", count = 2 } }), true)
     eq(arms.need_slot(rec, 2, {}), true)
     eq(arms.need_slot({ arms = { {}, {} } }, 1, {}), false)
+  end)
+  local function set_hand(a,name,count,quality)
+    a.held_stack={valid_for_read=true,name=name,count=count,quality={name=quality or "normal"},clear=function() a.held_stack.valid_for_read=false end}
+  end
+  it("create makes out arms per lane", function()
+    local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec)
+    eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{false,false}); eq(rec.hand,nil)
+    local n=0; for _,v in ipairs(created) do if v.spec.name==N.OUT then n=n+1; eq(v.entity.destructible,false); eq(v.spec.position,rec.entity.position); eq(v.spec.force,"force") end end
+    eq(n,N.OUT_ARMS*2)
+  end)
+  it("out arm setup per lane and direction", function()
+    local expected={north={{10.25,19.5},{10.75,19.5}},east={{11.5,20.25},{11.5,20.75}},south={{10.75,21.5},{10.25,21.5}},west={{9.5,20.75},{9.5,20.25}}}
+    for _,dir in ipairs({"north","east","south","west"}) do
+      local rec,s=setup(); rec.entity.surface=s; rec.dir=dir; arms.create(rec)
+      for lane=1,2 do local a=rec.out[lane][1]; eq(a.pickup_position,rec.entity.position); eq(a.pickup_target,rec.stores[lane]); eq(a.drop_position,{x=expected[dir][lane][1],y=expected[dir][lane][2]}) end
+    end
+  end)
+  it("create saves hands of old arms", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+    set_hand(rec.arms[1][1],"iron-plate",3); rec.invs[1].room=1
+    set_hand(rec.out[2][1],"copper-plate",2); rec.invs[2].room=0; rec.entity.inventory.room=0
+    local oldin,oldout=rec.arms[1][1],rec.out[2][1]; arms.create(rec)
+    eq(oldin.valid,false); eq(oldout.valid,false); eq(rec.invs[1].insert_calls,1); eq(rec.invs[2].insert_calls,1)
+    eq(rec.entity.inventory.insert_calls,2); eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position); eq(s.spills[1].stack,{name="copper-plate",count=2,quality="normal"})
+    local r,s2=setup(); r.entity.surface=s2; arms.create(r); arms.create(r); eq(r.invs[1].insert_calls,0); eq(r.entity.inventory.insert_calls,0); eq(#s2.spills,0)
+  end)
+  it("destroy removes out arms", function()
+    for _,keep in ipairs({false,true}) do local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local a=rec.out[1][1]; arms.destroy(rec,keep); eq(a.valid,false); eq(rec.out,nil); eq(rec.out_paused,nil); eq(rec.hand,nil) end
+    arms.destroy({arms={{},{}},out={{nil,{valid=false}},{}},stores={{valid=false},nil},invs={}})
+  end)
+  it("pause_out writes only on change", function()
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.pause_out(rec,1,true); local n=writes.disabled_by_script
+    arms.pause_out(rec,1,true); eq(writes.disabled_by_script,n); eq(n,#rec.out[1]); eq(rec.out[2][1].disabled_by_script,nil); eq(rec.arms[1][1].disabled_by_script,nil)
+    arms.pause_out(rec,1,false); eq(writes.disabled_by_script,2*n)
+  end)
+  it("hand writes only on change", function()
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.hand(rec,4); local n=writes.hand
+    eq(n,N.OUT_ARMS*2); eq(rec.out[1][1].inserter_stack_size_override,4); arms.hand(rec,4); eq(writes.hand,n); arms.hand(rec,2); eq(writes.hand,n*2); eq(rec.arms[1][1].inserter_stack_size_override,nil)
+    rec.out[1][1].valid=false; arms.hand(rec,3)
+  end)
+  it("held lists out arm hands", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.out[1][2],"iron-plate",3); set_hand(rec.out[1][5],"copper-plate",4,"rare")
+    local a=arms.held(rec,1); eq(a,{{arm=2,name="iron-plate",quality="normal",count=3},{arm=5,name="copper-plate",quality="rare",count=4}}); eq(arms.held(rec,2),{})
+    local again=arms.held(rec,1); eq(again,a); eq(again[1].count,3)
+  end)
+  it("clear_held clears one hand", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local a=rec.out[1][2]; set_hand(a,"iron-plate",3); set_hand(rec.out[1][3],"coal",1)
+    arms.clear_held(rec,1,2); eq(a.held_stack.valid_for_read,false); eq(rec.out[1][3].held_stack.valid_for_read,true); arms.clear_held(rec,8,1); arms.clear_held(rec,1,99)
+  end)
+  it("drain_hands returns and clears all hands", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.arms[1][1],"iron-plate",3); set_hand(rec.out[2][1],"copper-plate",2)
+    eq(arms.drain_hands(rec),{{name="iron-plate",quality="normal",count=3,lane=1},{name="copper-plate",quality="normal",count=2,lane=2}}); eq(rec.arms[1][1].held_stack.valid_for_read,false); eq(rec.out[2][1].held_stack.valid_for_read,false); eq(arms.drain_hands(rec),{})
+    eq(arms.drain_hands({arms=nil,out={{}, {}}}),{}); eq(arms.drain_hands({arms={{},{}},out=nil}),{})
+  end)
+  it("ensure rebuilds when out arms missing", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); rec.out=nil; eq(arms.ensure(rec),true); eq(#rec.out[1],N.OUT_ARMS); eq(arms.ensure(rec),false)
+    rec.out[1][1].valid=false; eq(arms.ensure(rec),true); rec.out[1]={}; eq(arms.ensure(rec),true)
   end)
 end)
