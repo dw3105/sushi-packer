@@ -31,8 +31,8 @@ local function fixture(tier)
   local invs={inventory(),inventory()}
   local rec={entity=entity,unit_number=1,tier=tier or "yellow",dir="north",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs=invs,arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),extra=nil,out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
   storage.boxes[1]=rec
-  local orig={can=belt_io.can_push,push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,plan=ledger.plan,hoard=ledger.hoard,ledger_led=ledger.led,pause=arms.pause,skip=arms.skip,set=led.set}
-  local pushes, plans, pauses, skips, ledcalls={}, {}, {}, {}, {}
+  local orig={can=belt_io.can_push,push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,plan=ledger.plan,hoard=ledger.hoard,ledger_led=ledger.led,pause=arms.pause,pause_out=arms.pause_out,skip=arms.skip,set=led.set}
+  local pushes, plans, pauses, pauses_out, skips, ledcalls={}, {}, {}, {}, {}, {}
   local blocked_after
   belt_io.lane_rate=function() return 0.125 end
   belt_io.can_push=function() return true end  -- v15 perf: lane free check before contents read
@@ -47,11 +47,13 @@ local function fixture(tier)
   ledger.hoard=function(state,lane,contents) return #contents>0 and {{name=contents[1].name,quality=contents[1].quality}} or {} end
   ledger.led=function(a,b,slots) return a+b==0 and "green" or "yellow" end
   arms.pause=function(r,l,p) if r.paused[l]~=p then pauses[#pauses+1]={l,p}; r.paused[l]=p end end
+  arms.pause_out=function(r,l,p) pauses_out[#pauses_out+1]={l,p} end
   arms.skip=function(r,l,k) skips[#skips+1]={l,k} end
   led.set=function(r,s,v) ledcalls[#ledcalls+1]={s,v}; r.led={state=s,visible=v} end
-  local f={rec=rec,invs=invs,boxinv=boxinv,pushes=pushes,plans=plans,pauses=pauses,skips=skips,ledcalls=ledcalls,orig=orig}
+  rec.settings.filters={{name="__never__"}}
+  local f={rec=rec,invs=invs,boxinv=boxinv,pushes=pushes,plans=plans,pauses=pauses,pauses_out=pauses_out,skips=skips,ledcalls=ledcalls,orig=orig}
   function f.block_after(n) blocked_after=n end
-  function f.restore() belt_io.can_push=orig.can; belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.skip=orig.skip; led.set=orig.set end
+  function f.restore() belt_io.can_push=orig.can; belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.pause_out=orig.pause_out; arms.skip=orig.skip; led.set=orig.set end
   function f.run(t) tick.on_tick({tick=t or 1}) end
   return f
 end

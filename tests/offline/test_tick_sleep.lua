@@ -4,6 +4,7 @@ local belt_io=require("scripts.belt_io")
 local circuit=require("scripts.circuit")
 local led=require("scripts.led")
 local ledger=require("scripts.ledger")
+local arms=require("scripts.arms")
 
 local function inv()
   local x={reads=0,items={}}
@@ -22,17 +23,18 @@ local function fixture(unit,tier,due)
   local reads,data={}, {valid=true,unit_number=unit,force={index=1}}
   local entity=setmetatable({}, {__index=function(_,k) reads[k]=(reads[k] or 0)+1; return data[k] end})
   local invs={inv(),inv()}
-  local rec={entity=entity,unit_number=unit,tier=tier or "yellow",dir="north",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs=invs,arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=due or 0,last_poll=0,led={state="green",visible=true}}
+  local rec={entity=entity,unit_number=unit,tier=tier or "yellow",dir="north",settings={filters={{name="__never__"}},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs=invs,arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=due or 0,last_poll=0,led={state="green",visible=true}}
   storage.boxes[unit]=rec
-  local original={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan}
+  local original={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan,pause_out=arms.pause_out}
   local plans,ledcalls={},{}
   belt_io.can_push=function() return true end  -- v15 perf
+  arms.pause_out=function() end
   belt_io.push=function() return 0 end
   belt_io.lane_rate=function() return 0.125 end
   circuit.evaluate=function() return true,false end
   ledger.plan=function(_,lane,contents,opts) plans[#plans+1]={lane=lane,tick=opts.tick}; return {} end
   led.set=function(r,s,v) ledcalls[#ledcalls+1]={state=s,visible=v}; r.led={state=s,visible=v} end
-  local function restore() belt_io.push=original.push; belt_io.lane_rate=original.rate; circuit.evaluate=original.eval; led.set=original.set; ledger.plan=original.plan end
+  local function restore() belt_io.push=original.push; belt_io.lane_rate=original.rate; circuit.evaluate=original.eval; led.set=original.set; ledger.plan=original.plan; arms.pause_out=original.pause_out end
   return rec,invs,reads,plans,ledcalls,restore,function(v) data.valid=v end
 end
 local function run(t) tick.on_tick({tick=t}) end

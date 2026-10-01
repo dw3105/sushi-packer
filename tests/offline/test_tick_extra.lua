@@ -18,7 +18,8 @@ describe("tick extra",function()
   end)
 
   local function fixture(tier,belt_name,speed)
-    local old={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan,hoard=ledger.hoard,led=ledger.led}
+    local arms=require("scripts.arms")
+    local old={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan,hoard=ledger.hoard,led=ledger.led,pause_out=arms.pause_out}
     belt_io._reset_rates(); defines={inventory={chest=1},gui_type={entity=1}}
     settings={global={[N.SETTING_TIMEOUT]={value=0}}}
     prototypes={entity={[belt_name]={belt_speed=speed}},item={iron={stack_size=100}},quality={normal={level=0}}}
@@ -32,7 +33,8 @@ describe("tick extra",function()
     setmetatable(inv2,{__len=function() return 12 end})
     local emptybox={is_empty=function() return true end,get_contents=function() return {} end}
     tick._reset_intervals()
-    local rec={entity={valid=true,unit_number=1,force={index=1},get_inventory=function() return emptybox end},unit_number=1,tier=tier,settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv,inv2},arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
+    local rec={entity={valid=true,unit_number=1,force={index=1},get_inventory=function() return emptybox end},unit_number=1,tier=tier,settings={filters={{name="__never__"}},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv,inv2},arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
+    arms.pause_out=function() end
     belt_io.can_push=function() return true end  -- v15 perf (never restored: every case in this file fakes it)
     belt_io.push=function(r,l,p) r.pushed=(r.pushed or 0)+p.count; return p.count end
     circuit.evaluate=function() return true,false end
@@ -41,7 +43,7 @@ describe("tick extra",function()
     end
     ledger.hoard=function() return {} end; ledger.led=function() return "yellow" end; led.set=function(r,s,v) r.led={state=s,visible=v} end
     storage={boxes={[1]=rec},belt_stack={[1]=1}}; game={connected_players={}}
-    return rec,function() belt_io.push=old.push; belt_io.lane_rate=old.rate; circuit.evaluate=old.eval; led.set=old.set; ledger.plan=old.plan; ledger.hoard=old.hoard; ledger.led=old.led end
+    return rec,function() belt_io.push=old.push; belt_io.lane_rate=old.rate; circuit.evaluate=old.eval; led.set=old.set; ledger.plan=old.plan; ledger.hoard=old.hoard; ledger.led=old.led; arms.pause_out=old.pause_out end
   end
 
   local function rate_case(tier,name,speed,expected,title)
