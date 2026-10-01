@@ -313,7 +313,7 @@ end
 --          puts the rest (total - S) back into the lane store.
 local SWEEP, SWEEP_SOON = 300, 60  -- hand looks cost ~80 us per lane (bench 2026-10-01): rare
 local MERGE_OUT, MERGE_POOL = {}, {}
-local HAND_SIZE, HAND_KEY, HAND_MERGED = {}, {}, {}
+local HAND_SIZE, HAND_KEY, HAND_MERGED, HAND_OK = {}, {}, {}, {}
 function M.hands(state, lane, held, opts)
   local ready = state.ready
   if not ready then ready = { 0, 0 }; state.ready = ready end
@@ -323,7 +323,9 @@ function M.hands(state, lane, held, opts)
   if not memories then memories = { {}, {} }; state.held = memories end
   local sinces = state.since
   if not sinces then sinces = { {}, {} }; state.since = sinces end
-  local memory, since = memories[lane], sinces[lane]
+  local cmems = state.hcount
+  if not cmems then cmems = { {}, {} }; state.hcount = cmems end
+  local memory, since, counts_mem = memories[lane], sinces[lane], cmems[lane]
   local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
   local n = #held
   local do_sweep = tick >= (sweep[lane] or 0)  -- (scan may call later than this on a busy lane)
@@ -337,17 +339,21 @@ function M.hands(state, lane, held, opts)
     if item_size < size then size = item_size end
     if h.count < size then HAND_SIZE[i] = size; HAND_KEY[i] = look_key(h.name, h.quality) else HAND_SIZE[i] = 0; HAND_KEY[i] = false end
     HAND_MERGED[i] = false
+    -- may this hand be merged now? Jam / flush_all: any partial hand. Quiet sweep: only a hand that did not change
+    -- since previous sweep (same kind, same count): on a flowing lane partial hands fill by themselves.
+    local key = HAND_KEY[i]
+    HAND_OK[i] = key and (flush_all or jam or (do_sweep and memory[h.arm] == key and counts_mem[h.arm] == h.count)) or false
   end
-  for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i] = nil, nil, nil end
+  for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i], HAND_OK[i] = nil, nil, nil, nil end
 
   -- merges: first kind (arm order) whose partial hands reach one stack; shortest prefix of its hands
   local merge_n = 0
   for i = 1, n do
     local key = HAND_KEY[i]
-    if key and not HAND_MERGED[i] then
+    if key and HAND_OK[i] and not HAND_MERGED[i] then
       local total, last = 0, nil
       for j = i, n do
-        if HAND_KEY[j] == key then
+        if HAND_KEY[j] == key and HAND_OK[j] then
           total = total + held[j].count
           if total >= HAND_SIZE[i] then last = j; break end
         end
@@ -357,7 +363,7 @@ function M.hands(state, lane, held, opts)
         local m = MERGE_POOL[merge_n]
         if not m then m = { arms = {} }; MERGE_POOL[merge_n] = m end
         local arms, an = m.arms, 0
-        for j = i, last do if HAND_KEY[j] == key then an = an + 1; arms[an] = held[j].arm; HAND_MERGED[j] = true end end
+        for j = i, last do if HAND_KEY[j] == key and HAND_OK[j] then an = an + 1; arms[an] = held[j].arm; HAND_MERGED[j] = true end end
         for j = an + 1, #arms do arms[j] = nil end
         m.name, m.quality, m.total = held[i].name, held[i].quality, total
         MERGE_OUT[merge_n] = m
@@ -380,10 +386,11 @@ function M.hands(state, lane, held, opts)
         else
           memory[arm], since[arm] = key, tick
         end
+        counts_mem[arm] = held[i].count
       end
       if flush then
         out_n = out_n + 1; HANDS_OUT[out_n] = arm
-        memory[arm], since[arm] = nil, nil
+        memory[arm], since[arm], counts_mem[arm] = nil, nil, nil
       end
     end
   end
@@ -392,7 +399,7 @@ function M.hands(state, lane, held, opts)
     for arm, key in pairs(memory) do
       local still = false
       for i = 1, n do if held[i].arm == arm and HAND_KEY[i] == key and not HAND_MERGED[i] then still = true; break end end
-      if not still then memory[arm], since[arm] = nil, nil end
+      if not still then memory[arm], since[arm], counts_mem[arm] = nil, nil, nil end
     end
     sweep[lane] = tick + (merge_n > 0 and SWEEP_SOON or SWEEP)
   end
