@@ -115,16 +115,71 @@ local function cached(rec, field, sign)
   if type(b.scan) ~= "table" then b.scan = {} end -- one rescan clock per side: a missing side never starves the other
   if type(b.lines) ~= "table" then b.lines = {} end
   local belt = b[field]
-  if matches(belt, rec.entity, rec.dir, sign) then return belt, b.lines[field] or PLAIN end
-  b[field] = nil
+  local kind = b.kind and b.kind[field]
+  if belt then
+    if not kind then
+      b.kind = b.kind or {}
+      kind = belt.type
+      b.kind[field] = kind
+    end
+    local valid = belt.valid
+    local direction = valid and belt.direction
+    if valid and direction == direction_value(rec.dir) then
+      local function ensure_lines(map)
+        local lines = b.lines[field]
+        if type(lines) ~= "table" or type(lines[1]) == "number" then
+          map = type(lines) == "table" and lines or map or PLAIN
+          b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
+        end
+      end
+      if kind == "transport-belt" or kind == "underground-belt" then
+        local tick = game.tick or 0
+        b.checked = b.checked or {}
+        if tick < (b.checked[field] or -60) + 60 then
+          ensure_lines(PLAIN)
+          return belt, PLAIN
+        end
+        b.checked[field] = tick
+        if matches(belt, rec.entity, rec.dir, sign) then
+          ensure_lines(PLAIN)
+          return belt, PLAIN
+        end
+      elseif matches(belt, rec.entity, rec.dir, sign) then
+        local map = b.lines[field]
+        if type(map) ~= "table" or type(map[1]) ~= "number" then map = nil end
+        if type(b.lines[field]) ~= "table" or type(b.lines[field][1]) == "number" then
+          map = map or neighbour_lines(belt, rec.entity, rec.dir, sign) or PLAIN
+          b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
+        end
+        return belt, map or PLAIN
+      end
+    end
+    if not valid then b.scan[field] = (game.tick or 0) - 60 end
+  end
+  b[field], b.lines[field] = nil, nil
+  if b.kind then b.kind[field] = nil end
+  if b.checked then b.checked[field] = nil end
   local tick = game.tick or 0
   if tick < (b.scan[field] or -60) + 60 then return nil end
   b.scan[field] = tick
   local lines
   belt, lines = find_belt(rec.entity, rec.dir, sign)
   b[field] = belt
-  b.lines[field] = lines
+  b.lines[field] = nil
+  if belt then
+    b.kind = b.kind or {}
+    b.kind[field] = belt.type
+    b.checked = b.checked or {}
+    b.checked[field] = tick
+    local map = lines or PLAIN
+    b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
+  end
   return belt, lines or PLAIN
+end
+
+local function transport_line(rec, field, lane, map)
+  local lines = rec.belt and rec.belt.lines and rec.belt.lines[field]
+  if lines then return lines[lane] end
 end
 
 function M._eta(position, speed)
@@ -167,7 +222,7 @@ function M.pull(rec, budget, sink)
   local fast = speed > 0.0625
   for i = 0, 1 do
     local lane = i == 0 and first or 3 - first
-    local line = belt.get_transport_line(map[lane])
+    local line = transport_line(rec, "behind", lane, map)
     local tries = 0
     local detailed, di
     while tries < (budget[lane] or 0) do
@@ -198,7 +253,7 @@ function M.pull(rec, budget, sink)
   -- ETA describes the leading item after any removals. Lane that took an item: next item sits >= 0.25 tile
   -- (belt item gap) behind, never sooner than next tier visit (PERF-3) -> skip costly detailed read.
   for lane = 1, 2 do
-    local line = belt.get_transport_line(map[lane])
+    local line = transport_line(rec, "behind", lane, map)
     if taken[lane] > 0 or #line == 0 then eta[lane] = nil
     elseif not line.can_insert_at(0) then eta[lane] = 0
     else
@@ -217,7 +272,7 @@ function M.push(rec, lane, item, belt_stack_size)
   local counters = storage and storage.sp_counters
   local belt, map = cached(rec, "front", 1)
   if not belt then return 0 end
-  local line = belt.get_transport_line(map[lane])
+  local line = transport_line(rec, "front", lane, map)
   if not line.can_insert_at_back() then return 0 end
   if line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then
     if counters then counters.pushes = counters.pushes + 1; counters.items_out = counters.items_out + item.count end
