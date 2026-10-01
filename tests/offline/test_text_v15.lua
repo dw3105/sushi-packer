@@ -41,9 +41,11 @@ describe("text v15", function()
       ok(not text:match("24%s+slots?") and not text:match("48%s+slots?"), path .. " has stale slot count")
       ok(not text:match("24%s+Plätze") and not text:match("48%s+Plätze"), path .. " has stale German slot count")
     end
-    local portal = read("portal/description.md")
-    ok(portal:find("12", 1, true) and (portal:find("per lane", 1, true) or portal:find("each lane", 1, true)),
-      "portal must say 12 slots per lane")
+    for _, path in ipairs({ "README.md", "portal/description.md" }) do
+      local text = read(path):lower()
+      ok(text:find("12 slots per lane", 1, true) or text:find("each lane has 12 slots", 1, true)
+        or text:find("each lane holds 12 slots", 1, true), path .. " must say 12 slots per lane")
+    end
   end)
 
   it("changelog has 0.1.15 and 0.2.15", function()

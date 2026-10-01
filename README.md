@@ -4,6 +4,8 @@
 
 Sushi Packer is a 1×1 inline belt box for mixed item belts. It keeps the two belt lanes separate, gathers each item type until it fills one belt stack (1 item before belt stacking research, then whatever research sets: 4 in vanilla Space Age, more when a mod raises it), then sends that stack forward as one stacked belt item. The box preserves the lane each item entered on.
 
+The box now uses much less script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them.
+
 ## Tiers and recipes
 
 Each tier matches a belt speed. Recipes are crafted in the crafting category, by hand or in an assembler.
