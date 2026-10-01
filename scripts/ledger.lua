@@ -311,7 +311,7 @@ end
 --   merge: at most one entry per kind: { name=, quality=, total=, arms = { ascending arm indexes } }: partial hands of
 --          one kind that together hold at least one belt stack. Caller clears those hands, pushes one full stack,
 --          puts the rest (total - S) back into the lane store.
-local SWEEP, SWEEP_SOON = 120, 30
+local SWEEP, SWEEP_SOON = 300, 60  -- hand looks cost ~80 us per lane (bench 2026-10-01): rare
 local MERGE_OUT, MERGE_POOL = {}, {}
 local HAND_SIZE, HAND_KEY, HAND_MERGED = {}, {}, {}
 function M.hands(state, lane, held, opts)

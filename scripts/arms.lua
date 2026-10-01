@@ -215,11 +215,15 @@ local held_lists = { {}, {} }
 function M.held(rec, lane)
   local list = held_lists[lane]
   for i = #list, 1, -1 do list[i] = nil end
-  for i, arm in ipairs((rec.out and rec.out[lane]) or {}) do
-    if _valid(arm) then
-      local hand = arm.held_stack
-      if hand and hand.valid_for_read then
-        list[#list + 1] = { arm = i, name = hand.name, quality = hand.quality.name, count = hand.count }
+  local outs = rec.out and rec.out[lane]
+  if outs then
+    for i = 1, #outs do
+      local arm = outs[i]
+      if _valid(arm) then  -- kept: another mod may destroy hidden parts; reading a dead arm would stop the game
+        local hand = arm.held_stack
+        if hand and hand.valid_for_read then
+          list[#list + 1] = { arm = i, name = hand.name, quality = hand.quality.name, count = hand.count }
+        end
       end
     end
   end
