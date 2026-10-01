@@ -140,10 +140,10 @@ describe("arms", function()
   it("create saves hands of old arms", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
     set_hand(rec.arms[1][1],"iron-plate",3); rec.invs[1].room=1
-    set_hand(rec.out[2][1],"copper-plate",2); rec.invs[2].room=0; rec.entity.inventory.room=0
+    set_hand(rec.out[2][1],"copper-plate",2); rec.invs[2].room=2; rec.entity.inventory.room=0
     local oldin,oldout=rec.arms[1][1],rec.out[2][1]; arms.create(rec)
     eq(oldin.valid,false); eq(oldout.valid,false); eq(rec.invs[1].insert_calls,1); eq(rec.invs[2].insert_calls,1)
-    eq(rec.entity.inventory.insert_calls,2); eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position); eq(s.spills[1].stack,{name="copper-plate",count=2,quality="normal"})
+    eq(rec.entity.inventory.insert_calls,1); eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position); eq(s.spills[1].stack,{name="iron-plate",count=2,quality="normal"})
     local r,s2=setup(); r.entity.surface=s2; arms.create(r); arms.create(r); eq(r.invs[1].insert_calls,0); eq(r.entity.inventory.insert_calls,0); eq(#s2.spills,0)
   end)
   it("destroy removes out arms", function()
