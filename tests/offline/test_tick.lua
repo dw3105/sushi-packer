@@ -17,7 +17,7 @@ local function inventory(contents)
     return x.count-left
   end
   function inv.count_empty_stacks() return 12-#inv.contents end
-  return setmetatable(inv,{__len=function(x) return #x.contents end})
+  return setmetatable(inv,{__len=function() return 12 end})
 end
 
 local function fixture(tier)
@@ -38,16 +38,18 @@ local function fixture(tier)
   belt_io.push=function(r,l,piece,bss)
     pushes[#pushes+1]={lane=l,piece={name=piece.name,quality=piece.quality,count=piece.count},inv=r._pushing_inv}
     if blocked_after and #pushes==blocked_after then return 0 end
+    if storage.sp_counters then storage.sp_counters.pushes=storage.sp_counters.pushes+1; storage.sp_counters.items_out=storage.sp_counters.items_out+piece.count end
     return piece.count
   end
   circuit.evaluate=function() return true,false end
   ledger.plan=function(_,lane,contents,opts) plans[#plans+1]={lane=lane,contents=contents,opts=opts}; return {} end
-  ledger.hoard=function(contents) return {{name="iron",quality="normal"}} end
+  ledger.hoard=function(contents) return #contents>0 and {{name=contents[1].name,quality=contents[1].quality}} or {} end
   ledger.led=function(a,b,slots) return a+b==0 and "green" or "yellow" end
-  arms.pause=function(r,l,p) pauses[#pauses+1]={l,p} end
+  arms.pause=function(r,l,p) if r.paused[l]~=p then pauses[#pauses+1]={l,p}; r.paused[l]=p end end
   arms.skip=function(r,l,k) skips[#skips+1]={l,k} end
   led.set=function(r,s,v) ledcalls[#ledcalls+1]={s,v}; r.led={state=s,visible=v} end
   local f={rec=rec,invs=invs,boxinv=boxinv,pushes=pushes,plans=plans,pauses=pauses,skips=skips,ledcalls=ledcalls,orig=orig}
+  function f.block_after(n) blocked_after=n end
   function f.restore() belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.skip=orig.skip; led.set=orig.set end
   function f.run(t) tick.on_tick({tick=t or 1}) end
   return f
@@ -55,14 +57,14 @@ end
 
 describe("tick arms", function()
   it("pushes ledger pieces on own lane and removes them", function()
-    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs; f.rec.out_credit[1]=2
     ledger.plan=function(_,lane) if lane==1 then return {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} end return {} end
     f.run(1); eq(#f.pushes,2); eq(f.pushes[1].lane,1); eq(f.pushes[2].lane,1); eq(#f.invs[1].removes,2); eq(#f.invs[2].removes,0); f.restore()
   end)
   it("stops at blocked lane", function()
     local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs; f.rec.out_credit={2,0}; f.blocked_after=2
-    ledger.plan=function(_,lane) return lane==1 and {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} or {} end
-    f.run(1); eq(#f.invs[1].removes,1); f.rec.next_poll=0; f.blocked_after=nil; f.run(9); eq(#f.invs[1].removes,2); f.restore()
+    ledger.plan=function(_,lane,contents) if lane~=1 then return {} end; if contents[1] and contents[1].count>=8 then return {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} end; return {{name="iron",quality="normal",count=4}} end
+    f.block_after(2); f.run(1); eq(#f.invs[1].removes,1); f.rec.next_poll=0; f.block_after(nil); f.run(9); eq(#f.invs[1].removes,2); f.restore()
   end)
   it("rate cap by credit", function()
     local f=fixture("yellow"); f.invs[1]=inventory({{name="iron",quality="normal",count=100}}); f.rec.invs=f.invs
@@ -77,17 +79,17 @@ describe("tick arms", function()
     eq(o.tick,1); eq(o.bss,4); eq(o.timeout_ticks,0); eq(o.slots,N.STORE_SLOTS); eq(o.slots_used,1); eq(o.flush_all,true); ok(o.skip("iron","normal")); eq(o.stack_size("iron"),100); f.restore()
   end)
   it("circuit off pauses both lanes", function()
-    local f=fixture(); circuit.evaluate=function() return false,false end; f.run(1); eq(f.pauses,{{1,true},{2,true}}); eq(#f.pushes,0); f.pauses={}; circuit.evaluate=function() return true,false end; f.rec.next_poll=0; f.run(9); eq(f.pauses,{{1,false},{2,false}}); f.restore()
+    local f=fixture(); circuit.evaluate=function() return false,false end; f.run(1); eq(f.pauses,{{1,true},{2,true}}); eq(#f.pushes,0); while #f.pauses>0 do table.remove(f.pauses) end; circuit.evaluate=function() return true,false end; f.rec.next_poll=0; f.run(9); eq(f.pauses,{{1,false},{2,false}}); f.restore()
   end)
   it("hoard kinds go to arms", function()
     local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=100}}); f.rec.invs=f.invs; f.run(1); eq(f.skips,{{1,{{name="iron",quality="normal"}}},{2,{}}}); f.restore()
   end)
   it("extra leaves first and pauses its lane", function()
-    local f=fixture(); f.rec.extra={{name="iron",quality="normal",count=9,lane=1}}; f.boxinv.contents={{name="iron",quality="normal",count=9}}
-    local got={}; belt_io.push=function(r,l,p,bss) got[#got+1]={lane=l,count=p.count,source=r._pushing_inv}; return p.count end
+    local f=fixture(); f.rec.extra={{name="iron",quality="normal",count=9,lane=1}}; f.boxinv.contents={{name="iron",quality="normal",count=9}}; f.rec.out_credit[1]=4; belt_io.lane_rate=function() return 4 end
+    local got={}; belt_io.push=function(r,l,p,bss) got[#got+1]={lane=l,count=p.count,source=p.name=="iron" and f.boxinv or f.invs[l]}; return p.count end
     f.invs[1]=inventory({{name="copper",quality="normal",count=4}}); f.rec.invs=f.invs
     ledger.plan=function(_,lane) return lane==1 and {{name="copper",quality="normal",count=4}} or {} end
-    f.run(1); eq(got[1],{lane=1,count=4,source=f.boxinv}); eq(got[2],{lane=1,count=4,source=f.boxinv}); eq(got[3],{lane=1,count=1,source=f.boxinv}); eq(got[4].source,f.invs[1]); eq(f.rec.extra,nil); ok(f.pauses[1][2]); f.restore()
+    f.run(1); eq(got[1],{lane=1,count=4,source=f.boxinv}); eq(got[2],{lane=1,count=4,source=f.boxinv}); eq(got[3],{lane=1,count=1,source=f.boxinv}); eq(got[4].source,f.invs[1]); eq(f.rec.extra,nil); eq(f.pauses,{{1,true},{1,false}}); f.restore()
   end)
   it("led from used slots", function()
     local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=1}}); f.rec.invs=f.invs; f.run(1); eq(f.ledcalls,{{"yellow",true}}); f.rec.next_poll=0; f.run(9); eq(#f.ledcalls,1); f.restore()
@@ -108,5 +110,5 @@ describe("tick", function()
   it("timeout ticks custom and global", function() local r=fixture().rec; r.settings.timeout_mode="custom"; r.settings.timeout_s=3; eq(tick.timeout_ticks(r),180); r.settings.timeout_mode="global"; settings.global[N.SETTING_TIMEOUT].value=7; eq(tick.timeout_ticks(r),420) end)
   it("on research caches belt stack size", function() local f=fixture(); local old=belt_io.belt_stack_size; belt_io.belt_stack_size=function(x) return x.index+2 end; tick.on_research({force={index=4}}); eq(storage.belt_stack[4],6); belt_io.belt_stack_size=old; f.restore() end)
   it("invalid entity drops rec", function() local f=fixture(); f.rec.entity.valid=false; f.run(1); eq(storage.boxes[1],nil); f.restore() end)
-  it("decon stops visits and hides led", function() local f=fixture(); tick.on_decon({entity=f.rec.entity},true); f.run(1); eq(#f.pushes,0); eq(f.ledcalls[#f.ledcalls],{"green",false}); f.restore() end)
+  it("decon stops visits and pauses arms", function() local f=fixture(); tick.on_decon({entity=f.rec.entity},true); f.run(1); eq(#f.pushes,0); eq(f.pauses,{{1,true},{2,true}}); eq(f.ledcalls[#f.ledcalls],{"green",false}); f.restore() end)
 end)

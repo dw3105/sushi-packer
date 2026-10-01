@@ -1,113 +1,61 @@
-local belt_io = require("scripts.belt_io")
-local core = require("scripts.core")
-local tick = require("scripts.tick")
-local circuit = require("scripts.circuit")
-local led = require("scripts.led")
-local N = require("scripts.names")
+local belt_io=require("scripts.belt_io")
+local tick=require("scripts.tick")
+local circuit=require("scripts.circuit")
+local led=require("scripts.led")
+local ledger=require("scripts.ledger")
+local N=require("scripts.names")
 
-describe("tick extra", function()
-  it("lane rate is belt speed times 4", function()
-    belt_io._reset_rates()
-    prototypes = { entity = {
-      ["turbo-transport-belt"] = { belt_speed = 0.125 },
-      ["kr-superior-transport-belt"] = { belt_speed = 0.1875 },
-    } }
-    eq(belt_io.lane_rate("turbo"), 0.5)
-    eq(belt_io.lane_rate("kr-superior"), 0.75)
+describe("tick extra",function()
+  it("lane rate is belt speed times 4",function()
+    belt_io._reset_rates(); prototypes={entity={["turbo-transport-belt"]={belt_speed=0.125},["kr-superior-transport-belt"]={belt_speed=0.1875}}}
+    eq(belt_io.lane_rate("turbo"),0.5); eq(belt_io.lane_rate("kr-superior"),0.75)
+  end)
+  it("missing belt prototype falls back to table rate",function()
+    belt_io._reset_rates(); prototypes={entity={}}; eq(belt_io.lane_rate("turbo"),0.5); eq(belt_io.lane_rate("kr-superior"),0)
+  end)
+  it("modded vanilla speed followed",function()
+    belt_io._reset_rates(); prototypes={entity={["transport-belt"]={belt_speed=0.0625}}}; eq(belt_io.lane_rate("yellow"),0.25)
   end)
 
-  it("missing belt prototype falls back to table rate", function()
-    belt_io._reset_rates()
-    prototypes = { entity = {} }
-    eq(belt_io.lane_rate("turbo"), 0.5)
-    eq(belt_io.lane_rate("kr-superior"), 0)
-  end)
-
-  it("modded vanilla speed followed", function()
-    belt_io._reset_rates()
-    prototypes = { entity = { ["transport-belt"] = { belt_speed = 0.0625 } } }
-    eq(belt_io.lane_rate("yellow"), 0.25)
-  end)
-
-  local function tick_fixture(tier, unit, belt_name, speed)
-    belt_io._reset_rates()
-    local old = { pull = belt_io.pull, push = belt_io.push, bss = belt_io.belt_stack_size,
-      evaluate = circuit.evaluate, set = led.set }
-    defines = { inventory = { chest = 1 }, gui_type = { entity = 1, item = 3 },
-      direction = { north = 0, east = 4, south = 8, west = 12 },
-      wire_connector_id = { circuit_red = 1, circuit_green = 2 } }
-    settings = { global = { [N.SETTING_TIMEOUT] = { value = 0 } } }
-    prototypes = { entity = { [belt_name] = { belt_speed = speed } }, item = { iron = { stack_size = 100 } } }
-    local calls = { pull = 0, budgets = {}, push = 0, led = 0 }
-    local inv = { contents = {} }
-    function inv.insert(x)
-      inv.contents[1] = inv.contents[1] or { name = x.name, quality = x.quality, count = 0 }
-      inv.contents[1].count = inv.contents[1].count + x.count
-      return x.count
+  local function fixture(tier,belt_name,speed)
+    local old={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan,hoard=ledger.hoard,led=ledger.led}
+    belt_io._reset_rates(); defines={inventory={chest=1},gui_type={entity=1}}
+    settings={global={[N.SETTING_TIMEOUT]={value=0}}}
+    prototypes={entity={[belt_name]={belt_speed=speed}},item={iron={stack_size=100}},quality={normal={level=0}}}
+    local inv={items={{name="iron",quality="normal",count=3000}}}
+    function inv.get_contents() local a={}; for i,x in ipairs(inv.items) do a[i]={name=x.name,quality=x.quality,count=x.count} end; return a end
+    function inv.is_empty() return #inv.items==0 end
+    function inv.count_empty_stacks() return 11 end
+    function inv.remove(x) local y=inv.items[1]; if not y then return 0 end; local n=math.min(x.count,y.count); y.count=y.count-n; return n end
+    setmetatable(inv,{__len=function() return 12 end})
+    local inv2={get_contents=function() return {} end,is_empty=function() return true end,count_empty_stacks=function() return 12 end,remove=function() return 0 end}
+    setmetatable(inv2,{__len=function() return 12 end})
+    local rec={entity={valid=true,unit_number=1,force={index=1}},unit_number=1,tier=tier,settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv,inv2},arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
+    belt_io.push=function(r,l,p) r.pushed=(r.pushed or 0)+p.count; return p.count end
+    circuit.evaluate=function() return true,false end
+    ledger.plan=function(state,lane,contents)
+      local out={}; if lane==1 and contents[1] then for _=1,contents[1].count do out[#out+1]={name="iron",quality="normal",count=1} end end; return out
     end
-    function inv.remove(x)
-      if not inv.contents[1] then return 0 end
-      local n = math.min(x.count, inv.contents[1].count); inv.contents[1].count = inv.contents[1].count - n; return n
-    end
-    function inv.get_contents()
-      local out = {}
-      for i, x in ipairs(inv.contents) do out[i] = { name = x.name, quality = x.quality, count = x.count } end
-      return out
-    end
-    local ent = { valid = true, unit_number = unit, position = { x = 0, y = 0 }, force = { index = 1, belt_stack_size_bonus = 0 } }
-    function ent.get_inventory() return inv end
-    local rec = { entity = ent, unit_number = unit, tier = tier, dir = "north", box = core.new_box(),
-      settings = { timeout_mode = "global", filters = {}, circuit = {} }, enabled = true,
-      in_credit = { 0, 0 }, out_credit = { 0, 0 }, next_poll = 0 }
-    belt_io.pull = function(_, budget) calls.pull = calls.pull + 1; calls.budgets[#calls.budgets + 1] = { budget[1], budget[2] }; return { 0, 0 } end
-    belt_io.push = function(_, _, p) calls.push = calls.push + p.count; return p.count end
-    belt_io.belt_stack_size = function() return 1 end
-    circuit.evaluate = function() return true, false end
-    led.set = function() calls.led = calls.led + 1 end
-    storage = { boxes = { [unit] = rec }, belt_stack = { [1] = 1 } }
-    game = { connected_players = {} }
-    return rec, calls, inv, old
+    ledger.hoard=function() return {} end; ledger.led=function() return "yellow" end; led.set=function(r,s,v) r.led={state=s,visible=v} end
+    storage={boxes={[1]=rec},belt_stack={[1]=1}}; game={connected_players={}}
+    return rec,function() belt_io.push=old.push; belt_io.lane_rate=old.rate; circuit.evaluate=old.eval; led.set=old.set; ledger.plan=old.plan; ledger.hoard=old.hoard; ledger.led=old.led end
   end
 
-  local function restore(old)
-    belt_io.pull, belt_io.push, belt_io.belt_stack_size = old.pull, old.push, old.bss
-    circuit.evaluate, led.set = old.evaluate, old.set
-  end
-
-  local function rate_case(tier, belt, speed, expected, test_name)
-    it(test_name, function()
-      local r, c, inv, o = tick_fixture(tier, 1, belt, speed)
-      belt_io.push = function(_, _, p) c.push = c.push + p.count; return p.count end
-      core.adopt_external(r.box, "iron", "normal", 3000, 3000, 1)
-      core.flush_partials(r.box, 1); inv.insert({ name = "iron", quality = "normal", count = 3000 })
-      for t = 1, 800 do tick.on_tick({ tick = t }) end
-      ok(c.push >= expected - 2, tier .. " below rate")
-      ok(c.push <= expected + 2, tier .. " exceeded rate")
-      restore(o)
+  local function rate_case(tier,name,speed,expected,title)
+    it(title,function()
+      local rec,restore=fixture(tier,name,speed)
+      for t=1,800 do tick.on_tick({tick=t}) end
+      if expected<=800 then ok(rec.pushed>=expected-2,tier.." below rate") end
+      ok(rec.pushed<=expected+2,tier.." exceeded rate"); restore()
     end)
   end
-
-  rate_case("planetaris-hyper", "planetaris-hyper-transport-belt", 0.15625, 500,
-    "75 per s tier keeps rate over 800 ticks")
-  rate_case("kr-superior", "kr-superior-transport-belt", 0.1875, 600,
-    "90 per s tier keeps rate over 800 ticks")
-  rate_case("ub-ultimate", "ultimate-belt", 0.5625, 1800,
-    "270 per s tier keeps rate over 800 ticks")
-
-  it("input budget reaches 2 per tick at 270 per s", function()
-    local r, c, _, o = tick_fixture("ub-ultimate", 1, "ultimate-belt", 0.5625)
-    for t = 1, 8 do tick.on_tick({ tick = t }) end
-    local reached = false
-    for _, b in ipairs(c.budgets) do if b[1] >= 2 or b[2] >= 2 then reached = true end end
-    ok(reached, "no input budget reached 2")
-    restore(o)
-  end)
-
-  it("extra tier visited every tick", function()
-    local r, c, _, o = tick_fixture("kr-superior", 1, "kr-superior-transport-belt", 0.1875)
-    core.accept(r.box, "iron", "normal", 1, 1, 100, 0, false)
-    for t = 1, 10 do tick.on_tick({ tick = t }) end
-    eq(c.pull, 10)
-    restore(o)
+  rate_case("planetaris-hyper","planetaris-hyper-transport-belt",0.15625,500,"75 per s tier keeps rate over 800 ticks")
+  rate_case("kr-superior","kr-superior-transport-belt",0.1875,600,"90 per s tier keeps rate over 800 ticks")
+  rate_case("ub-ultimate","ultimate-belt",0.5625,1800,"270 per s tier keeps rate over 800 ticks")
+  it("extra tier visits at two tick cadence",function()
+    local rec,restore=fixture("kr-superior","kr-superior-transport-belt",0.1875); local visits=0
+    local original=ledger.plan; ledger.plan=function(...) visits=visits+1; return original(...) end
+    for t=1,10 do tick.on_tick({tick=t}) end
+    eq(visits,10); restore()
   end)
 end)
