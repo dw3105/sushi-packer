@@ -9,8 +9,20 @@ local gui = require("scripts.gui")
 local M = {}
 -- Visit gap per tier = ticks between two belt items on one lane (0.25 tile / belt speed) when that is a whole number
 -- of ticks >= 2 (yellow 8, red 4, turbo 2); any other speed -> every tick (blue 2.67: gap 2 lost rate, 200 of 225).
-local intervals = {}
-function M._reset_intervals() intervals = {} end  -- tests only: mocks swap prototypes
+local intervals, naps = {}, {}
+function M._reset_intervals() intervals, naps = {}, {} end  -- tests only: mocks swap prototypes
+-- Idle box sleeps about one belt tile of travel (blue 9, turbo 7 ticks), 2..15: first item after a pause is not held long.
+function M._nap(tier)
+  local n = naps[tier]
+  if n == nil then
+    local proto = prototypes.entity[N.TIER[tier].belt]
+    if not proto then return 15 end
+    n = math.floor(1 / proto.belt_speed) - 1
+    if n > 15 then n = 15 elseif n < 2 then n = 2 end
+    naps[tier] = n
+  end
+  return n
+end
 function M._interval(tier)
   local n = intervals[tier]
   if n == nil then
@@ -49,14 +61,6 @@ function M.on_research(e)
   storage.belt_stack[force.index] = belt_io.belt_stack_size(force)
 end
 
-local function update_led(rec)
-  local used1 = #rec.invs[1] - rec.invs[1].count_empty_stacks()
-  local used2 = #rec.invs[2] - rec.invs[2].count_empty_stacks()
-  local state = ledger.led(used1, used2, N.STORE_SLOTS)
-  local visible = rec.enabled ~= false and not rec.decon
-  if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
-end
-
 local function remove_extra(rec, box_inv, entry, amount)
   box_inv.remove({ name = entry.name, quality = entry.quality, count = amount })
   entry.count = entry.count - amount
@@ -92,60 +96,146 @@ local function drain_extra(rec, lane, bss, credit, counters)
   return credit,false
 end
 
+-- v15 perf (bench 2026-10-01: first loop cost 0.077 ms per turbo box, rig 0.012): engine calls per lane visit are
+-- can_push (1), get_contents (1), per belt stack out insert + remove. No contents read while lane cannot push, except
+-- once per SLOW ticks (hoarding rule, LED, timers). Used slots estimated from contents; engine asked only when the
+-- estimate says full.
+local SLOW = 30
+local EMPTY = {}
+local opts = {}  -- reused per call: ledger.plan reads it, never keeps it
+local tick_timeout  -- global flush timeout in ticks, read at most once per on_tick
+
+local function timeout_for(rec)
+  if rec.settings.timeout_mode == "custom" then return rec.settings.timeout_s * 60 end
+  if tick_timeout == nil then tick_timeout = settings.global[N.SETTING_TIMEOUT].value * 60 end
+  return tick_timeout
+end
+
+local function lane_has_extra(rec, lane)
+  local extra = rec.extra
+  if not extra then return false end
+  for i = 1, #extra do if extra[i].lane == lane and extra[i].count > 0 then return true end end
+  return false
+end
+
+local skip_filters
+local function skip_fn(name, quality) return filter.match(skip_filters, name, quality, levels()) end
+
+-- Returns true when lane store is known empty.
 local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counters)
+  local stopped = rec.enabled == false or rec.decon == true
+  local extra_lane = lane_has_extra(rec, lane)
+  arms.pause(rec, lane, stopped or extra_lane)
+  local cap = 2 * rate
+  if cap < 2 then cap = 2 end
+  local credit = (rec.out_credit[lane] or 0) + rate * elapsed
+  if credit > cap then credit = cap end
+  if extra_lane and not stopped then
+    credit, extra_lane = drain_extra(rec, lane, bss, credit, counters)
+    if not extra_lane then arms.pause(rec, lane, false) end
+  end
+  local can = not stopped and not extra_lane and credit >= 1 and belt_io.can_push(rec, lane)
+  rec.slow = rec.slow or { 0, 0 }
+  if not can and not flush_all and tick < rec.slow[lane] then
+    rec.out_credit[lane] = credit
+    return false  -- nothing can leave now; contents looked at again at slow tick
+  end
+  rec.slow[lane] = tick + SLOW
   local inv = rec.invs[lane]
-  local was_empty = inv.is_empty()
   local contents = inv.get_contents()
-  local slots_used = #inv - inv.count_empty_stacks()
-  local filters = rec.settings.filters
-  local skip
-  if filters and filters[1] ~= nil then
-    skip = function(name, quality) return filter.match(filters, name, quality, levels()) end
+  local n = #contents
+  rec.used = rec.used or { 0, 0 }
+  opts.tick, opts.bss, opts.stack_size, opts.timeout_ticks = tick, bss, stack_size, timeout_for(rec)
+  opts.slots, opts.flush_all = N.STORE_SLOTS, flush_all
+  if n == 0 then
+    opts.slots_used, opts.skip, opts.need_slot = 0, nil, nil
+    ledger.plan(rec.ledger, lane, contents, opts)  -- clears first-seen clocks
+    arms.skip(rec, lane, EMPTY)
+    rec.used[lane] = 0
+    rec.out_credit[lane] = credit
+    return true
+  end
+  local used, hoarding = 0, false
+  for i = 1, n do
+    local c = contents[i]
+    local count, size = c.count, stack_size(c.name)
+    used = used + math.ceil(count / size)
+    if count >= size then hoarding = true end  -- C-6 candidate
   end
   local need_slot
-  if slots_used >= N.STORE_SLOTS then  -- rare state: full store. New kind in an arm hand or waiting on belt behind?
-    need_slot = arms.need_slot(rec, lane, contents)
-    if not need_slot then
-      for _, w in ipairs(belt_io.behind_kinds(rec, lane) or {}) do
-        local found = false
-        for i = 1, #contents do if contents[i].name == w.name and contents[i].quality == w.quality then found = true; break end end
-        if not found then need_slot = true; break end
+  if used >= N.STORE_SLOTS then
+    if inv.count_empty_stacks() == 0 then  -- rare state: full store. New kind in an arm hand or waiting on belt behind?
+      used = N.STORE_SLOTS
+      need_slot = arms.need_slot(rec, lane, contents)
+      if not need_slot then
+        for _, w in ipairs(belt_io.behind_kinds(rec, lane) or EMPTY) do
+          local found = false
+          for i = 1, n do if contents[i].name == w.name and contents[i].quality == w.quality then found = true; break end end
+          if not found then need_slot = true; break end
+        end
       end
+    else
+      used = N.STORE_SLOTS - 1
     end
   end
-  local opts = { tick=tick, bss=bss, stack_size=stack_size, timeout_ticks=M.timeout_ticks(rec),
-    slots_used=slots_used, slots=N.STORE_SLOTS, skip=skip, flush_all=flush_all, need_slot=need_slot }
+  local filters = rec.settings.filters
+  local skip
+  if filters and filters[1] ~= nil then skip_filters = filters; skip = skip_fn end
+  opts.slots_used, opts.skip, opts.need_slot = used, skip, need_slot
   local plan = ledger.plan(rec.ledger, lane, contents, opts)
-  local kinds = ledger.hoard(contents, stack_size, #(rec.arms[lane] or {}) * N.ARM_HAND, bss)
-  arms.skip(rec, lane, kinds)
-  local extra_lane = false
-  for _, entry in ipairs(rec.extra or {}) do if entry.lane == lane and entry.count > 0 then extra_lane = true; break end end
-  arms.pause(rec, lane, rec.enabled == false or rec.decon == true or extra_lane)
-
-  rec.out_credit[lane] = math.min((rec.out_credit[lane] or 0) + rate * elapsed, math.max(2, 2 * rate))
-  local credit = rec.out_credit[lane]
-  if rec.enabled ~= false and not rec.decon then credit, extra_lane = drain_extra(rec, lane, bss, credit, counters) end
-  if rec.extra == nil or not extra_lane then arms.pause(rec, lane, rec.enabled == false or rec.decon == true or extra_lane) end
-  if rec.enabled ~= false and not rec.decon and not extra_lane then
-    for _, piece in ipairs(plan) do
-      if credit >= 1 then
-        local pushed = belt_io.push(rec, lane, piece, bss)
-        if pushed <= 0 then break end
-        inv.remove({ name=piece.name, quality=piece.quality, count=pushed })
-        if counters then counters.items_in = counters.items_in + pushed end
-        credit = credit - 1
-      else
-        break
-      end
+  if hoarding or rec.skip[lane] ~= "" then arms.skip(rec, lane, ledger.hoard(rec.ledger, lane, contents, stack_size)) end
+  if can then
+    local most = math.ceil(rate * elapsed)  -- belt items lane can take since last visit: no push attempt beyond
+    for i = 1, #plan do
+      if credit < 1 or i > most then break end
+      local piece = plan[i]
+      local pushed = belt_io.push(rec, lane, piece, bss)
+      if pushed <= 0 then break end
+      inv.remove(piece)
+      if counters then counters.items_in = counters.items_in + pushed end
+      credit = credit - 1
     end
   end
+  rec.used[lane] = used
   rec.out_credit[lane] = credit
-  return was_empty and inv.is_empty()
+  return false
+end
+
+local function update_led(rec)
+  local used = rec.used
+  local state = ledger.led(used and used[1] or 0, used and used[2] or 0, N.STORE_SLOTS)
+  local visible = rec.enabled ~= false and not rec.decon
+  if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
+end
+
+-- Once per 60 ticks per box: items someone put into box container (inserter, robot, player) and that are not
+-- old-save extra yet become extra on lane 1 (D-1 "surplus adopted as left-lane arrival"). Empty container: one call.
+local function adopt_outside(rec, tick)
+  local entity = rec.entity
+  if not entity.valid then return end
+  rec.force_index = entity.force.index
+  local box_inv = entity.get_inventory(defines.inventory.chest)
+  if box_inv.is_empty() then return end
+  local known = {}
+  for _, x in ipairs(rec.extra or EMPTY) do local k = x.name .. "\0" .. x.quality; known[k] = (known[k] or 0) + x.count end
+  for _, c in ipairs(box_inv.get_contents()) do
+    local more = c.count - (known[c.name .. "\0" .. c.quality] or 0)
+    if more > 0 then
+      rec.extra = rec.extra or {}
+      local hit
+      for _, x in ipairs(rec.extra) do if x.lane == 1 and x.name == c.name and x.quality == c.quality then hit = x; break end end
+      if hit then hit.count = hit.count + more else rec.extra[#rec.extra + 1] = { name = c.name, quality = c.quality, count = more, lane = 1 } end
+      rec.next_poll = tick
+    end
+  end
 end
 
 function M.on_tick(e)
   local counters = storage and storage.sp_counters
-  if e.tick % 30 == 0 then  -- open box windows show live lane stores
+  local tick = e.tick
+  belt_io.set_tick(tick)
+  tick_timeout = nil
+  if tick % 30 == 0 then  -- open box windows show live lane stores
     for _, player in pairs(game.connected_players) do
       if player.opened_gui_type == defines.gui_type.entity then
         local entity = player.opened
@@ -155,52 +245,45 @@ function M.on_tick(e)
     end
   end
   for _, rec in pairs(storage.boxes) do
-    local interval = M._interval(rec.tier)
-    -- Once per 60 ticks per box: items someone put into box container (inserter, robot, player) and that are not
-    -- old-save extra yet become extra on lane 1 (D-1 "surplus adopted as left-lane arrival"). Empty container: one call.
-    if rec.stores and not rec.decon and (e.tick + rec.unit_number) % 60 == 0 and rec.entity.valid then
-      local box_inv = rec.entity.get_inventory(defines.inventory.chest)
-      if not box_inv.is_empty() then
-        local known = {}
-        for _, x in ipairs(rec.extra or {}) do local k = x.name .. "\0" .. x.quality; known[k] = (known[k] or 0) + x.count end
-        for _, c in ipairs(box_inv.get_contents()) do
-          local more = c.count - (known[c.name .. "\0" .. c.quality] or 0)
-          if more > 0 then
-            rec.extra = rec.extra or {}
-            local hit
-            for _, x in ipairs(rec.extra) do if x.lane == 1 and x.name == c.name and x.quality == c.quality then hit = x; break end end
-            if hit then hit.count = hit.count + more else rec.extra[#rec.extra + 1] = { name = c.name, quality = c.quality, count = more, lane = 1 } end
-            rec.next_poll = e.tick
+    if rec.stores then
+      if not rec.decon and (tick + rec.unit_number) % 60 == 0 then adopt_outside(rec, tick) end
+      if not rec.decon and tick >= (rec.next_poll or 0) then
+        local interval = M._interval(rec.tier)
+        if rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0 then
+          if not rec.entity.valid then
+            storage.boxes[rec.unit_number] = nil
+          else
+            if counters then counters.visits = counters.visits + 1 end
+            local enabled, flush_now = circuit.evaluate(rec)
+            rec.enabled = enabled
+            local fi = rec.force_index
+            if fi == nil then fi = rec.entity.force.index; rec.force_index = fi end
+            local bss = storage.belt_stack[fi]
+            if bss == nil then bss = belt_io.belt_stack_size(rec.entity.force); storage.belt_stack[fi] = bss end
+            local elapsed = tick - (rec.last_poll or (tick - interval))
+            local rate = belt_io.lane_rate(rec.tier)
+            local empty1 = visit_lane(rec, 1, tick, bss, rate, elapsed, flush_now, counters)
+            local empty2 = visit_lane(rec, 2, tick, bss, rate, elapsed, flush_now, counters)
+            rec.last_poll = tick
+            -- Idle sleep only after stores stayed empty 30 ticks: a busy pass-through box (belt stack 1) empties its
+            -- stores on most visits; sleeping 15 ticks there cost 10-25 % of belt rate (rate test, 2026-10-01).
+            local idle = false
+            if empty1 and empty2 and rec.extra == nil then
+              rec.empty_since = rec.empty_since or tick
+              idle = tick - rec.empty_since >= 30
+            else
+              rec.empty_since = nil
+            end
+            rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
+            update_led(rec)
+            rec.led_dirty = nil
           end
         end
-      end
-    end
-    local staggered = rec.last_poll ~= nil or (e.tick + rec.unit_number) % interval == 0
-    local due = not rec.decon and e.tick >= (rec.next_poll or 0) and staggered
-    if due and rec.stores then
-      if not rec.entity.valid then
-        storage.boxes[rec.unit_number] = nil
-      else
-        if counters then counters.visits = counters.visits + 1 end
-        local enabled, flush_now = circuit.evaluate(rec)
-        rec.enabled = enabled
-        local force = rec.entity.force
-        local bss = storage.belt_stack[force.index]
-        if bss == nil then bss = belt_io.belt_stack_size(force); storage.belt_stack[force.index] = bss end
-        local elapsed = e.tick - (rec.last_poll or (e.tick - interval))
-        local empty1, empty2 = true, true
-        for lane = 1, 2 do
-          local lane_empty = visit_lane(rec, lane, e.tick, bss, belt_io.lane_rate(rec.tier), elapsed, flush_now, counters)
-          if lane == 1 then empty1 = lane_empty else empty2 = lane_empty end
-        end
-        rec.last_poll = e.tick
-        local idle = empty1 and empty2 and rec.extra == nil
-        rec.next_poll = e.tick + (idle and 15 or interval)
+      elseif rec.led_dirty then
         update_led(rec)
         rec.led_dirty = nil
       end
     elseif rec.led_dirty then
-      if rec.stores then update_led(rec) end
       rec.led_dirty = nil
     end
   end

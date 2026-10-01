@@ -288,8 +288,15 @@ describe("repro", function()
         local r = string.format("FND-0020 stack=%d chest=%d laneL=%d laneR=%d usedL=%d usedR=%d waitL=%d waitR=%d", cap, chest,
           per_lane[1], per_lane[2], used(rec, 1), used(rec, 2), waiting[1], waiting[2])
         print(r)
-        assert.is_true(per_lane[1] <= cap and per_lane[2] <= cap and chest == 0, r)
-        assert.is_true(used(rec, 1) <= 1 and used(rec, 2) <= 1, "one item stack per lane: " .. r)
+        -- C-6 on arms box (V15-3): lane stops taking a kind once it holds one full stack; items already in arm hands
+        -- still arrive, so the bound is one stack + arms of lane x hand size, and never more than 2 slots.
+        for l = 1, 2 do
+          local slack = #rec.arms[l] * N.ARM_HAND
+          assert.is_true(per_lane[l] >= cap, "lane " .. l .. " filled one stack before stopping: " .. r)
+          assert.is_true(per_lane[l] <= cap + slack, "lane " .. l .. " over one stack + arm hands (" .. slack .. "): " .. r)
+        end
+        assert.are_equal(0, chest, r)
+        assert.is_true(used(rec, 1) <= 2 and used(rec, 2) <= 2, "at most two slots per kind per lane: " .. r)
         assert.is_true(per_lane[1] > 0 and per_lane[2] > 0, "both lanes took items: " .. r)
         assert.is_true(waiting[1] > 0 and waiting[2] > 0, "items over the cap wait on belt: " .. r)
         done()

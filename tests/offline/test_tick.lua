@@ -31,10 +31,11 @@ local function fixture(tier)
   local invs={inventory(),inventory()}
   local rec={entity=entity,unit_number=1,tier=tier or "yellow",dir="north",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs=invs,arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),extra=nil,out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
   storage.boxes[1]=rec
-  local orig={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,plan=ledger.plan,hoard=ledger.hoard,ledger_led=ledger.led,pause=arms.pause,skip=arms.skip,set=led.set}
+  local orig={can=belt_io.can_push,push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,plan=ledger.plan,hoard=ledger.hoard,ledger_led=ledger.led,pause=arms.pause,skip=arms.skip,set=led.set}
   local pushes, plans, pauses, skips, ledcalls={}, {}, {}, {}, {}
   local blocked_after
   belt_io.lane_rate=function() return 0.125 end
+  belt_io.can_push=function() return true end  -- v15 perf: lane free check before contents read
   belt_io.push=function(r,l,piece,bss)
     pushes[#pushes+1]={lane=l,piece={name=piece.name,quality=piece.quality,count=piece.count},inv=r._pushing_inv}
     if blocked_after and #pushes==blocked_after then return 0 end
@@ -42,15 +43,15 @@ local function fixture(tier)
     return piece.count
   end
   circuit.evaluate=function() return true,false end
-  ledger.plan=function(_,lane,contents,opts) plans[#plans+1]={lane=lane,contents=contents,opts=opts}; return {} end
-  ledger.hoard=function(contents) return #contents>0 and {{name=contents[1].name,quality=contents[1].quality}} or {} end
+  ledger.plan=function(_,lane,contents,opts) local o={}; for k,v in pairs(opts) do o[k]=v end; plans[#plans+1]={lane=lane,contents=contents,opts=o}; return {} end  -- opts table is reused by tick: copy
+  ledger.hoard=function(state,lane,contents) return #contents>0 and {{name=contents[1].name,quality=contents[1].quality}} or {} end
   ledger.led=function(a,b,slots) return a+b==0 and "green" or "yellow" end
   arms.pause=function(r,l,p) if r.paused[l]~=p then pauses[#pauses+1]={l,p}; r.paused[l]=p end end
   arms.skip=function(r,l,k) skips[#skips+1]={l,k} end
   led.set=function(r,s,v) ledcalls[#ledcalls+1]={s,v}; r.led={state=s,visible=v} end
   local f={rec=rec,invs=invs,boxinv=boxinv,pushes=pushes,plans=plans,pauses=pauses,skips=skips,ledcalls=ledcalls,orig=orig}
   function f.block_after(n) blocked_after=n end
-  function f.restore() belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.skip=orig.skip; led.set=orig.set end
+  function f.restore() belt_io.can_push=orig.can; belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.skip=orig.skip; led.set=orig.set end
   function f.run(t) tick.on_tick({tick=t or 1}) end
   return f
 end
@@ -58,6 +59,7 @@ end
 describe("tick arms", function()
   it("pushes ledger pieces on own lane and removes them", function()
     local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs; f.rec.out_credit[1]=2
+    belt_io.lane_rate=function() return 2 end  -- v15 perf: at most ceil(rate x elapsed) belt items per visit (elapsed 1 here)
     ledger.plan=function(_,lane) if lane==1 then return {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} end return {} end
     f.run(1); eq(#f.pushes,2); eq(f.pushes[1].lane,1); eq(f.pushes[2].lane,1); eq(#f.invs[1].removes,2); eq(#f.invs[2].removes,0); f.restore()
   end)
@@ -74,7 +76,7 @@ describe("tick arms", function()
   end)
   it("passes rules to ledger", function()
     local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.invs[1]=inventory({{name="iron",quality="normal",count=4}}); f.rec.invs=f.invs
-    ledger.plan=function(_,lane,contents,opts) if lane==1 then f.seen=opts end; return {} end
+    ledger.plan=function(_,lane,contents,opts) if lane==1 then f.seen={}; for k,v in pairs(opts) do f.seen[k]=v end end; return {} end
     circuit.evaluate=function() return true,true end; f.run(1); local o=f.seen
     eq(o.tick,1); eq(o.bss,4); eq(o.timeout_ticks,0); eq(o.slots,N.STORE_SLOTS); eq(o.slots_used,1); eq(o.flush_all,true); ok(o.skip("iron","normal")); eq(o.stack_size("iron"),100); f.restore()
   end)
@@ -94,7 +96,14 @@ describe("tick arms", function()
   it("led from used slots", function()
     local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=1}}); f.rec.invs=f.invs; f.run(1); eq(f.ledcalls,{{"yellow",true}}); f.rec.next_poll=0; f.run(9); eq(#f.ledcalls,1); f.restore()
   end)
-  it("empty box sleeps 15 ticks", function() local f=fixture(); f.run(1); eq(f.rec.next_poll,16); f.restore() end)
+  it("empty box sleeps 15 ticks", function()  -- v15 INT: only after stores stayed empty 30 ticks (busy pass-through box must not nap)
+    local f=fixture(); f.run(1); eq(f.rec.next_poll,9)            -- yellow gap 8: still on tier cadence
+    f.rec.next_poll=0; f.run(20); eq(f.rec.next_poll,28)
+    f.rec.next_poll=0; f.run(31); eq(f.rec.next_poll,46)          -- empty since tick 1: 30 ticks -> sleep 15 (yellow: one tile = 31 ticks, capped 15)
+    eq(tick._nap("blue"),9); eq(tick._nap("turbo"),7); eq(tick._nap("yellow"),15)
+    f.invs[1].contents={{name="iron",quality="normal",count=1}}; f.rec.next_poll=0; f.run(40); eq(f.rec.next_poll,48); eq(f.rec.empty_since,nil)
+    f.restore()
+  end)
   it("sleeping box costs no engine read", function()
     local f=fixture(); f.rec.next_poll=100; local reads=0; f.rec.entity=setmetatable({}, {__index=function() reads=reads+1; error("unexpected engine read") end}); for t=1,50 do f.run(t) end; eq(reads,0); f.restore()
   end)
@@ -137,18 +146,24 @@ describe("tick", function()
   it("full lane store asks arms whether a new kind waits", function()
     local f=fixture(); local asked={}
     local old=arms.need_slot; arms.need_slot=function(r,l,contents) asked[#asked+1]=l; return l==1 end
-    local full=inventory({{name="iron",quality="normal",count=2}}); full.count_empty_stacks=function() return 0 end
+    local twelve={}; for i=1,12 do twelve[i]={name="iron",quality="q"..i,count=2} end
+    local full=inventory(twelve); full.count_empty_stacks=function() return 0 end
     f.invs[1]=full; f.rec.invs=f.invs
     f.run(1)
     eq(asked,{1}); eq(f.plans[1].opts.need_slot,true); eq(f.plans[2].opts.need_slot,nil)
     arms.need_slot=old; f.restore()
   end)
-  it("hoard gets slack of arms in hand and belt stack floor", function()
-    local f=fixture(); f.rec.arms={{{},{}},{{},{}}}; local got
-    ledger.hoard=function(contents,size,slack,floor) got={slack,floor}; return {} end
-    f.invs[1]=inventory({{name="iron",quality="normal",count=2}}); f.rec.invs=f.invs
-    f.run(1); eq(got,{2*N.ARM_HAND,4}); f.restore()
+  it("hoard asked only when a kind holds a full stack or a kind is still skipped", function()
+    local f=fixture(); local calls=0
+    ledger.hoard=function(state,lane,contents,size) calls=calls+1; eq(state,f.rec.ledger); eq(size("iron"),100); return {} end
+    f.invs[1]=inventory({{name="iron",quality="normal",count=99}}); f.rec.invs=f.invs
+    f.run(1); eq(calls,0)
+    -- credit set: without credit a lane is not read again before its slow tick (30)
+    f.invs[1].contents[1].count=100; f.rec.next_poll=0; f.rec.out_credit={2,2}; f.run(2); eq(calls,1)
+    f.invs[1].contents[1].count=60; f.rec.skip[1]="iron"; f.rec.next_poll=0; f.rec.out_credit={2,2}; f.run(3); eq(calls,2)  -- still skipped: asked again
+    f.restore()
   end)
+
   it("full lane store needs slot when belt behind carries a new kind", function()
     -- engine (v15 INT, game test full box flushes oldest): arm does not pick up an item its store cannot take,
     -- so the waiting kind is seen on the belt behind, not in an arm hand.
@@ -156,7 +171,10 @@ describe("tick", function()
     arms.need_slot=function() return false end
     local behind={ {{name="iron",quality="normal",count=3}}, {{name="copper",quality="normal",count=1}} }
     belt_io.behind_kinds=function(r,l) return behind[l] end
-    for lane=1,2 do local full=inventory({{name="iron",quality="normal",count=2}}); full.count_empty_stacks=function() return 0 end; f.invs[lane]=full end
+    for lane=1,2 do
+      local twelve={{name="iron",quality="normal",count=2}}; for i=2,12 do twelve[i]={name="iron",quality="q"..i,count=2} end
+      local full=inventory(twelve); full.count_empty_stacks=function() return 0 end; f.invs[lane]=full
+    end
     f.rec.invs=f.invs; f.run(1)
     eq(f.plans[1].opts.need_slot,false); eq(f.plans[2].opts.need_slot,true)
     arms.need_slot, belt_io.behind_kinds = old_need, old_kinds; f.restore()

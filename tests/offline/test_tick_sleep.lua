@@ -26,6 +26,7 @@ local function fixture(unit,tier,due)
   storage.boxes[unit]=rec
   local original={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,set=led.set,plan=ledger.plan}
   local plans,ledcalls={},{}
+  belt_io.can_push=function() return true end  -- v15 perf
   belt_io.push=function() return 0 end
   belt_io.lane_rate=function() return 0.125 end
   circuit.evaluate=function() return true,false end

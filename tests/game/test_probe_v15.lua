@@ -1,5 +1,6 @@
 -- v15 S0 probes for arms box (SP-10: NOT in index; temporary entry only). Report via log() + error().
 local WEST, NORTH = defines.direction.west, defines.direction.north
+local N = require("scripts.names")
 local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -90, -90 }, { 90, 200 } } })) do if e.valid and e.type ~= "character" then e.destroy() end end
 end
@@ -142,6 +143,67 @@ describe("probe v15", function()
         out[#out + 1] = string.format("G wires red: iron=%s copper=%s coal=%s | green: iron=%s", sig("iron-plate", R), sig("copper-plate", R), sig("coal", R), sig("iron-plate", G))
         local text = table.concat(out, " ;; ") .. " ;; notes[" .. table.concat(notes, " | ") .. "]"
         log("v15 probe misc: " .. text)
+        error(text)
+      end
+    end)
+  end)
+  it("rate diag", function()
+    -- where is the limit when box output < belt rate: arms intake or script output? Real box, belt stack 1.
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    force.belt_stack_size_bonus = 0
+    storage.belt_stack = {}
+    local rigs = {}
+    for i, v in ipairs({ { "blue", "express-transport-belt" }, { "turbo", "turbo-transport-belt" } }) do
+      local x = i * 4
+      local feed
+      for j = 1, 3 do local b = surface.create_entity({ name = v[2], position = { x + 0.5, 0.5 + j }, direction = NORTH, force = force }); feed = b end
+      local last
+      for j = 1, 12 do last = surface.create_entity({ name = v[2], position = { x + 0.5, 0.5 - j }, direction = NORTH, force = force }) end
+      surface.create_entity({ name = N.placer(v[1]), position = { x + 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
+      local box = surface.find_entity(N.variant(v[1], "north"), { x + 0.5, 0.5 })
+      rigs[#rigs + 1] = { tier = v[1], belt = v[2], feed = feed, last = last, rec = storage.boxes[box.unit_number], fed = { 0, 0 }, got = { 0, 0 }, k = 0 }
+    end
+    local t = 0
+    remote.call("sushi-packer", "counters_on")
+    on_tick(function()
+      t = t + 1
+      for _, r in ipairs(rigs) do
+        for lane = 1, 2 do
+          local line = r.feed.get_transport_line(lane)
+          local tries = 0
+          while tries < 4 and line.can_insert_at_back() do
+            tries = tries + 1; SHARED = (SHARED or 0) + 1
+            if t > 600 then r.fed[lane] = r.fed[lane] + 1 end
+            line.insert_at_back({ name = ({ "iron-plate", "copper-plate", "coal", "stone" })[SHARED % 4 + 1], count = 1 })
+          end
+          local out = r.last.get_transport_line(lane)
+          local c = out.get_item_count()
+          if t > 600 then r.got[lane] = r.got[lane] + c end
+          if lane == 1 then r.b = r.b or {}; local k = math.floor((t - 1) / 60) + 1; r.b[k] = (r.b[k] or 0) + c end
+          out.clear()
+        end
+      end
+      if t >= 1200 then
+        local rep = {}
+        for _, r in ipairs(rigs) do
+          local want = prototypes.entity[r.belt].belt_speed * 4 * 600
+          rep[#rep + 1] = string.format("%s want=%.0f fed=%d/%d out=%d/%d store=%d/%d used=%s/%s paused=%s/%s skip=[%s|%s] credit=%.2f/%.2f arms=%d",
+            r.tier, want, r.fed[1], r.fed[2], r.got[1], r.got[2], r.rec.invs[1].get_item_count(), r.rec.invs[2].get_item_count(),
+            tostring(r.rec.used and r.rec.used[1]), tostring(r.rec.used and r.rec.used[2]), tostring(r.rec.paused[1]), tostring(r.rec.paused[2]),
+            (r.rec.skip[1] or ""):gsub("%z", "/"), (r.rec.skip[2] or ""):gsub("%z", "/"), r.rec.out_credit[1], r.rec.out_credit[2], #r.rec.arms[1])
+        end
+        for _, r in ipairs(rigs) do
+          local kinds = {}
+          for lane = 1, 2 do for _, c in ipairs(r.rec.invs[lane].get_contents()) do kinds[#kinds + 1] = lane .. ":" .. c.name .. "=" .. c.count end end
+          rep[#rep + 1] = r.tier .. " stores " .. table.concat(kinds, " ")
+        end
+        for _, r in ipairs(rigs) do local o = {}; for k = 1, 12 do o[k] = r.b[k] or 0 end; rep[#rep + 1] = r.tier .. " lane1 per 60 ticks: " .. table.concat(o, " ") end
+        local c = remote.call("sushi-packer", "counters")
+        rep[#rep + 1] = string.format("counters visits=%d pushes=%d items_out=%d", c.visits, c.pushes, c.items_out)
+        storage.sp_counters = nil
+        local text = table.concat(rep, " ;; ")
+        log("v15 probe ratediag: " .. text)
         error(text)
       end
     end)

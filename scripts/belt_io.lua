@@ -108,6 +108,19 @@ end
 
 local PLAIN = { 1, 2 }
 
+-- v15 perf: tick.on_tick tells current tick once (no `game.tick` read per call); a side checked this tick is not
+-- re-checked for further calls in same tick.
+local now
+function M.set_tick(tick) now = tick end
+
+local function ensure_lines(b, field, belt, map)
+  local lines = b.lines[field]
+  if type(lines) ~= "table" or type(lines[1]) == "number" then
+    map = type(lines) == "table" and lines or map or PLAIN
+    b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
+  end
+end
+
 -- Returns belt-like entity on this side and its line pair for lanes 1/2.
 local function cached(rec, field, sign)
   local b = rec.belt
@@ -116,6 +129,10 @@ local function cached(rec, field, sign)
   if type(b.lines) ~= "table" then b.lines = {} end
   local belt = b[field]
   local kind = b.kind and b.kind[field]
+  local tick = now or game.tick or 0
+  if belt and now and b.ok and b.ok[field] == now and type(b.lines[field]) == "table" and type(b.lines[field][1]) ~= "number" then
+    return belt, PLAIN
+  end
   if belt then
     if not kind then
       b.kind = b.kind or {}
@@ -125,23 +142,18 @@ local function cached(rec, field, sign)
     local valid = belt.valid
     local direction = valid and belt.direction
     if valid and direction == direction_value(rec.dir) then
-      local function ensure_lines(map)
-        local lines = b.lines[field]
-        if type(lines) ~= "table" or type(lines[1]) == "number" then
-          map = type(lines) == "table" and lines or map or PLAIN
-          b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
-        end
-      end
+      b.ok = b.ok or {}
       if kind == "transport-belt" or kind == "underground-belt" then
-        local tick = game.tick or 0
         b.checked = b.checked or {}
         if tick < (b.checked[field] or -60) + 60 then
-          ensure_lines(PLAIN)
+          ensure_lines(b, field, belt, PLAIN)
+          b.ok[field] = tick
           return belt, PLAIN
         end
         b.checked[field] = tick
         if matches(belt, rec.entity, rec.dir, sign) then
-          ensure_lines(PLAIN)
+          ensure_lines(b, field, belt, PLAIN)
+          b.ok[field] = tick
           return belt, PLAIN
         end
       elseif matches(belt, rec.entity, rec.dir, sign) then
@@ -151,15 +163,16 @@ local function cached(rec, field, sign)
           map = map or neighbour_lines(belt, rec.entity, rec.dir, sign) or PLAIN
           b.lines[field] = { belt.get_transport_line(map[1]), belt.get_transport_line(map[2]) }
         end
+        b.ok[field] = tick
         return belt, map or PLAIN
       end
     end
-    if not valid then b.scan[field] = (game.tick or 0) - 60 end
+    if not valid then b.scan[field] = tick - 60 end
   end
   b[field], b.lines[field] = nil, nil
   if b.kind then b.kind[field] = nil end
   if b.checked then b.checked[field] = nil end
-  local tick = game.tick or 0
+  if b.ok then b.ok[field] = nil end
   if tick < (b.scan[field] or -60) + 60 then return nil end
   b.scan[field] = tick
   local lines
@@ -274,6 +287,14 @@ function M.behind_kinds(rec, lane)
   if not belt then return nil end
   local line = transport_line(rec, "behind", lane)
   return line and line.get_contents() or nil
+end
+
+-- v15 perf: may lane take one more belt item now? One engine call (plus side check once per tick).
+function M.can_push(rec, lane)
+  local belt = cached(rec, "front", 1)
+  if not belt then return false end
+  local line = transport_line(rec, "front", lane)
+  return line ~= nil and line.can_insert_at_back()
 end
 
 function M.push(rec, lane, item, belt_stack_size)

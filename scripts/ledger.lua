@@ -1,6 +1,7 @@
 -- v15 arms box: pure rules (no game API). What leaves a lane store, in what order. Seam: docs/CONTRACT.md.
 local N = require("scripts.names")
 local M = {}
+local EMPTY = {}
 
 function M.new()
   return { seen = { {}, {} } }
@@ -21,7 +22,7 @@ local function append_pieces(out, name, quality, count, size)
   end
 end
 
-function M.plan(state, lane, contents, opts)
+local function plan_full(state, lane, contents, opts)
   local seen = state.seen[lane]
   local names, qualities, counts, sizes, ticks = {}, {}, {}, {}, {}
   local present, indices = {}, {}
@@ -94,20 +95,119 @@ function M.plan(state, lane, contents, opts)
   return out
 end
 
--- C-6: kinds a lane must stop taking. Arms that already hold items still drop them, so block `slack` items before
--- one inventory stack is reached; never below `floor` (one belt stack), else a kind could never fill a stack to leave.
-function M.hoard(contents, stack_size, slack, floor)
-  local names, qualities, counts = {}, {}, {}
-  local indices = {}
-  for i = 1, #contents do
+-- v15 perf: called every lane visit; most visits nothing leaves. One pass, no table, no string made: update first-seen
+-- clocks, find out whether anything may leave; only then run the full planner. EMPTY is shared: callers never write it.
+local key_cache = {}
+local function key_of(name, quality)
+  local by = key_cache[name]
+  if not by then by = {}; key_cache[name] = by end
+  local key = by[quality]
+  if not key then key = name .. "\0" .. quality; by[quality] = key end
+  return key
+end
+local OUT, POOL = {}, {}          -- reused result list + piece tables: result is valid until next plan call
+local cand, cand_first = {}, {}   -- scratch: indexes of kinds with a full stack, their first-seen ticks
+function M.plan(state, lane, contents, opts)
+  local seen = state.seen[lane]
+  local n = #contents
+  local sizes = state.size
+  if not sizes then sizes = { 0, 0 }; state.size = sizes end
+  local tick, bss, stack_size, skip, timeout = opts.tick, opts.bss, opts.stack_size, opts.skip, opts.timeout_ticks
+  local complex = false
+  local cn = 0
+  for i = 1, n do
     local item = contents[i]
-    local limit = stack_size(item.name) - (slack or 0)
-    if limit < (floor or 1) then limit = floor or 1 end
-    if item.count >= limit then
+    local name, quality = item.name, item.quality
+    local by = key_cache[name]
+    if not by then by = {}; key_cache[name] = by end
+    local key = by[quality]
+    if not key then key = name .. "\0" .. quality; by[quality] = key end
+    local first = seen[key]
+    if first == nil then first = tick; seen[key] = tick; sizes[lane] = sizes[lane] + 1 end
+    local size = stack_size(name)
+    if bss < size then size = bss end
+    if item.count >= size then cn = cn + 1; cand[cn] = i; cand_first[cn] = first end
+    if (skip and skip(name, quality)) or (timeout > 0 and tick - first >= timeout) then complex = true end
+  end
+  if sizes[lane] ~= n then  -- some kind left the store: forget its clock
+    local present = {}
+    for i = 1, n do present[key_of(contents[i].name, contents[i].quality)] = true end
+    for key in pairs(seen) do if not present[key] then seen[key] = nil end end
+    sizes[lane] = n
+  end
+  if n == 0 then return EMPTY end
+  if complex or opts.flush_all or (cn == 0 and opts.slots_used >= opts.slots and opts.need_slot ~= false) then
+    return plan_full(state, lane, contents, opts)
+  end
+  if cn == 0 then return EMPTY end
+  -- common case: only full stacks leave. Order by first seen, then name, then quality (few candidates: insertion sort).
+  for a = 2, cn do
+    local ia, fa = cand[a], cand_first[a]
+    local na, qa = contents[ia].name, contents[ia].quality
+    local b = a - 1
+    while b >= 1 do
+      local ib, fb = cand[b], cand_first[b]
+      local before
+      if fa ~= fb then before = fa < fb
+      elseif na ~= contents[ib].name then before = na < contents[ib].name
+      else before = qa < contents[ib].quality end
+      if not before then break end
+      cand[b + 1], cand_first[b + 1] = ib, fb
+      b = b - 1
+    end
+    cand[b + 1], cand_first[b + 1] = ia, fa
+  end
+  local k = 0
+  for a = 1, cn do
+    local item = contents[cand[a]]
+    local name, quality = item.name, item.quality
+    local size = stack_size(name)
+    if bss < size then size = bss end
+    for _ = 1, math.floor(item.count / size) do
+      k = k + 1
+      local piece = POOL[k]
+      if not piece then piece = {}; POOL[k] = piece end
+      piece.name, piece.quality, piece.count = name, quality, size
+      OUT[k] = piece
+    end
+  end
+  for extra = k + 1, #OUT do OUT[extra] = nil end
+  return OUT
+end
+
+-- C-6 (V15-3): kinds a lane must stop taking, with memory: a kind is blocked once the lane store holds one full
+-- inventory stack of it and stays blocked until it is down to half a stack. One fixed limit toggled the arm filter on
+-- every item and starved output (rate test 2026-10-01: blue 187 of 225). Items already in arm hands still arrive,
+-- so a store may hold somewhat more than one stack (bound: arms of lane x hand size).
+function M.hoard(state, lane, contents, stack_size)
+  local hoards = state.hoard
+  if not hoards then hoards = { {}, {} }; state.hoard = hoards end
+  local blocked = hoards[lane]
+  local n = #contents
+  local any = next(blocked) ~= nil
+  if not any then
+    for i = 1, n do
+      local item = contents[i]
+      if item.count >= stack_size(item.name) then any = true; break end
+    end
+    if not any then return EMPTY end  -- common case, no table made
+  end
+  local present = {}
+  local names, qualities, counts, indices = {}, {}, {}, {}
+  for i = 1, n do
+    local item = contents[i]
+    local key = key_of(item.name, item.quality)
+    present[key] = true
+    local size = stack_size(item.name)
+    if item.count >= size then blocked[key] = true
+    elseif blocked[key] and item.count <= size / 2 then blocked[key] = nil end
+    if blocked[key] then
       names[i], qualities[i], counts[i] = item.name, item.quality, item.count
       indices[#indices + 1] = i
     end
   end
+  for key in pairs(blocked) do if not present[key] then blocked[key] = nil end end
+  if #indices == 0 then return EMPTY end
   table.sort(indices, function(a, b)
     if counts[a] ~= counts[b] then return counts[a] > counts[b] end
     if names[a] ~= names[b] then return names[a] < names[b] end

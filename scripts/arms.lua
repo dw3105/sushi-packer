@@ -105,6 +105,7 @@ local function _signature(kinds)
 end
 
 function M.skip(rec, lane, kinds)
+  if #kinds == 0 and rec.skip and rec.skip[lane] == "" then return end  -- common case: nothing to skip, nothing set
   local signature = _signature(kinds)
   rec.skip = rec.skip or { "", "" }
   if rec.skip[lane] == signature then return end

@@ -57,13 +57,18 @@ describe("ledger", function()
     eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=12,need_slot=false}))),{})
     eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=12,need_slot=true}))),{{"copper","normal",3}})
   end)
-  it("hoard blocks early by slack and never below belt stack", function()
+  it("hoard blocks at one stack and frees at half", function()
     local function names(k) local o={}; for i,x in ipairs(k) do o[i]=x.name end; return o end
-    local size=function(n) return n=="module" and 10 or 50 end
-    -- slack 24 (2 arms x 12 in hand): stack 50 blocks from 26; stack 10 would block from -14 -> floor 4 (one belt stack)
-    eq(names(ledger.hoard({c("ore",25),c("module",3)},size,24,4)),{})
-    eq(names(ledger.hoard({c("ore",26),c("module",4)},size,24,4)),{"module","ore"})
-    eq(names(ledger.hoard({c("ore",49)},size,0,4)),{}); eq(names(ledger.hoard({c("ore",50)},size,0,4)),{"ore"})
+    local size=function() return 50 end
+    local st=ledger.new()
+    eq(names(ledger.hoard(st,1,{c("ore",49)},size)),{})
+    eq(names(ledger.hoard(st,1,{c("ore",50)},size)),{"ore"})
+    eq(names(ledger.hoard(st,1,{c("ore",26)},size)),{"ore"})   -- still blocked above half
+    eq(names(ledger.hoard(st,1,{c("ore",25)},size)),{})        -- freed at half
+    eq(names(ledger.hoard(st,1,{c("ore",49)},size)),{})        -- and free until a full stack again
+    eq(names(ledger.hoard(st,2,{c("ore",60)},size)),{"ore"}); eq(names(ledger.hoard(st,1,{c("ore",30)},size)),{})  -- lanes apart
+    eq(names(ledger.hoard(st,2,{c("coal",3)},size)),{})        -- kind gone from store: forgotten
+    eq(names(ledger.hoard(st,2,{c("ore",30)},size)),{})
   end)
   it("skip kinds leave first whole", function()
     eq(pieces(ledger.plan(ledger.new(),1,{c("iron",4),c("coal",6)},opts({skip=function(n) return n=="coal" end}))),{{"coal","normal",4},{"coal","normal",2},{"iron","normal",4}})
@@ -76,10 +81,11 @@ describe("ledger", function()
     ledger.plan(ledger.new(),1,x,opts({flush_all=true})); eq(x,before)
   end)
   it("hoard lists kinds at one inventory stack", function()
-    local got=ledger.hoard({c("iron",100),c("copper",99),c("gear",250)},function() return 100 end,0,4)
-    eq(got,{{name="gear",quality="normal"},{name="iron",quality="normal"}})
-    local many={}; for i=1,7 do many[#many+1]=c("item"..i,200) end
-    eq(#ledger.hoard(many,function() return 100 end,0,4),5)
+    local got=ledger.hoard(ledger.new(),1,{c("iron",100),c("copper",99),c("gear",250)},function() return 100 end)
+    eq(#got,2); eq(got[1].name,"gear"); eq(got[2].name,"iron"); eq(got[1].quality,"normal")
+    local many={}; for i=1,7 do many[i]=c("k"..i,100+i) end
+    local five=ledger.hoard(ledger.new(),1,many,function() return 100 end)
+    eq(#five,5); eq(five[1].name,"k3"); eq(five[5].name,"k7")  -- largest five, then sorted by name
   end)
   it("led states", function()
     eq(ledger.led(0,0,12),"green"); eq(ledger.led(3,0,12),"yellow"); eq(ledger.led(12,1,12),"red"); eq(ledger.led(0,12,12),"red")

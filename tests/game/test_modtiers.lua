@@ -177,7 +177,10 @@ describe("modtiers", function()
   it("box output matches belt rate", function()
     -- Per tier (turbo = control): 3 own belts behind, box, 12 own belts in front, north. Belt stack 1 = every item
     -- leaves at once (C-2). Both lanes saturated from far behind; last front tile emptied each tick and counted.
-    -- Warm-up 180 ticks, measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
+    -- Warm-up 540 ticks, measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
+    -- v15 arms box: warm-up was 180 (blue transit 160). Arms settle once after start: probe `rate diag` (2026-10-01,
+    -- per 60 ticks, blue lane 1: 0 0 3 22 23 22 23 14 23 22 23 22) shows one short dip near tick 450, then steady full
+    -- rate. Test checks steady rate, so warm-up covers that settling (SP-14).
     force.belt_stack_size_bonus = 0
     local rigs = {}
     -- FND-0030: blue always measured (was only a chain tier without space-age; 200/225 per lane before fix).
@@ -207,11 +210,11 @@ describe("modtiers", function()
             line.insert_at_back({ name = names[n % #names + 1], count = 1 })
           end
           local out = r.last.get_transport_line(lane)
-          if t > 180 then for _, s in ipairs(out.get_contents()) do r.got[lane] = r.got[lane] + s.count end end
+          if t > 540 then for _, s in ipairs(out.get_contents()) do r.got[lane] = r.got[lane] + s.count end end
           out.clear()
         end
       end
-      if t >= 780 then
+      if t >= 1140 then
         local report = {}
         for _, r in ipairs(rigs) do
           for lane = 1, 2 do
