@@ -383,3 +383,28 @@ Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20 identical, `tests/game/test_probe
 - Caveat found in scratch bench (same day, 5 turbo boxes, flow `stacks` = 4 kinds mixed per lane, 1200 ticks, load 28-41): one arm carries one kind per swing, so mixed lanes need more arms: items through per arms-per-lane 1 / 2 / 4 / 8 = 2248 / 6024 / 14140 / 14164 (engine loader same scene: 14360). Turbo mixed flow needs 4 arms per lane.
 
 Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v14.lua::probe v14 > arms lane lock and rate'` (temporary index entry; same on `FV=2.1`); scratch bench `~/wt-sushi-packer-r2-v14` `tools/bench/run.sh 2.0 --tier turbo --flow stacks --boxes 5 --ticks 1300 --arms <n>`
+
+## FND-0041 - Big-fix scratch bench: arms (Way A) and pot (Way B) vs today's packer vs plain belts
+
+Measured 2026-10-01 13:44-15:03 UTC on dev-vm 2.0.77, scratch worktree `~/wt-sushi-packer-r2-v14` (= `53d7d9b` + scratch rigs in bench mod, never merged), 200 boxes, 3600 ticks, flow `stacks`, belt stack 4, 1 run per row, host load1 15-42 (other sessions): order of size only, not bar-grade. Rigs: pot = input loader `container_distance = 0` + one chest on box tile (FND-0039); arms = n lane-locked inserters per lane + one chest per lane (FND-0040). Output half of both = bench-mod script every 2 ticks per box: `get_contents` of chest, `insert_at_back` full stacks of 4 while lane free, `inventory.remove`; pot alternates lanes, arms push each chest to its own lane. No filter, timeout, circuit, LED, GUI logic in rigs.
+
+| Row | Scene | script ms | whole ms | items in 3000 ticks | load1 |
+|---|---|---|---|---|---|
+| turbo | packers today | 56.280 | 70.232 | 1476092 | 21.7 |
+| turbo | pot | 2.442 / 2.669 | 11.152 / 11.479 | 1474864 | 25.4 / 24.5 |
+| turbo | arms, 4 per lane | 3.855 | 13.937 | 1463492 | 35.0 |
+| turbo | plain belts | 0.020 / 0.020 | 5.441 / 4.728 | - | 32.9 / 19.8 |
+| yellow | packers today | 16.316 | 25.663 | 351087 | 26.1 |
+| yellow | pot | 1.533 | 6.504 | 350400 | 33.0 |
+| yellow | arms, 1 per lane | 1.688 | 4.737 | 226060 (64 %) | 19.4 |
+| yellow | arms, 2 per lane | 1.485 | 4.958 | 347416 | 28.4 |
+| yellow | plain belts | 0.017 / 0.014 | 4.672 / 1.752 | - | 44.2 / 23.1 |
+| `ub-ultimate` | packers today | 342.336 (load 28; 78-89 at load 7-14, FND-0037) | 383.880 | 6675803 | 28.0 |
+| `ub-ultimate` | pot | 15.490 / 12.674 | 47.640 / 35.504 | 5973448 (89 %, loader cap) | 42.0 / 23.5 |
+| `ub-ultimate` | arms, 8 per lane | 9.403 | 25.721 | 6586656 (98.7 %) | 15.4 |
+| `ub-ultimate` | arms, 16 per lane | 8.822 | 26.682 | 6650064 (99.6 %) | 16.8 |
+| `ub-ultimate` | plain belts | 0.034 / 0.019 | 18.541 / 6.667 | - | 39.0 / 19.7 |
+
+Readings: both rigs cut script cost about x10-x20 and whole-update cost (minus belts) about x5-x8 against today's packer in same session. Arms keep lanes exactly (FND-0040) and reach belt rate on 270/s belt with 8 arms per lane; pot loses lane of origin and caps at 240/s. Arms needed for mixed flow: yellow 2, turbo 4, 270/s 8 per lane. First `ub-ultimate` arms rows (8 and 16 arms both 2387220 items) were a rig artifact: output script pushed one stack per lane per visit; fixed to push while lane free, rows above are the rerun.
+
+Verified-by: logs `~/.cache/sushi-packer/v14/logs/bench-r2.txt`, `bench-arms.txt`; `cd ~/wt-sushi-packer-r2-v14 && gateslot --label sushi-packer/heavy -- tools/bench/run.sh 2.0 --tier <tier> [--modset ubsa] --flow stacks [--arms <n> | --r2 | --belt-only]`
