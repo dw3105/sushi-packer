@@ -301,7 +301,8 @@ function M.scan(state, lane, contents, opts)
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled
-  local want = flush_all or piled or tick >= (sweep[lane] or 0)
+  local due = (sweep[lane] or 0) + (ready[lane] > 0 and 480 or 0)  -- busy lane: hands complete by themselves
+  local want = flush_all or piled or tick >= due
   return SCAN_OUT, want
 end
 
@@ -325,7 +326,7 @@ function M.hands(state, lane, held, opts)
   local memory, since = memories[lane], sinces[lane]
   local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
   local n = #held
-  local do_sweep = tick >= (sweep[lane] or 0)
+  local do_sweep = tick >= (sweep[lane] or 0)  -- (scan may call later than this on a busy lane)
   local jam = state.piled ~= nil and state.piled[lane] == true  -- store piles up: arms holding leftovers are lost capacity
 
   -- per hand: belt stack size of its kind (0 = full hand, not our business), key

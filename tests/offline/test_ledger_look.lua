@@ -67,6 +67,12 @@ describe("ledger look", function()
     pile[2].count=24; _,w=ledger.scan(s,1,pile,opts({tick=2})); eq(w,true, "64 items: store piles up"); eq(s.piled[1],true)
     local t=ledger.new(); t.sweep={10000,10000}
     _,w=ledger.scan(t,1,pile,opts({tick=1})); eq(w,false, "first look with a pile: streak 1")
+    -- sweep: idle lane as soon as due; busy lane (full stack seen at this look) only 480 ticks later (hands cost)
+    local u=ledger.new(); u.sweep={100,100}
+    _,w=ledger.scan(u,1,{c("iron",2)},opts({tick=100})); eq(w,true, "idle lane sweeps when due")
+    _,w=ledger.scan(u,1,{c("iron",4)},opts({tick=100})); eq(w,false, "busy lane waits")
+    _,w=ledger.scan(u,1,{c("iron",4)},opts({tick=579})); eq(w,false)
+    _,w=ledger.scan(u,1,{c("iron",4)},opts({tick=580})); eq(w,true, "busy lane sweeps 480 ticks late")
     _,w=ledger.scan(s,1,{},opts({tick=3})); eq(s.ready[1],0); eq(w,false)
     _,w=ledger.scan(s,1,{},opts({tick=4,flush_all=true})); eq(w,true)
     _,w=ledger.scan(s,1,{},opts({tick=10000})); eq(w,true)

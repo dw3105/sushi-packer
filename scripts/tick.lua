@@ -210,7 +210,12 @@ local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counte
 end
 
 local function engine_look(rec, tick, bss, flush_all)
-  local stopped = rec.enabled == false or rec.decon == true or not belt_io.front_ok(rec)
+  -- front belt check costs engine calls: asked once per 120 ticks (V16-6: up to 2 s late after front belt is rotated)
+  local front = rec.front_was
+  if front == nil or tick - (rec.front_at or -120) >= 120 then
+    front = belt_io.front_ok(rec); rec.front_was, rec.front_at = front, tick
+  end
+  local stopped = rec.enabled == false or rec.decon == true or not front
   arms.hand(rec, bss)
   rec.used = rec.used or { 0, 0 }
   for lane=1,2 do
@@ -342,6 +347,95 @@ local function adopt_outside(rec, tick)
   end
 end
 
+-- v16 schedule (INT, bench 2026-10-01: walking over every box every tick cost 0.38 ms per 200 boxes).
+-- storage.sched = { n = box count, buckets = { [1..60] = { unit, ... } }, fast = { [unit] = true } }.
+-- Engine-mode box sits in 2 buckets (its look ticks: (tick + unit) % 30 == 0). Box in script mode or with extra
+-- items is in `fast` and is checked every tick with the v15 due rule. Rebuilt when box table changes
+-- (registry / copy set storage.sched = nil; count checked as second guard).
+local size = table_size or function(t) local n = 0; for _ in pairs(t) do n = n + 1 end; return n end
+
+local function is_script_mode(rec)
+  local filters = rec.settings.filters
+  if filters and filters[1] ~= nil then return true end
+  if can_stack() then return false end
+  -- engine out arms can not stack without space travel feature flag: box that must stack stays on script path
+  local fi = rec.force_index
+  local force_bss = fi and storage.belt_stack[fi]
+  return force_bss == nil or force_bss > 1  -- unknown yet: script path, it finds out
+end
+
+local function build_sched()
+  local units, n = {}, 0
+  for unit in pairs(storage.boxes) do n = n + 1; units[n] = unit end
+  table.sort(units)
+  local buckets, fast = {}, {}
+  for k = 1, 2 * LOOK do buckets[k] = {} end
+  for i = 1, n do
+    local unit = units[i]
+    local rec = storage.boxes[unit]
+    if rec.stores then
+      local b = (-unit) % LOOK
+      local list = buckets[b + 1]; list[#list + 1] = unit
+      list = buckets[b + LOOK + 1]; list[#list + 1] = unit
+      if rec.extra ~= nil or is_script_mode(rec) then fast[unit] = true end
+    end
+  end
+  return { n = n, buckets = buckets, fast = fast }
+end
+
+local function visit(rec, tick, script_mode, interval, counters)
+  if not rec.entity.valid then
+    storage.boxes[rec.unit_number] = nil
+    storage.sched = nil
+    return
+  end
+  if counters then counters.visits = counters.visits + 1 end
+  local enabled, flush_now = circuit.evaluate(rec)
+  rec.enabled = enabled
+  local fi = rec.force_index
+  if fi == nil then fi = rec.entity.force.index; rec.force_index = fi end
+  local bss = storage.belt_stack[fi]
+  if bss == nil then bss = belt_io.belt_stack_size(rec.entity.force); storage.belt_stack[fi] = bss end
+  if script_mode then
+    arms.pause_out(rec, 1, true); arms.pause_out(rec, 2, true)
+    local elapsed = tick - (rec.last_poll or (tick - interval))
+    local rate = belt_io.lane_rate(rec.tier)
+    local empty1 = visit_lane(rec, 1, tick, bss, rate, elapsed, flush_now, counters)
+    local empty2 = visit_lane(rec, 2, tick, bss, rate, elapsed, flush_now, counters)
+    rec.last_poll = tick
+    -- Idle sleep only after stores stayed empty 30 ticks: a busy pass-through box (belt stack 1) empties its
+    -- stores on most visits; sleeping 15 ticks there cost 10-25 % of belt rate (rate test, 2026-10-01).
+    local idle = false
+    if empty1 and empty2 and rec.extra == nil then
+      rec.empty_since = rec.empty_since or tick
+      idle = tick - rec.empty_since >= 30
+    else
+      rec.empty_since = nil
+    end
+    rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
+  else
+    engine_look(rec, tick, bss, flush_now)
+    rec.last_poll = tick
+    rec.next_poll = tick + (interval or 0)  -- interval only set while extra items drain
+    rec.empty_since = nil
+  end
+  update_led(rec)
+end
+
+-- Box of `fast` set: every tick, v15 due rule. Leaves the set when it is a plain engine-mode box again.
+local function fast_step(sched, rec, unit, tick, counters)
+  if not rec.decon and (tick + unit) % 60 == 0 then adopt_outside(rec, tick) end
+  local script_mode = is_script_mode(rec)
+  if not script_mode and rec.extra == nil then
+    sched.fast[unit] = nil  -- bucket loop (runs after this, same tick) looks at it when its tick comes
+    return
+  end
+  local interval = M._interval(rec.tier)
+  if not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + unit) % interval == 0) then
+    visit(rec, tick, script_mode, interval, counters)
+  end
+end
+
 function M.on_tick(e)
   local counters = storage and storage.sp_counters
   local tick = e.tick
@@ -356,68 +450,30 @@ function M.on_tick(e)
       end
     end
   end
-  for _, rec in pairs(storage.boxes) do
-    if rec.stores then
-      if not rec.decon and (tick + rec.unit_number) % 60 == 0 then adopt_outside(rec, tick) end
-      local script_mode = rec.settings.filters and rec.settings.filters[1] ~= nil
-      if not script_mode and not can_stack() then
-        -- engine out arms can not stack without space travel feature flag: box that must stack stays on script path
-        local fi = rec.force_index
-        local force_bss = fi and storage.belt_stack[fi]
-        script_mode = force_bss == nil or force_bss > 1  -- unknown yet: script path, it finds out
-      end
-      local interval, due
-      if script_mode or rec.extra ~= nil then
-        interval = M._interval(rec.tier)
-        due = not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0)
+  local boxes = storage.boxes
+  local sched = storage.sched
+  if not sched or sched.n ~= size(boxes) then sched = build_sched(); storage.sched = sched end
+  local fast = sched.fast
+  for unit in pairs(fast) do
+    local rec = boxes[unit]
+    if rec and rec.stores then fast_step(sched, rec, unit, tick, counters) else fast[unit] = nil end
+  end
+  local list = sched.buckets[tick % (2 * LOOK) + 1]
+  for i = 1, #list do
+    local unit = list[i]
+    local rec = boxes[unit]
+    if rec and rec.stores and not fast[unit] then
+      if not rec.decon and (tick + unit) % 60 == 0 then adopt_outside(rec, tick) end
+      if rec.extra ~= nil or is_script_mode(rec) then
+        fast[unit] = true  -- found at its look: from now on checked every tick
+        local interval = M._interval(rec.tier)
+        if not rec.decon and tick >= (rec.next_poll or 0) then visit(rec, tick, is_script_mode(rec), interval, counters) end
       else
-        due = (tick + rec.unit_number) % LOOK == 0
+        visit(rec, tick, false, nil, counters)
       end
-      if due then
-          if not rec.entity.valid then
-            storage.boxes[rec.unit_number] = nil
-          else
-            if counters then counters.visits = counters.visits + 1 end
-            local enabled, flush_now = circuit.evaluate(rec)
-            rec.enabled = enabled
-            local fi = rec.force_index
-            if fi == nil then fi = rec.entity.force.index; rec.force_index = fi end
-            local bss = storage.belt_stack[fi]
-            if bss == nil then bss = belt_io.belt_stack_size(rec.entity.force); storage.belt_stack[fi] = bss end
-            if script_mode then
-              arms.pause_out(rec, 1, true); arms.pause_out(rec, 2, true)
-              local elapsed = tick - (rec.last_poll or (tick - interval))
-              local rate = belt_io.lane_rate(rec.tier)
-              local empty1 = visit_lane(rec, 1, tick, bss, rate, elapsed, flush_now, counters)
-              local empty2 = visit_lane(rec, 2, tick, bss, rate, elapsed, flush_now, counters)
-              rec.last_poll = tick
-              local idle = false
-              if empty1 and empty2 and rec.extra == nil then
-                rec.empty_since = rec.empty_since or tick
-                idle = tick - rec.empty_since >= 30
-              else
-                rec.empty_since = nil
-              end
-              rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
-            else
-              engine_look(rec, tick, bss, flush_now)
-              rec.last_poll = tick
-              rec.next_poll = tick + (interval or 0)  -- interval only set while extra items drain
-              rec.empty_since = nil
-            end
-            update_led(rec)
-            rec.led_dirty = nil
-          end
-      elseif rec.led_dirty then
-        update_led(rec)
-        rec.led_dirty = nil
-      end
-    elseif rec.led_dirty then
-      rec.led_dirty = nil
     end
   end
 end
-
 local function zero_counters()
   return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0, full=0 }
 end
@@ -431,7 +487,7 @@ function M.on_decon(e, marked)
   local entity = e and e.entity
   local rec = entity and entity.unit_number and storage.boxes[entity.unit_number]
   if rec then
-    rec.decon=marked; rec.next_poll=0; rec.led_dirty=true
+    rec.decon=marked; rec.next_poll=0
     if rec.stores then
       for lane=1,2 do
         local has_extra=false
@@ -440,6 +496,7 @@ function M.on_decon(e, marked)
         arms.pause_out(rec,lane,marked==true or rec.enabled==false or has_extra or not belt_io.front_ok(rec))
       end
     end
+    update_led(rec)
   end
 end
 

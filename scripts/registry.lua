@@ -90,7 +90,7 @@ function M.new_rec(entity)
   local rec = { entity = entity, unit_number = entity.unit_number, tier = v.tier, dir = v.dir,
     ledger = ledger.new(), settings = copy.default_settings(), enabled = true,
     circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
-  boxes()[entity.unit_number] = rec
+  boxes()[entity.unit_number] = rec; storage.sched = nil
   return rec
 end
 
@@ -138,7 +138,7 @@ function M.on_removed(e)
   end
   arms.destroy(rec)
   led.destroy(rec)
-  boxes()[rec.unit_number] = nil
+  boxes()[rec.unit_number] = nil; storage.sched = nil
 end
 
 function M.on_died(e)
@@ -152,7 +152,7 @@ function M.on_died(e)
   spill(entity, held)
   arms.destroy(rec)
   led.destroy(rec)
-  boxes()[rec.unit_number] = nil
+  boxes()[rec.unit_number] = nil; storage.sched = nil
 end
 
 function M.swap(rec, new_dir)
@@ -175,13 +175,13 @@ function M.swap(rec, new_dir)
   old.destroy()
   local entity = surface.create_entity({ name = N.variant(tier, new_dir), position = position,
     force = force, quality = quality, create_build_effect_smoke = false })
-  if not valid(entity) then boxes()[old_unit] = nil; return nil end
+  if not valid(entity) then boxes()[old_unit] = nil; storage.sched = nil; return nil end
   local inv = entity.get_inventory(defines.inventory.chest)
   if inv then for _, item in ipairs(contents_as_array(contents)) do inv.insert(item) end end
   rec.entity, rec.unit_number, rec.dir = entity, entity.unit_number, new_dir
   rec.stores, rec.invs = stores, invs
-  boxes()[old_unit] = nil
-  boxes()[entity.unit_number] = rec
+  boxes()[old_unit] = nil; storage.sched = nil
+  boxes()[entity.unit_number] = rec; storage.sched = nil
   for _, w in ipairs(wires) do
     if valid(w.target) then
       local connector = entity.get_wire_connector(w.id, true)
@@ -235,7 +235,7 @@ function M.stash(rec)
   storage.upgrade_stash[upgrade_key(entity)] = { rec = rec, tick = game.tick,
     force = entity.force.index, wires = wires, surface = entity.surface, position = entity.position }
   led.destroy(rec)
-  boxes()[rec.unit_number] = nil
+  boxes()[rec.unit_number] = nil; storage.sched = nil
 end
 function M.take_stash(entity)
   prune_stash()
@@ -248,7 +248,7 @@ function M.take_stash(entity)
   rec.entity, rec.unit_number = entity, entity.unit_number
   rec.tier, rec.dir = variant.tier, variant.dir
   rec.belt, rec.next_poll = nil, 0
-  boxes()[entity.unit_number] = rec
+  boxes()[entity.unit_number] = rec; storage.sched = nil
   for _, w in ipairs(entry.wires) do
     if valid(w.target) then
       local connector = entity.get_wire_connector(w.id, true)
@@ -277,7 +277,7 @@ function M.on_configuration_changed(data)
       led.ensure(rec)
     end
   end
-  for _, unit in ipairs(remove) do boxes()[unit] = nil end
+  for _, unit in ipairs(remove) do boxes()[unit] = nil; storage.sched = nil end
 end
 
 return M

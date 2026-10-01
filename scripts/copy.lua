@@ -78,7 +78,7 @@ function M.on_cloned(e)
   local rec = { entity = dst, unit_number = dst.unit_number, tier = variant.tier, dir = variant.dir,
     ledger = ledger.new(), settings = M.default_settings(), enabled = true,
     circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
-  storage.boxes[dst.unit_number] = rec
+  storage.boxes[dst.unit_number] = rec; storage.sched = nil  -- tick schedule rebuilt
   M.import(rec, M.export(src))
   arms.create(rec)
   for lane = 1, 2 do
