@@ -144,7 +144,13 @@ describe("arms", function()
     local expected={north={{10.25,19.5},{10.75,19.5}},east={{11.5,20.25},{11.5,20.75}},south={{10.75,21.5},{10.25,21.5}},west={{9.5,20.75},{9.5,20.25}}}
     for _,dir in ipairs({"north","east","south","west"}) do
       local rec,s=setup(); rec.entity.surface=s; rec.entity.position={x=10.5,y=20.5}; rec.dir=dir; arms.create(rec)
-      for lane=1,2 do local a=rec.out[lane][1]; eq(a.pickup_position,rec.entity.position); eq(a.pickup_target,rec.stores[lane]); eq(a.drop_position,{x=expected[dir][lane][1],y=expected[dir][lane][2]}) end
+      for lane=1,2 do
+        local a=rec.out[lane][1]; eq(a.pickup_target,rec.stores[lane]); eq(a.drop_position,{x=expected[dir][lane][1],y=expected[dir][lane][2]})
+        -- INT (V16-9): pickup lies opposite to drop, 0.3 of the way, so every arm turns exactly half a circle in every
+        -- box direction (pickup at box centre gave direction-dependent swing time: north box 1.5 x faster than west)
+        local dx,dy=expected[dir][lane][1]-10.5,expected[dir][lane][2]-20.5
+        ok(math.abs(a.pickup_position.x-(10.5-0.3*dx))<1e-9 and math.abs(a.pickup_position.y-(20.5-0.3*dy))<1e-9, dir.." lane "..lane.." pickup")
+      end
     end
   end)
   it("create saves hands of old arms", function()

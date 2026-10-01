@@ -17,9 +17,24 @@ local function find_box(surface, position)
   end
 end
 
--- v15: items a box holds = both lane stores + box container (extra / outside items).
+-- v16: items waiting in arm hands of a lane (in arms and out arms). Leftovers below one belt stack wait in an
+-- out-arm hand, not in the lane store (V16-3).
+local function hands(rec, lane, name)
+  local n = 0
+  for _, group in ipairs({ rec.arms[lane], rec.out[lane] }) do
+    for _, arm in ipairs(group) do
+      local h = arm.held_stack
+      if h.valid_for_read and (name == nil or h.name == name) then n = n + h.count end
+    end
+  end
+  return n
+end
+
+local function lane_count(rec, lane, name) return rec.invs[lane].get_item_count(name) + hands(rec, lane, name) end
+
+-- v16: items a box holds = both lane stores + arm hands + box container (extra / outside items).
 local function stored(rec, name)
-  return rec.invs[1].get_item_count(name) + rec.invs[2].get_item_count(name)
+  return lane_count(rec, 1, name) + lane_count(rec, 2, name)
     + rec.entity.get_inventory(defines.inventory.chest).get_item_count(name)
 end
 
@@ -224,11 +239,11 @@ describe("tick", function()
     -- v6: belt stack 4 -> 50 ore = 12 belt items of 4 out, 2 held as partial.
     local _, rec, feed, front = build(surface, force, {})
     run_until(feeder(feed, { rep("iron-ore", 50), {} }),
-      function() return total(output(front, 1)) >= 48 and rec.invs[1].get_item_count("iron-ore") == 2 end, 3400, function()
+      function() return total(output(front, 1)) >= 48 and lane_count(rec, 1, "iron-ore") == 2 end, 3400, function()
       local counts = {}
       for _, s in ipairs(output(front, 1)) do counts[#counts + 1] = s.count end
       assert.are.same(rep(4, 12), counts)
-      assert.are_equal(2, rec.invs[1].get_item_count("iron-ore"), "partial held in left lane store")
+      assert.are_equal(2, lane_count(rec, 1, "iron-ore"), "partial held in left lane (store or out-arm hand)")
       assert.are_equal(2, stored(rec), "nothing else held")
     end)
   end)
@@ -271,19 +286,18 @@ describe("tick", function()
       assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count(), "box container stays empty")
       assert.are_equal("red", rec.led.state)
       local front = front_belts(surface, force, 0, 20, "transport-belt")
-      -- V15-2: flush only where an arriving item needs a slot: left lane (13th kind waits), not right lane.
-      run_until(function() end, function() return rec.invs[1].get_item_count(extra_name) == 1 end, 900, function()
+      -- v16: front belt appears -> out arms wake at next look and take leftovers into their hands (8 per lane):
+      -- store slots come free, waiting 13th kind gets in. Nothing needs a flush, nothing is lost.
+      run_until(function() end, function() return lane_count(rec, 1, extra_name) == 1 end, 900, function()
         after_ticks(120, function()
           local left, right = output(front, 1), output(front, 2)
-          assert.are_equal(1, rec.invs[1].get_item_count(extra_name), "waiting kind got its slot")
-          assert.are.same({ name = names[1], count = 1 }, left[1], "oldest partial of left lane flushed first (F-1)")
-          assert.are_equal(1, #left, "exactly one partial flushed: one slot was needed")
-          assert.are_equal(0, #right, "right lane full but nothing new waits there: no flush (F-1)")
-          for _, s in ipairs(left) do assert.are_equal(1, s.count, "flushed partial = one smaller belt item") end
-          assert.are_equal(0, rec.invs[2].get_item_count(names[1]) + total(right, names[1]), "lane kept")
-          local kept = rec.invs[1].get_item_count() + rec.invs[2].get_item_count()
+          assert.are_equal(1, lane_count(rec, 1, extra_name), "waiting kind got into left lane")
+          assert.are_equal(0, behind_count(), "belt behind is free again")
+          assert.are_equal(0, lane_count(rec, 2, names[1]) + total(right, names[1]), "lane kept")
+          for _, s in ipairs(left) do assert.are_equal(1, s.count, "only single leftovers could leave") end
+          local kept = lane_count(rec, 1) + lane_count(rec, 2)
           assert.are_equal(2 * SLOTS + 1, kept + total(left) + total(right) + behind_count(), "nothing lost, nothing made")
-          assert.are_equal(SLOTS, used_slots(rec, 1), "freed slot taken by waiting kind"); assert.are_equal(SLOTS, used_slots(rec, 2))
+          assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count(), "box container stays empty")
         end)
       end)
     end)
@@ -338,7 +352,7 @@ describe("tick", function()
     after_ticks(5, function()
       assert.are_equal("green", rec.led.state)
       feed.get_transport_line(1).insert_at_back({ name = "iron-ore", count = 1 })
-      after_ticks(240, function() -- 3 belt tiles ~96 ticks + idle nap up to 30
+      after_ticks(360, function() -- 3 belt tiles ~96 ticks, then item waits in an out-arm hand: LED sees it at next hand look (<= 120 ticks)
         assert.are_equal("yellow", rec.led.state)
         assert.is_true(rec.led.visible)
       end)
@@ -358,11 +372,11 @@ describe("tick", function()
       assert.are_equal(4, rec.invs[1].remove({ name = "iron-ore", count = 4 }))
       local front = front_belts(surface, force, 0, 20, "transport-belt")
       run_until(function() end, function() return total(output(front, 1)) >= 4 end, 600, function()
-        after_ticks(120, function()
+        after_ticks(240, function()
           game.players[1].opened = nil
           local seq = output(front, 1)
           assert.are.same({ { name = "iron-ore", count = 4 } }, seq, "one full stack of what was left went out")
-          assert.are_equal(2, rec.invs[1].get_item_count("iron-ore"), "rest stays as partial")
+          assert.are_equal(2, lane_count(rec, 1, "iron-ore"), "rest stays as partial")
           assert.are_equal(2, stored(rec), "nothing else held")
           assert.are_equal(0, total(output(front, 2)), "lane kept")
           assert.are_equal("yellow", rec.led.state)
@@ -383,27 +397,28 @@ describe("tick", function()
     end)
   end)
 
-  it("output never faster than tier", function()
-    -- backlog of ready stacks while no front belt; then turbo front belt appears.
-    -- Uncapped push would move ~0.5 piece/tick; yellow cap is 0.125 piece/lane/tick.
+  it("output about tier speed on a faster belt", function()
+    -- V16-2 / V16-9: exact tier cap is gone; out arms of a tier move about 1.6 x its lane rate (8 arms, one swing
+    -- per N.out_swing ticks). Backlog while no front belt; then turbo front belt appears.
     local _, rec, feed = build(surface, force, { belt = "turbo-transport-belt", front = 0 })
     local front
     local opened_at
-    -- v15: lane store 12 slots, item cap one stack (C-6): backlog 3 items x 32 = 24 pieces of 4 in left lane store.
-    -- 100-tick window: yellow cap floor(100 * 0.125) + 2 = 14 < 24, uncapped push would move all 24.
-    local q = rep("iron-ore", 32)
-    for _, name in ipairs({ "copper-ore", "stone" }) do for _, x in ipairs(rep(name, 32)) do q[#q + 1] = x end end
+    -- 3 kinds x 64 = 192 items = 48 belt stacks of 4 in left lane store. 100-tick window: yellow arms
+    -- 8 / 40 per tick -> 20 stacks, + 8 hands; fast arms (one swing per 2 ticks) would move all 48.
+    local q = rep("iron-ore", 64)
+    for _, name in ipairs({ "copper-ore", "stone" }) do for _, x in ipairs(rep(name, 64)) do q[#q + 1] = x end end
     local step = feeder(feed, { q, {} })
     run_until(function()
       step()
-      if not front and #q == 0 and rec.invs[1].get_item_count() == 96 then
+      if not front and #q == 0 and rec.invs[1].get_item_count() == 192 then
         front = front_belts(surface, force, 0, 30, "turbo-transport-belt"); opened_at = game.tick
       end
-    end, function() return opened_at and game.tick - opened_at >= 100 end, 3400, function()
+    end, function() return opened_at and game.tick - opened_at >= 100 end, 5000, function()
       assert.is_not_nil(front, "backlog built")
       local pieces = #output(front, 1)
-      assert.is_true(pieces > 0)
-      assert.is_true(pieces <= math.floor(100 * N.TIER.yellow.lane_rate) + 2, "belt items " .. pieces)
+      local cap = math.ceil(100 * N.OUT_ARMS / N.out_swing(0.03125)) + N.OUT_ARMS
+      assert.is_true(pieces > 0, "something left")
+      assert.is_true(pieces <= cap, "belt items " .. pieces .. " cap " .. cap)
     end)
   end)
 
@@ -412,8 +427,9 @@ describe("tick", function()
     -- per lane), more than either tier may release, so each box runs at its own cap: yellow 7.5, red 15 belt items/s.
     -- (Old feed of single items = 30 items/s = 7.5 stacks/s: no longer above yellow cap, both tiers moved the same.)
     -- 40 front tiles hold 640 items per lane: never full inside the 400-tick window.
-    local _, _, yfeed, yfront = build(surface, force, { x = 0, belt = "turbo-transport-belt", front = 40 })
-    local _, _, rfeed, rfront = build(surface, force, { x = 6, tier = "red", belt = "turbo-transport-belt", front = 40 })
+    -- v16: caps are approximate (out arm speed per tier, V16-9): yellow 12, red 24 belt stacks/s per lane.
+    local _, _, yfeed, yfront = build(surface, force, { x = 0, belt = "turbo-transport-belt", front = 60 })
+    local _, _, rfeed, rfront = build(surface, force, { x = 6, tier = "red", belt = "turbo-transport-belt", front = 60 })
     local function stacks(feed)
       return function()
         local line = feed.get_transport_line(1)
@@ -423,10 +439,10 @@ describe("tick", function()
     local ys, rs = stacks(yfeed), stacks(rfeed)
     run_until(function() ys(); rs() end, function(t) return t >= 400 end, 500, function()
       local y, r = total(output(yfront, 1)), total(output(rfront, 1))
-      local cap = math.floor(400 * N.TIER.yellow.lane_rate) + 2
+      local cap = math.ceil(400 * N.OUT_ARMS / N.out_swing(0.03125)) + N.OUT_ARMS
       assert.is_true(y > 0, "yellow moved")
       assert.is_true(#output(yfront, 1) <= cap, "yellow belt items " .. #output(yfront, 1) .. " over tier cap " .. cap)
-      assert.is_true(r < 0.9 * 640, "red front belt (dead end, holds 640) never filled up: " .. r)
+      assert.is_true(r < 0.9 * 960, "red front belt (dead end, holds 960) never filled up: " .. r)
       assert.is_true(r >= 1.6 * y, "yellow " .. y .. " red " .. r)
     end)
   end)

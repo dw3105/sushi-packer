@@ -99,13 +99,16 @@ function M.create(rec)
     end
     local fx, fy = _delta(rec.dir)
     local s = lane == 1 and 0.25 or -0.25
-    local drop = { x = pos.x + fx + fy * s, y = pos.y + fy - fx * s }
+    local ddx, ddy = fx + fy * s, fy - fx * s
+    local drop = { x = pos.x + ddx, y = pos.y + ddy }
+    -- pickup opposite to drop (still on box tile): half a circle per swing in every box direction (V16-9)
+    local pick = { x = pos.x - 0.3 * ddx, y = pos.y - 0.3 * ddy }
     local out_name = N.out_name(speed)
     if not prototypes.entity[out_name] then out_name = N.OUT end  -- belt of tier changed after data stage: fast arm
     for _ = 1, N.OUT_ARMS do
       local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
-      arm.pickup_position = pos
+      arm.pickup_position = pick
       arm.pickup_target = rec.stores[lane]
       arm.drop_position = drop
       rec.out[lane][#rec.out[lane] + 1] = arm
