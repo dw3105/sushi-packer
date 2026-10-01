@@ -244,6 +244,8 @@ local function engine_look(rec, tick, bss, flush_all)
         if used >= N.STORE_SLOTS then
           if inv.count_empty_stacks() == 0 then
             used = N.STORE_SLOTS
+            local c = storage.sp_counters
+            if c then c.full = (c.full or 0) + 1 end  -- bench: lane store seen full at a look (output not keeping up)
             opts.need_slot = arms.need_slot(rec, lane, contents)
             if not opts.need_slot then
               for _, w in ipairs(belt_io.behind_kinds(rec, lane) or EMPTY) do
@@ -419,13 +421,13 @@ function M.on_tick(e)
 end
 
 local function zero_counters()
-  return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0 }
+  return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0, full=0 }
 end
 function M.counters_on() storage.sp_counters = zero_counters() end
 function M.counters()
   local c = storage and storage.sp_counters
   if not c then return nil end
-  return { visits=c.visits, reads=c.reads, pulls=c.pulls, pushes=c.pushes, items_in=c.items_in, items_out=c.items_out }
+  return { visits=c.visits, reads=c.reads, pulls=c.pulls, pushes=c.pushes, items_in=c.items_in, items_out=c.items_out, full=c.full or 0 }
 end
 function M.on_decon(e, marked)
   local entity = e and e.entity
