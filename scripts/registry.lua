@@ -1,8 +1,9 @@
 local M = {}
 local N = require("scripts.names")
-local core = require("scripts.core")
 local copy = require("scripts.copy")
 local led = require("scripts.led")
+local ledger = require("scripts.ledger")
+local arms = require("scripts.arms")
 
 local function boxes() storage.boxes = storage.boxes or {}; return storage.boxes end
 local function valid(e) return e and e.valid end
@@ -10,13 +11,16 @@ local function direction_name(direction)
   for _, d in ipairs(N.DIRS) do if defines.direction[d] == direction then return d end end
   return "north"
 end
-local function spill(entity, items)
+local function spill_at(surface, position, items)
   for _, item in ipairs(items or {}) do
     if item.name and item.count and item.count > 0 then
-      entity.surface.spill_item_stack({ position = entity.position,
+      surface.spill_item_stack({ position = position,
         stack = { name = item.name, count = item.count, quality = item.quality }, enable_looted = true })
     end
   end
+end
+local function spill(entity, items)
+  spill_at(entity.surface, entity.position, items)
 end
 local function inventory_items(entity)
   local inv = entity.get_inventory(defines.inventory.chest)
@@ -33,6 +37,47 @@ local function contents_as_array(contents)
   end
   return items
 end
+local function store_items(rec)
+  local items = {}
+  for lane = 1, 2 do
+    local inv = rec.invs and rec.invs[lane]
+    if inv and inv.valid ~= false then
+      for _, item in ipairs(contents_as_array(inv.get_contents())) do
+        if item.name and item.count and item.count > 0 then items[#items + 1] = item end
+      end
+    end
+  end
+  return items
+end
+local function migrate_old_box(rec)
+  if not rec.box or rec.stores then return end
+  local old, merged, order = rec.box, {}, {}
+  local function add(item, lane)
+    if not item or not item.name or not item.count or item.count <= 0 then return end
+    lane = item.lane or lane
+    if lane ~= 1 and lane ~= 2 then return end
+    local key = item.name .. "\0" .. tostring(item.quality or "normal") .. "\0" .. lane
+    if not merged[key] then
+      merged[key] = { name = item.name, quality = item.quality or "normal", lane = lane, count = 0 }
+      order[#order + 1] = key
+    end
+    merged[key].count = merged[key].count + item.count
+  end
+  for _, item in ipairs(old.partials or {}) do add(item, item.lane) end
+  for lane = 1, 2 do for _, item in ipairs(old.ready and old.ready[lane] or {}) do add(item, lane) end end
+  local inv = rec.entity.get_inventory(defines.inventory.chest)
+  for lane = 1, 2 do
+    local hold = old.hold and old.hold[lane]
+    if hold and hold.name and hold.count and hold.count > 0 then
+      local inserted = inv and inv.insert({ name = hold.name, count = hold.count, quality = hold.quality }) or 0
+      if inserted > 0 then add({ name = hold.name, quality = hold.quality, count = inserted }, lane) end
+      if inserted < hold.count then spill(rec.entity, { { name = hold.name, quality = hold.quality, count = hold.count - inserted } }) end
+    end
+  end
+  rec.extra = {}
+  for _, key in ipairs(order) do rec.extra[#rec.extra + 1] = merged[key] end
+  rec.box, rec.ledger, rec.in_credit = nil, ledger.new(), nil
+end
 
 function M.get(entity)
   if not valid(entity) or not entity.unit_number then return nil end
@@ -43,7 +88,7 @@ function M.new_rec(entity)
   local v = N.VARIANTS[entity.name]
   if not v then return nil end
   local rec = { entity = entity, unit_number = entity.unit_number, tier = v.tier, dir = v.dir,
-    box = core.new_box(), settings = copy.default_settings(), enabled = true,
+    ledger = ledger.new(), settings = copy.default_settings(), enabled = true,
     circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
   boxes()[entity.unit_number] = rec
   return rec
@@ -68,6 +113,8 @@ function M.on_built(e)
   if not rec then rec = M.take_stash(entity); recovered = rec ~= nil end
   local created = rec == nil
   rec = rec or M.new_rec(entity)
+  rec.entity, rec.unit_number = entity, entity.unit_number
+  if created or recovered then arms.create(rec) end
   if e.tags and e.tags.sushi_packer then copy.import(rec, e.tags.sushi_packer) end
   if created or recovered then led.create(rec) else led.ensure(rec) end
 end
@@ -81,13 +128,12 @@ function M.on_removed(e)
     M.stash(rec)
     return
   end
-  local hold = core.hold_items(rec.box)
   if e.buffer then
-    for _, item in ipairs(hold) do e.buffer.insert({ name = item.name, count = item.count, quality = item.quality }) end
+    for _, item in ipairs(store_items(rec)) do e.buffer.insert({ name = item.name, count = item.count, quality = item.quality }) end
   else
-    spill(entity, hold)
+    spill(entity, store_items(rec))
   end
-  core.clear_hold(rec.box)
+  arms.destroy(rec)
   led.destroy(rec)
   boxes()[rec.unit_number] = nil
 end
@@ -98,7 +144,8 @@ function M.on_died(e)
   if not rec then return end
   local contents = inventory_items(entity)
   spill(entity, contents_as_array(contents))
-  spill(entity, core.hold_items(rec.box))
+  spill(entity, store_items(rec))
+  arms.destroy(rec)
   led.destroy(rec)
   boxes()[rec.unit_number] = nil
 end
@@ -118,6 +165,7 @@ function M.swap(rec, new_dir)
     end
   end
   local position, force, quality, surface, tier = old.position, old.force, old.quality, old.surface, rec.tier
+  local stores, invs = rec.stores, rec.invs
   led.destroy(rec)
   old.destroy()
   local entity = surface.create_entity({ name = N.variant(tier, new_dir), position = position,
@@ -126,6 +174,7 @@ function M.swap(rec, new_dir)
   local inv = entity.get_inventory(defines.inventory.chest)
   if inv then for _, item in ipairs(contents_as_array(contents)) do inv.insert(item) end end
   rec.entity, rec.unit_number, rec.dir = entity, entity.unit_number, new_dir
+  rec.stores, rec.invs = stores, invs
   boxes()[old_unit] = nil
   boxes()[entity.unit_number] = rec
   for _, w in ipairs(wires) do
@@ -135,6 +184,7 @@ function M.swap(rec, new_dir)
     end
   end
   led.create(rec)
+  arms.create(rec)
   if old_led then led.set(rec, old_led.state, old_led.visible) end
   return rec
 end
@@ -156,7 +206,12 @@ end
 local function prune_stash()
   storage.upgrade_stash = storage.upgrade_stash or {}
   for key, entry in pairs(storage.upgrade_stash) do
-    if entry.tick < game.tick then storage.upgrade_stash[key] = nil end
+    if entry.tick < game.tick then
+      local rec = entry.rec
+      spill_at(entry.surface, entry.position, store_items(rec))
+      arms.destroy(rec)
+      storage.upgrade_stash[key] = nil
+    end
   end
 end
 function M.stash(rec)
@@ -173,7 +228,7 @@ function M.stash(rec)
     end
   end
   storage.upgrade_stash[upgrade_key(entity)] = { rec = rec, tick = game.tick,
-    force = entity.force.index, wires = wires }
+    force = entity.force.index, wires = wires, surface = entity.surface, position = entity.position }
   led.destroy(rec)
   boxes()[rec.unit_number] = nil
 end
@@ -212,7 +267,10 @@ end
 function M.on_configuration_changed(data)
   local remove = {}
   for _, rec in pairs(boxes()) do
-    if not valid(rec.entity) then remove[#remove + 1] = rec.unit_number else led.ensure(rec) end
+    if not valid(rec.entity) then arms.destroy(rec); remove[#remove + 1] = rec.unit_number else
+      if rec.box and not rec.stores then migrate_old_box(rec); arms.create(rec) else arms.ensure(rec) end
+      led.ensure(rec)
+    end
   end
   for _, unit in ipairs(remove) do boxes()[unit] = nil end
 end

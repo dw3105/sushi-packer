@@ -1,7 +1,8 @@
 local M = {}
 local N = require("scripts.names")
-local core = require("scripts.core")
 local led = require("scripts.led")
+local ledger = require("scripts.ledger")
+local arms = require("scripts.arms")
 
 local function get_rec(entity)
   if not entity or not entity.valid or not entity.unit_number then return nil end
@@ -75,16 +76,20 @@ function M.on_cloned(e)
   storage.boxes = storage.boxes or {}
   local variant = N.VARIANTS[dst.name]
   local rec = { entity = dst, unit_number = dst.unit_number, tier = variant.tier, dir = variant.dir,
-    box = core.new_box(), settings = M.default_settings(), enabled = true,
+    ledger = ledger.new(), settings = M.default_settings(), enabled = true,
     circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
   storage.boxes[dst.unit_number] = rec
   M.import(rec, M.export(src))
-  local function clone_box(t)
-    if type(t) ~= "table" then return t end
-    local o = {}; for k, v in pairs(t) do o[clone_box(k)] = clone_box(v) end; return o
+  arms.create(rec)
+  for lane = 1, 2 do
+    local source = src.invs and src.invs[lane]
+    local destination = rec.invs and rec.invs[lane]
+    if source and destination and source.valid ~= false then
+      for _, stack in ipairs(source.get_contents()) do
+        destination.insert({ name = stack.name, quality = stack.quality, count = stack.count })
+      end
+    end
   end
-  rec.box = clone_box(src.box)
-  rec.box.partial_by_key = nil -- deep copy split shared partial tables; core rebuilds its key index (PERF-2)
   led.create(rec)
 end
 
