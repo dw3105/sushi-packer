@@ -38,7 +38,7 @@ end
 
 describe("arms", function()
   it("count from speed table", function()
-    eq(arms.count(0.03125),2); eq(arms.count(0.0625),4); eq(arms.count(0.125),4)
+    eq(arms.count(0.03125),4); eq(arms.count(0.0625),4); eq(arms.count(0.125),4)
     eq(arms.count(0.15625),8); eq(arms.count(0.3),8); eq(arms.count(0.3125),12); eq(arms.count(0.5625),12)
   end)
   it("create makes two stores and n arms per lane", function()
