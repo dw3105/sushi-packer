@@ -419,3 +419,33 @@ Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20 identical, `tests/game/test_probe
 - Arms per lane, worst mix (single items, 4 kinds, every belt item differs from one before), belt items accepted per lane in 600 ticks vs want, n = 1 / 2 / 4 / 8 / 12: yellow (75) 50 / 75 / 75 / 75 / 75; red (150) 46 / 99 / 150 / 150 / 150; blue (225) 45 / 106 / 225 / 225 / 225; turbo (300) 45 / 118 / 300 / 300 / 300; 135/s test belt (675) 45 / 113 / 584 / 675 / 675; 270/s test belt (1350) 45 / 144 / 1350 / 1350 / 1350. Table chosen (`N.ARMS`): speed <= 0.03125 -> 2, <= 0.125 -> 4, above -> 8.
 
 Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v15.lua::probe v15 > arms per speed worst mix'`, `... > skip kind pause wires behind kinds'` (temporary index entry; same on `FV=2.1`)
+
+## FND-0043 - v1.15 arms box: integration results (tests, old save, speed pairs vs v1.14)
+
+Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20, branch `int/v14`. Design: V14-9..11, V15-1..4.
+
+Integration path (each red seen before fix): first headless run of merged lanes 040-046 `Tests: 26 failed, 117 passed`; 25 of 26 were tests reading old internals (rewritten on lane stores, helper run, each alone on both versions), 1 real defect (C-6 overshoot 55 / 53 of 50). Further defects found by headless runs and fixed: visit gap 2 lost blue rate (200 of 225); `arms._valid` asked `type(part) == "table"` (engine objects are userdata); full-store flush fired without a waiting kind; arm does not pick an item its store cannot take, so waiting kind is seen on belt behind (`belt_io.behind_kinds`), not in arm hand; idle nap on a pass-through box cost 10-25 % rate; hoard limit with slack blocked stack-50 kinds at 2 items; arms with hand 12 held up to 18 items while lane store ran empty (trace: `321:s0,h13 ... 336:s0,h18`), blue 213..216 of 225 -> hand 4; hand 4 at 270/s needs 12 arms per lane (8 gave 1271 of 1350); yellow needs 4 arms per lane for a belt of mixed stacks (2 passed 95.7 %).
+
+Final code `4b22600`: `make test FV=2.0` -> `Tests: 143 passed (143 total)`, `full-2.0-ok`; `make test FV=2.1` -> `Tests: 143 passed (143 total)`, `full-2.1-ok` (round 5; rounds 3 and 4 same counts on `9065aa9` / `89b2b6c`). Mod sets and load checks: see STEPS v1.15 (round 5).
+
+Old save: save made by released 0.1.14 code (stage of `73b4849`) + test mod `sp-oldsave`: 3 north boxes (yellow, red, turbo), no front belt, 900 ticks of feed, 16 kinds on left lane, 8 other kinds on right lane; at tick 950: `fed=593 behind1=48 behind2=48 box=497`. Same save loaded by 0.1.15 build (`89b2b6c`), front belts built at tick 1000, run to tick 6000 (`--benchmark`, 5100 ticks): `fed=593 front1=229 front2=279 store=85 mismatch[] lane_cross=0`: every kind conserved (229 + 279 + 85 = 593), nothing on ground, no left-lane kind on right lane or reverse; 85 = leftovers below one belt stack in lane stores. Same result on earlier build `a3c929b` (232 / 279 / 82).
+
+Speed, alternating pairs base (`99e243b` = v1.14 scripts + v14 bench tooling) vs new, `tools/bench/run.sh`, flow `stacks`, belt stack 4, 200 boxes, 3600 ticks unless said, script ms per tick; host load1 2.5..9; no separate A/A run (base rows of one tier differ up to x1.4 between rounds with load: cuts below are far outside that).
+
+| FV | Row | Base r1 / r2 | New r1 / r2 | Cut r1 / r2 | Items new / base | New code |
+|---|---|---|---|---|---|---|
+| 2.0 | yellow | 5.297 / 5.184 | 1.995 / 1.683 | 62 % / 68 % | 350816 / 351087 | `4b22600` |
+| 2.0 | red | 12.203 / 9.066 | 3.307 / 3.102 | 73 % / 66 % | 725692 / 726086 | `89b2b6c` |
+| 2.0 | blue | 24.490 / 21.169 | 8.407 / 7.600 | 66 % / 64 % | 1100140 / 1101047 | `89b2b6c` |
+| 2.0 | turbo | 24.079 / 20.650 | 5.753 / 5.559 | 76 % / 73 % | 1473228 / 1476092 | `89b2b6c` |
+| 2.0 | `ub-ultimate` (set `ubsa`, 1300 ticks) | 66.120 / 67.351 | 14.038 / 14.384 | 79 % / 79 % | 2632444 / 2638403 | `89b2b6c` |
+| 2.0 | player rig `g433`, 5 `ab-extreme` boxes | 0.963 / 1.066 | 0.406 / 0.373 | 58 % / 65 % | 92300 / 92372 (r2) | `89b2b6c` |
+| 2.1 | yellow | 5.225 / 4.840 | 1.678 / 1.601 | 68 % / 67 % | 350816 / 351087 | `4b22600` |
+| 2.1 | turbo | 20.798 / 20.666 | 5.375 / 5.856 | 74 % / 72 % | 1473228 / 1476092 | `89b2b6c` |
+| 2.1 | `kr-superior` (set `k2so`) | 36.660 / 34.230 | 11.065 / 9.884 | 70 % / 71 % | 2223608 / 2226082 | `89b2b6c` |
+
+`89b2b6c` -> `4b22600` changes only arms per lane of tiers with belt speed <= 0.03125 (yellow 2 -> 4); other rows unaffected by code. Yellow on `89b2b6c` (2 arms): 6.823 / 4.916 -> 2.048 / 1.712, items 336084 of 351087 (95.7 %): reason for the change. Player rig base includes other mods' scripts (belt-only scene 0.13..0.15 ms, FND-0037): packer share falls from about 0.85 ms to about 0.25 ms for 5 boxes (about 0.05 ms per box on this VM; player saw 0.08 ms per box with 0.1.12 on their PC).
+R-1 (v14 text): every FV 2.0 row and player rig at least 50 % below v1.14 code: met in 12 of 12 pairs (58..79 %); FV 2.1 rows not slower: met (67..74 % less). Rule asked for mean of >= 6 pairs after an A/A band: 2 pairs per row measured, no A/A run - stated, not met as written.
+Rig numbers of FND-0041 (x10..x20) were not reached: real loop keeps order, timers, hoarding rule, LED, pause and extra items.
+
+Verified-by: logs `~/.cache/sushi-packer/v14/logs/full-2.0-v15-r5.log`, `full-2.1-v15-r5.log`, `pairs-v15.txt`, `pairs-v15-yellow4.txt`; old save `~/.cache/sushi-packer/v15/oldsave/` (`run-old.log`, `run-new-final.log`, mod `sp-oldsave`); scripts `~/.cache/sushi-packer/v14/pairs-v15.sh`, `pairs-yellow.sh`
