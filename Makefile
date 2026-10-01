@@ -5,7 +5,7 @@ FV ?= 2.0
 # Exact label only (gateslot looks weights up by exact label). Lane checks call tools/run_tests.sh direct.
 GATE := $(if $(shell command -v gateslot),gateslot --label sushi-packer/heavy --,)
 
-.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench verify
+.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench bench-all verify
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "%-14s %s\n", $$1, $$2}'
@@ -46,8 +46,21 @@ test-modsets: ## v9: tests/game/test_modtiers.lua once per mod set of FV (fetch 
 	  tools/fetch_mods.py fetch $(FV) $$s; echo "== modset $$s"; MODSET=$$s $(GATE) tools/run_tests.sh $(FV) --modtiers || fail="$$fail $$s"; done; \
 	  test -z "$$fail" || { echo "test-modsets-$(FV) FAIL:$$fail"; exit 1; }; echo "test-modsets-$(FV)-ok"
 
-bench: ## R-1: 200 boxes, script ms/tick on FV (lane H fills tools/bench/)
-	$(GATE) tools/bench/run.sh $(FV)
+bench: ## Bench one row: FV, TIER=, MODSET=, FLOW=single|stacks, BOXES=, TICKS=, SEED=
+	$(if $(MODSET),tools/fetch_mods.py fetch $(FV) $(MODSET) &&) $(GATE) tools/bench/run.sh $(FV) $(if $(TIER),--tier $(TIER)) $(if $(MODSET),--modset $(MODSET)) $(if $(FLOW),--flow $(FLOW)) $(if $(BOXES),--boxes $(BOXES)) $(if $(TICKS),--ticks $(TICKS)) $(if $(SEED),--seed $(SEED))
+
+bench-all: ## Standing bench: 200 boxes x yellow, red, blue, turbo + fastest mod tier, flow stacks. Integrator only
+	$(GATE) tools/bench/run.sh $(FV) --tier yellow --flow stacks --boxes 200
+	$(GATE) tools/bench/run.sh $(FV) --tier red --flow stacks --boxes 200
+	$(GATE) tools/bench/run.sh $(FV) --tier blue --flow stacks --boxes 200
+	$(GATE) tools/bench/run.sh $(FV) --tier turbo --flow stacks --boxes 200
+ifeq ($(FV),2.0)
+	$(if $(shell command -v gateslot),gateslot --label sushi-packer/heavy --,) tools/fetch_mods.py fetch 2.0 ubsa
+	$(GATE) tools/bench/run.sh 2.0 --tier ub-ultimate --modset ubsa --flow stacks --boxes 200
+else ifeq ($(FV),2.1)
+	$(if $(shell command -v gateslot),gateslot --label sushi-packer/heavy --,) tools/fetch_mods.py fetch 2.1 k2so
+	$(GATE) tools/bench/run.sh 2.1 --tier kr-superior --modset k2so --flow stacks --boxes 200
+endif
 
 verify: ## Gate before merge to main: skill lint + both full suites + skill drift
 	$(MAKE) skill-lint
