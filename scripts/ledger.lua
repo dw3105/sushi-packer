@@ -224,8 +224,121 @@ function M.hoard(state, lane, contents, stack_size)
 end
 
 -- v16 seam stubs (lane 049 fills): docs/CONTRACT.md "v16 engine output seam".
-function M.scan(state, lane, contents, opts) error("stub: ledger.scan") end
-function M.hands(state, lane, held, opts) error("stub: ledger.hands") end
+local SCAN_OUT, SCAN_POOL = {}, {}
+local SCAN_KEYS, SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS = {}, {}, {}, {}, {}, {}
+local SCAN_PRESENT = {}
+local HANDS_OUT = {}
+local HANDS_NEXT = { {}, {} }
+local function look_key(name, quality) return name .. "\0" .. quality end
+function M.scan(state, lane, contents, opts)
+  local left = state.left
+  if not left then left = { {}, {} }; state.left = left end
+  local ready = state.ready
+  if not ready then ready = { 0, 0 }; state.ready = ready end
+  local sweep = state.sweep
+  if not sweep then sweep = { 0, 0 }; state.sweep = sweep end
+  local clocks = left[lane]
+  local tick, bss, timeout = opts.tick, opts.bss, opts.timeout_ticks
+  local n, full, out_n = #contents, false, 0
+  local names, qualities, counts, sizes, keys = SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS
+  local function add(item, size, key)
+    out_n = out_n + 1
+    local p = SCAN_POOL[out_n]
+    if not p then p = {}; SCAN_POOL[out_n] = p end
+    p.name, p.quality, p.count = item.name, item.quality, item.count
+    SCAN_OUT[out_n] = p
+    clocks[key] = nil
+  end
+  for i = 1, n do
+    local item = contents[i]
+    local name, quality, count = item.name, item.quality, item.count
+    local size = bss
+    local item_size = opts.stack_size(name)
+    if item_size < size then size = item_size end
+    local key = look_key(name, quality)
+    names[i], qualities[i], counts[i], sizes[i], keys[i] = name, quality, count, size, key
+    SCAN_PRESENT[key] = true
+    if count >= size then
+      full = true
+      clocks[key] = nil
+    elseif clocks[key] == nil then
+      clocks[key] = tick
+    end
+  end
+  for key in pairs(clocks) do if not SCAN_PRESENT[key] then clocks[key] = nil end end
+  for key in pairs(SCAN_PRESENT) do SCAN_PRESENT[key] = nil end
+  for i = n + 1, #names do names[i], qualities[i], counts[i], sizes[i], keys[i] = nil, nil, nil, nil, nil end
+  ready[lane] = full and (ready[lane] or 0) + 1 or 0
+
+  local flush_all = opts.flush_all
+  local pressured = opts.need_slot and opts.slots_used >= opts.slots
+  local oldest_i, oldest_tick
+  for i = 1, n do
+    if counts[i] < sizes[i] then
+      local age = clocks[keys[i]]
+      if flush_all or (timeout > 0 and tick - age >= timeout) then
+        add(contents[i], sizes[i], keys[i])
+      elseif pressured and (oldest_tick == nil or age < oldest_tick or
+          (age == oldest_tick and (names[i] < names[oldest_i] or
+            (names[i] == names[oldest_i] and qualities[i] < qualities[oldest_i])))) then
+        oldest_i, oldest_tick = i, age
+      end
+    end
+  end
+  if pressured and oldest_i then
+    local already = false
+    for i = 1, out_n do if SCAN_OUT[i].name == names[oldest_i] and SCAN_OUT[i].quality == qualities[oldest_i] then already = true; break end end
+    if not already then add(contents[oldest_i], sizes[oldest_i], keys[oldest_i]) end
+  end
+  for i = out_n + 1, #SCAN_OUT do SCAN_OUT[i] = nil end
+  local want = flush_all or ready[lane] >= 2 or tick >= (sweep[lane] or 0)
+  return SCAN_OUT, want
+end
+
+function M.hands(state, lane, held, opts)
+  local ready = state.ready
+  if not ready then ready = { 0, 0 }; state.ready = ready end
+  local sweep = state.sweep
+  if not sweep then sweep = { 0, 0 }; state.sweep = sweep end
+  local memories = state.held
+  if not memories then memories = { {}, {} }; state.held = memories end
+  local memory = memories[lane]
+  local tick, timeout = opts.tick, opts.timeout_ticks
+  local do_sweep = tick >= (sweep[lane] or 0)
+  local jam = (ready[lane] or 0) >= 2 and #held >= opts.n_out
+  local out_n, old = 0, memory
+  local next_memory = HANDS_NEXT[lane]
+  for arm in pairs(next_memory) do next_memory[arm] = nil end
+  local flush_all = opts.flush_all
+  for i = 1, #held do
+    local h = held[i]
+    local size = opts.bss
+    local item_size = opts.stack_size(h.name)
+    if item_size < size then size = item_size end
+    if h.count < size then
+      local key = look_key(h.name, h.quality)
+      local flush = flush_all or jam or (do_sweep and timeout > 0 and old[h.arm] == key)
+      if flush then
+        out_n = out_n + 1; HANDS_OUT[out_n] = h.arm
+      elseif do_sweep and timeout > 0 then
+        next_memory[h.arm] = key
+      end
+    end
+  end
+  if do_sweep then
+    for arm, key in pairs(next_memory) do memory[arm] = key end
+    for arm in pairs(memory) do if next_memory[arm] == nil then memory[arm] = nil end end
+    local period = timeout == 0 and 600 or math.max(60, math.floor(timeout / 2))
+    sweep[lane] = tick + period
+  end
+  for i = 2, out_n do
+    local arm, j = HANDS_OUT[i], i - 1
+    while j >= 1 and HANDS_OUT[j] > arm do HANDS_OUT[j + 1] = HANDS_OUT[j]; j = j - 1 end
+    HANDS_OUT[j + 1] = arm
+  end
+  for i = out_n + 1, #HANDS_OUT do HANDS_OUT[i] = nil end
+  return HANDS_OUT
+end
 
 function M.led(used_left, used_right, slots)
   if used_left >= slots or used_right >= slots then return "red" end
