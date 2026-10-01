@@ -10,6 +10,14 @@ end
 local function contains(s, needle) return s:find(needle, 1, true) ~= nil end
 
 describe("bench run", function()
+  it("stale settings removed before init create", function()
+    -- 2026-10-01: mod-settings.dat of previous row (tier ab-extreme) made init create crash in vanilla row
+    -- ("Unknown entity name: extreme-belt"), run.sh died silent under set -e.
+    local f = assert(io.open("tools/bench/run.sh")); local s = f:read("*a"); f:close()
+    local rm, init = s:find('rm -f "$OUT/mods/mod-settings.dat"', 1, true), s:find('--create "$OUT/init.zip"', 1, true)
+    ok(rm and init and rm < init, "run.sh must delete stale mod-settings.dat before init create")
+    ok(s:find("bench FAIL", 1, true), "run.sh must name failed step")
+  end)
   it("belt only row marked box no", function()
     local p = io.popen("tools/bench/run.sh 2.0 --tier red --flow stacks --belt-only --dry-run 2>&1")
     local out = p:read("*a"); p:close()

@@ -76,13 +76,16 @@ python3 "$ROOT/tools/bench/modlist.py" "$OUT/mods"
 SAVE=$OUT/bench.zip
 LOG=$OUT/benchmark.log
 rm -f "$SAVE" "$LOG"
-"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$OUT/init.zip" >"$OUT/init.log" 2>&1
+# Previous row's startup settings (tier of another mod set) would crash this first create: start from defaults.
+rm -f "$OUT/mods/mod-settings.dat"
+step_fail() { echo "bench FAIL step=$1 log=$2: $(grep -m1 -A1 -E 'Error while|Unknown|Failed' "$2" | tr '\n' ' ')" ; exit 1; }
+"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$OUT/init.zip" >"$OUT/init.log" 2>&1 || step_fail init "$OUT/init.log"
 rm -f "$OUT/init.zip"
 if [ "$BOX" = yes ]; then BOXV=true; else BOXV=false; fi
 for pair in "boxes $BOXES" "tier $TIER" "flow $FLOW" "seed $SEED" "box $BOXV"; do
   set -- $pair
   (cd "$FT" && npx fmtk settings set startup "sushi-packer-bench-$1" "$2" --modsPath "$OUT/mods")
 done
-"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$SAVE" >"$OUT/create.log" 2>&1
-"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --benchmark "$SAVE" --benchmark-ticks "$TICKS" --benchmark-runs 1 --benchmark-verbose all >"$LOG" 2>&1
+"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$SAVE" >"$OUT/create.log" 2>&1 || step_fail create "$OUT/create.log"
+"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --benchmark "$SAVE" --benchmark-ticks "$TICKS" --benchmark-runs 1 --benchmark-verbose all >"$LOG" 2>&1 || step_fail benchmark "$LOG"
 python3 "$ROOT/tools/bench/parse.py" "$LOG" "$OUT/write/factorio-current.log" "$FV" "$BOXES" "$TICKS" "$TIER" "$MODSET" "$FLOW" "$BOX"
