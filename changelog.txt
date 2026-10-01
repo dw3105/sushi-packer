@@ -1,12 +1,12 @@
 ---------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
 Version: 0.2.15
 Date: 2026-10-01
   Changes:
     - The box window shows both lanes in two rows, and you can take items by clicking them.
     - Each lane holds 12 slots.
+    - Boxes in old saves keep every item; those items leave first.
   Optimisations:
-    - The box uses much less script time.
+    - The box uses much less script time: hidden inserters take items in, lanes stay separate.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.15
@@ -14,8 +14,9 @@ Date: 2026-10-01
   Changes:
     - The box window shows both lanes in two rows, and you can take items by clicking them.
     - Each lane holds 12 slots.
+    - Boxes in old saves keep every item; those items leave first.
   Optimisations:
-    - The box uses much less script time.
+    - The box uses much less script time: hidden inserters take items in, lanes stay separate.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.14

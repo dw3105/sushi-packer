@@ -49,7 +49,7 @@ The map setting **Sushi packer flush timeout** sets the default age, in seconds,
 
 ## Factorio versions
 
-The source supports two builds: Factorio 2.0 uses mod version `0.1.14`; Factorio 2.1 uses mod version `0.2.14`. Space Age is optional.
+The source supports two builds: Factorio 2.0 uses mod version `0.1.15`; Factorio 2.1 uses mod version `0.2.15`. Space Age is optional.
 
 ## Mod portal assets
 
