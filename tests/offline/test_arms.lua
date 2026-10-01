@@ -6,19 +6,23 @@ local function setup(speed)
   local created, writes, connectors = {}, {}, {}
   local function entity(spec)
     local e = { valid = true, name = spec.name, position = spec.position, force = spec.force, writes = {}, filters = {}, links = {} }
-    setmetatable(e, { __newindex = function(t, k, v)
+    setmetatable(e, { __index = function(t, k) local w = rawget(t, "_watched"); return w and w[k] end, __newindex = function(t, k, v)
       if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" then
         writes[k] = (writes[k] or 0) + 1; e.writes[k] = (e.writes[k] or 0) + 1
+        e._watched = e._watched or {}; e._watched[k] = v
+      else
+        rawset(t, k, v)
       end
-      rawset(t, k, v)
     end })
     function e.destroy() e.valid = false end
     function e.get_inventory(_) return e.inventory or {} end
     function e.set_filter(i, v) writes.filters = (writes.filters or 0) + 1; e.filters[i] = v end
+    e.wire_connectors = {}
     function e.get_wire_connector(id, create)
+      if e.wire_connectors[id] then return e.wire_connectors[id] end
       local c = { id = id, create = create, connections = {} }
       function c.connect_to(other, a, origin) c.connections[#c.connections+1] = { other=other, a=a, origin=origin } end
-      connectors[#connectors+1] = c; return c
+      connectors[#connectors+1] = c; e.wire_connectors[id] = c; return c
     end
     e.inventory = { tag = spec.name }
     created[#created+1] = { spec=spec, entity=e }
@@ -49,27 +53,31 @@ describe("arms", function()
       local rec,s,created=setup(); rec.entity.surface=s; rec.dir=dir; arms.create(rec)
       local delta=({north={0,1},east={-1,0},south={0,-1},west={1,0}})[dir]
       for lane=1,2 do for _,a in ipairs(rec.arms[lane]) do
-        eq(a.pickup_position,{10+delta[1],20+delta[2]}); eq(a.drop_position,{10,20})
+        eq(a.pickup_position,{x=10+delta[1],y=20+delta[2]}); eq(a.drop_position,{x=10,y=20})
         eq(a.pickup_from_left_lane,lane==1); eq(a.pickup_from_right_lane,lane==2); eq(a.drop_target,rec.stores[lane])
       end end
     end
   end)
   it("wires join stores to box", function()
-    local rec,s,_,_,_,entity=setup(); rec.entity.surface=s; local box=rec.entity; arms.create(rec)
-    for _,id in ipairs({1,2}) do for _,store in ipairs(rec.stores) do end end
-    -- Two connectors per store, each connected to the matching box connector.
-    eq(#rec.stores,2); ok(box)
+    local rec,s=setup(); rec.entity.surface=s; local box=rec.entity; arms.create(rec)
+    for _,id in ipairs({1,2}) do
+      local target=box.wire_connectors[id]
+      for _,store in ipairs(rec.stores) do
+        local links=store.wire_connectors[id].connections
+        eq(#links,1); eq(links[1].other,target); eq(links[1].a,false); eq(links[1].origin,3)
+      end
+    end
   end)
   it("create reuses valid stores and replaces arms", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local stores=rec.stores; local invs=rec.invs; local old=rec.arms[1][1]
     rec.dir="east"; arms.create(rec); eq(rec.stores,stores); eq(rec.invs,invs); eq(old.valid,false)
-    rec.stores[1].valid=false; arms.create(rec); ok(rec.stores[1]~=stores[1])
+    local previous=rec.stores[1]; previous.valid=false; arms.create(rec); ok(rec.stores[1]~=previous)
   end)
   it("destroy", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local a=rec.arms[1][1]; local st=rec.stores[1]
     arms.destroy(rec); eq(a.valid,false); eq(st.valid,false); eq(rec.arms,nil); eq(rec.stores,nil); eq(rec.invs,nil)
     arms.create(rec); local keep=rec.stores; arms.destroy(rec,true); eq(keep[1].valid,true); eq(rec.invs~=nil,true)
-    arms.destroy({arms={{false},{nil}},stores={false,nil},invs={}})
+    arms.destroy({arms={{ {valid=false} },{nil}},stores={{valid=false},nil},invs={}})
   end)
   it("pause writes only on change", function()
     local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.pause(rec,1,true); local n=writes.disabled_by_script
