@@ -166,3 +166,27 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 **2026-09-30, v12/v13.** Two `until grep ...` wait loops waited on strings that never came (lane log had no end marker; foreground loop moved to background) and needed TaskStop. Bucket: tooling. Root cause: waited on log text, not on job's own completion notification. Proposed rule: none new (SS-07 already: wait on job notification; no parallel poll loop).
 
 **Applied 2026-09-30 (author: all 4):** FRC-0033 + FRC-0034 -> `sushi-packer-code:SP-22`, FRC-0035 -> `SP-23`, FRC-0036 -> `SP-24`, FRC-0037 -> `SP-21` text; FRC-0038 no rule. Skill v0.8.
+
+## FRC-0039 - S0 stub broke engine load; nobody ran load-check after seam
+
+**2026-10-01, v15 S0.** Stub `prototypes/hidden.lua` returned `{}`; `data:extend({})` fails in engine (`Invalid array of prototypes`). Offline tests green, so int tree did not load in Factorio from seam commit until lane 040 merged; background bench pairs of small fix ran on it and lost all "new" rows but one. Bucket: process. Proposed rule: integrator runs `make load-check FV=2.0` after every seam commit that touches `data*.lua` or `prototypes/`.
+
+## FRC-0040 - Edited a tree that a background job was reading (three times in one day)
+
+**2026-10-01, v14/v15.** (1) Seam edits in int worktree while mod-set rerun ran there; (2) v15 probes on 2.1 in int worktree during `test-modsets` on 2.1: harness guard `FAIL harness space-age enabled=False, set wants True` on set `se` (cause suspected: shared `build/2.1/mods/.builtin_off`; not proven); (3) perf edits in worktree that bench pairs used as "new": pairs spoiled, rerun from frozen worktree. Bucket: process (SP-15 known, not obeyed). Proposed rule: long jobs run only from a detached worktree made for them (`wt-<repo>-bench-*`, `-suite-*`), never from a tree being edited.
+
+## FRC-0041 - Gateslot wrap from non-repo cwd took whole machine; headless server hung and listened on network
+
+**2026-10-01, v15 old-save test.** `gateslot --label sushi-packer/heavy -- ...` from `~/.cache/...` got w=15986 MiB / 4 cores and held queue 10 min (own helper waited 8 min). Command was Factorio `--start-server --until-tick`: paused with no players, bound 0.0.0.0:34197, fetched server padlock from auth service. Killed; redone with `--bind 127.0.0.1`, private server settings, hard `timeout`; ticks without save use `--benchmark`. Bucket: tooling + process. Proposed rule: wraps run with cwd inside a repo worktree; every new long command carries `timeout`; never `--start-server` without bind + settings + timeout.
+
+## FRC-0042 - Lane verdict `FAIL base-not-ancestor` when int branch moved during lane run
+
+**2026-10-01, lanes 038, 039.** Relaunched lanes got verdict FAIL although checks were green: int branch had new commits since launch. Hand check + manual merge cost ~10 min each. Also `lane launch` refused whole wave until a "pilot" task had a verdict (override `--no-pilot <reason>` used with written reason). Bucket: tooling. Proposed rule: no commit on int branch while lanes run; probes and seam fixes go to a side worktree until verdicts land.
+
+## FRC-0043 - Rig numbers promised to author before real loop was measured
+
+**2026-10-01, v15.** Scratch rig (bare output loop) gave x10..x20 less script; first real box loop gave only x2 on turbo (0.077 ms per box vs rig 0.012) and needed two perf passes. Author was told "10-20x" from rig. Bucket: evidence. Proposed rule: a rig number is reported as "rig, without rules X, Y, Z"; product claim waits for first bench of real code.
+
+## FRC-0044 - Status turns unreadable for author
+
+**2026-10-01.** Author: "YOU ARE FUCKING CONFUSING! EXPLAIN VERY SIMPLY!" after table-heavy progress turns with internal ids. Bucket: communication. Applied same day: memory `explain-plain-story` (problem, why, ways, ask; few numbers).
