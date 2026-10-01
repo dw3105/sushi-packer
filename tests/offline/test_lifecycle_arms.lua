@@ -22,7 +22,7 @@ local function setup()
   local id = 10
   local function entity(unit, name)
     id = id + 1
-    local e = { valid = true, name = name or N.variant("yellow", "east"), unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal" }
+    local e = { valid = true, name = name or N.variant("yellow", "east"), unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal", to_be_upgraded=function() return false end }
     e.surface.spilled = {}
     e.surface.spill_item_stack = function(spec) e.surface.spilled[#e.surface.spilled + 1] = spec end
     e.surface.create_entity = function(spec) local n = entity(id + 100, spec.name); n.position=spec.position; n.force=spec.force; n.surface=e.surface; return n end
@@ -44,17 +44,17 @@ describe("lifecycle arms", function()
     eq(#a.creates,1); eq(a.creates[1].dir,"south"); eq(a.creates[1].entity,rec.entity); eq(rec.invs[1],"i1"); eq(#a.destroys,0)
   end)
   it("mined box returns store items", function()
-    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ {contents={{name="iron",count=2,quality="rare"}}}, {contents={{name="copper",count=3,quality="normal"}}} }; local got={}
+    local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ inv({{name="iron",count=2,quality="rare"}}), inv({{name="copper",count=3,quality="normal"}}) }; local got={}
     r.on_removed({entity=e,buffer={insert=function(s) got[#got+1]=s end}}); eq(#got,2); eq(got[1],{name="iron",count=2,quality="rare"}); eq(got[2].name,"copper"); eq(#a.destroys,1)
   end)
   it("died box spills store items", function()
-    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ {contents={{name="iron",count=2,quality="rare"}}}, {contents={}} }; r.on_died({entity=e}); eq(#e.surface.spilled,1); eq(e.surface.spilled[1].stack.quality,"rare"); eq(#a.destroys,1)
+    local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ inv({{name="iron",count=2,quality="rare"}}), inv() }; r.on_died({entity=e}); eq(#e.surface.spilled,1); eq(e.surface.spilled[1].stack.quality,"rare"); eq(#a.destroys,1)
   end)
   it("upgrade carries stores", function()
-    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={{contents={{name="iron",count=2}}},{contents={}}}; r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); local n=entity(2,"fast-sushi-packer-south"); n.position=e.position; r.on_built({entity=n}); eq(r.get(n),rec); eq(#a.creates,1); eq(#a.destroys,0)
+    local r, _, a, _, entity, inv = setup(); local e=entity(1); e.to_be_upgraded=function() return true end; local rec=r.new_rec(e); rec.invs={inv({{name="iron",count=2}}),inv()}; r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); local n=entity(2,"fast-sushi-packer-south"); n.position=e.position; r.on_built({entity=n}); eq(r.get(n),rec); eq(#a.creates,1); eq(#a.destroys,0)
   end)
   it("clone gets own parts and copies items", function()
-    local _, c, a, _, entity = setup(); local s,d=entity(1),entity(2); local src={entity=s,unit_number=1,tier="yellow",dir="east",settings=c.default_settings(),stores={"a","b"},invs={{contents={{name="iron",count=4,quality="rare"}}},{contents={}}}}; storage.boxes[1]=src
+    local _, c, a, _, entity, inv = setup(); local s,d=entity(1),entity(2); local src={entity=s,unit_number=1,tier="yellow",dir="east",settings=c.default_settings(),stores={"a","b"},invs={inv({{name="iron",count=4,quality="rare"}}),inv()}}; storage.boxes[1]=src
     c.on_cloned({source=s,destination=d}); local dst=storage.boxes[2]; eq(#a.creates,1); eq(dst.invs[1].contents[1],{name="iron",count=4,quality="rare"}); eq(src.invs[1].contents[1].count,4)
   end)
   it("old save becomes extra", function()
@@ -65,6 +65,6 @@ describe("lifecycle arms", function()
     local r, _, a = setup(); local e={valid=true,unit_number=1}; local rec={entity=e,unit_number=1,stores={},invs={},arms={},box=nil}; storage.boxes[1]=rec; r.on_configuration_changed({}); r.on_configuration_changed({}); eq(#a.ensures,2); eq(rec.extra,nil); eq(#a.creates,0)
   end)
   it("stale stash cleans its parts", function()
-    local r, _, a, _, entity = setup(); local e=entity(1); local rec={entity=e,unit_number=1,invs={{contents={{name="iron",count=2}}},{contents={}}}}; storage.upgrade_stash={stale={rec=rec,tick=99,force=1}}; game.tick=100; r.take_stash(entity(2)); eq(#a.destroys,1); eq(#e.surface.spilled,1)
+    local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec={entity=e,unit_number=1,invs={inv({{name="iron",count=2}}),inv()}}; storage.upgrade_stash={stale={rec=rec,tick=99,force=1,surface=e.surface,position=e.position}}; game.tick=100; r.take_stash(entity(2)); eq(#a.destroys,1); eq(#e.surface.spilled,1)
   end)
 end)

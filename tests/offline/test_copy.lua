@@ -115,24 +115,28 @@ describe("copy", function()
 end)
 
 describe("copy clone", function()
-  it("cloned box stays consistent after more input", function()
-    -- deep copy without memo split partial tables from the core key index (PERF-2)
+  it("clone owns copied lane store items", function()
     defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
-    local core = require("scripts.core")
+    package.loaded["scripts.copy"] = nil
+    package.loaded["scripts.ledger"] = { new = function() return { seen = { {}, {} } } end }
+    package.loaded["scripts.arms"] = { create = function(rec)
+      rec.invs = { { contents = {}, insert = function(s) rec.invs[1].contents[#rec.invs[1].contents + 1] = s end },
+        { contents = {}, insert = function(s) rec.invs[2].contents[#rec.invs[2].contents + 1] = s end } }
+    end }
     local copy = require("scripts.copy")
     local led = require("scripts.led")
     local saved = led.create; led.create = function() end
     local src_ent = { valid = true, unit_number = 1, name = "sushi-packer-north" }
     local dst_ent = { valid = true, unit_number = 2, name = "sushi-packer-north" }
-    local src = { entity = src_ent, unit_number = 1, settings = copy.default_settings(), box = core.new_box() }
-    core.accept(src.box, "iron-plate", "normal", 1, 5, 100, 1, false)
+    local source_inv = { get_contents = function() return { { name = "iron-plate", quality = "normal", count = 5 } } end }
+    local src = { entity = src_ent, unit_number = 1, tier = "yellow", dir = "north", settings = copy.default_settings(),
+      invs = { source_inv, { get_contents = function() return {} end } } }
     storage = { boxes = { [1] = src } }
     copy.on_cloned({ source = src_ent, destination = dst_ent })
     led.create = saved
     local dst = storage.boxes[2]
-    core.accept(dst.box, "iron-plate", "normal", 1, 3, 100, 2, false)
-    eq(core.used_slots(dst.box), 1)
-    eq(core.totals(dst.box), { { name = "iron-plate", quality = "normal", count = 8 } })
-    eq(core.totals(src.box), { { name = "iron-plate", quality = "normal", count = 5 } })
+    eq(dst.box, nil)
+    eq(dst.invs[1].contents, { { name = "iron-plate", quality = "normal", count = 5 } })
+    eq(src.invs[1].get_contents()[1].count, 5)
   end)
 end)
