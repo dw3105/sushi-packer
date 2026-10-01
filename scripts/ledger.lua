@@ -223,6 +223,10 @@ function M.hoard(state, lane, contents, stack_size)
   return out
 end
 
+-- v16 seam stubs (lane 049 fills): docs/CONTRACT.md "v16 engine output seam".
+function M.scan(state, lane, contents, opts) error("stub: ledger.scan") end
+function M.hands(state, lane, held, opts) error("stub: ledger.hands") end
+
 function M.led(used_left, used_right, slots)
   if used_left >= slots or used_right >= slots then return "red" end
   if used_left == 0 and used_right == 0 then return "green" end

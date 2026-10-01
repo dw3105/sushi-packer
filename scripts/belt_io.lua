@@ -297,6 +297,11 @@ function M.can_push(rec, lane)
   return line ~= nil and line.can_insert_at_back()
 end
 
+-- v16: is there a belt-like entity in front that box may feed (same rules as push: same direction)? Cached like push.
+function M.front_ok(rec)
+  return cached(rec, "front", 1) ~= nil
+end
+
 function M.push(rec, lane, item, belt_stack_size)
   local counters = storage and storage.sp_counters
   local belt, map = cached(rec, "front", 1)

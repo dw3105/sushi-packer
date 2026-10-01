@@ -243,3 +243,52 @@ Engine facts (FND-0040, FND-0042, both versions): all writes above accepted; lan
 - `tick.on_tick`: per due box: `circuit.evaluate`; lane paused when circuit off, `rec.decon`, or lane has `rec.extra` items (`arms.pause`); per lane: extra items of that lane first (out of box container), then `ledger.plan` on `rec.invs[lane].get_contents()` -> pieces pushed in order with `belt_io.push(rec, lane, piece, bss)` while it returns > 0 and `rec.out_credit[lane] >= 1` (credit rule unchanged), each pushed piece removed from its inventory; `arms.skip(rec, lane, ledger.hoard(...))`; LED from `ledger.led` with used slots = `#inv - inv.count_empty_stacks()`. Counters: `visits`, `pushes`, `items_out` as today, `items_in` += pushed item count, `pulls` / `reads` stay 0.
 - `registry`: `arms.create(rec)` after every rec is made or rebound (build, rotate swap, upgrade, clone); mined box: store items into `e.buffer`; died box: store items spilled; old saves (`rec.box` present, `rec.stores` nil): items of box container stay there, `rec.extra` built from old core box records (lane known) + old pass-through hold, `rec.ledger = ledger.new()`, `rec.box = nil`.
 - `gui`: existing relative frame gains section "Lanes": two rows of `N.STORE_SLOTS` slot buttons (lane 1, lane 2) showing `rec.invs[lane]` stacks; click moves that stack to player (`player.insert`, rest stays). Box container grid (native) shows extra items.
+
+## v16 engine output seam (V16-1) - frozen for lanes 048..051
+
+Box of v15 plus hidden OUT arms: `N.OUT_ARMS` (8) inserters `N.OUT` per lane on box tile. Each takes from its lane store and drops belt stacks on its lane of front tile. Engine moves items out. Script does not touch items in normal flow; it looks at each box once per `N.LOOK` (30) ticks ("slow look").
+
+Two modes per box, chosen at every look:
+- **script mode**: box has pass-through filters (`rec.settings.filters[1] ~= nil`). v15 visit loop unchanged (`ledger.plan`, `ledger.hoard`, pushes by script); out arms of both lanes paused.
+- **engine mode**: every other box. Out arms run. Rules dropped in this mode by author (V16-2): hoarding rule C-6, exact tier rate cap, order of leaving.
+
+Leftover of a kind = fewer items than one belt stack `S(kind) = min(bss, stack_size(name))`. Out arm takes last slot first and waits with a partial hand until hand is full ("partial hand"); that hand is where a leftover normally waits. Engine facts (FND-0046, both versions): `pickup_target` picks store among several on tile; drop lane by `drop_position` (front tile centre +- 0.25 across travel); `inserter_stack_size_override = bss` gives stacks of exactly bss (2, 4, 20) and no waiting at bss 1; front may be belt, splitter half, underground entrance, loader; arm also drops on a sideways belt (so script must pause out arms when `belt_io.front_ok(rec)` is false).
+
+### rec fields (new)
+
+```lua
+rec.out = { { LuaEntity, ... }, { ... } }      -- out arms per lane, owned by scripts/arms.lua
+rec.out_paused = { bool, bool }                -- last pause state of out arms per lane, owned by scripts/arms.lua
+rec.hand = n | nil                             -- hand size last written to out arms, owned by scripts/arms.lua
+rec.ledger.left / .ready / .sweep / .held      -- slow-look memory, owned by scripts/ledger.lua (made lazily: v15 saves lack them)
+```
+
+### scripts/arms.lua (lane 048)
+
+| Signature | Does |
+|---|---|
+| `arms.create(rec)` | as v15, plus: before destroying any old arm (in `rec.arms`, out `rec.out`) that holds items (`held_stack.valid_for_read`): insert them into `rec.invs[lane]` when that store is valid, rest into `rec.entity.get_inventory(defines.inventory.chest)`, rest spilled (`surface.spill_item_stack{ position = box position, stack = { name=, count=, quality= } }`). Then destroys old out arms and per lane makes `N.OUT_ARMS` arms: `create_entity{ name = N.OUT, position = box position, force = box force }`, `destructible = false`, `pickup_position = box position`, `pickup_target = rec.stores[lane]`, `drop_position = { x = px + fx + fy * s, y = py + fy - fx * s }` with `(fx, fy)` = unit step of `rec.dir` (north `0,-1`, east `1,0`, south `0,1`, west `-1,0`), `s = 0.25` lane 1, `-0.25` lane 2. Sets `rec.out_paused = { false, false }`, `rec.hand = nil`. |
+| `arms.destroy(rec, keep_stores)` | as v15, plus destroys out arms, clears `rec.out`, `rec.out_paused`, `rec.hand`. Never moves items (caller drains hands first). |
+| `arms.pause_out(rec, lane, paused)` | like `pause` for out arms: when `rec.out_paused[lane] ~= paused`: each valid out arm of lane `disabled_by_script = paused`; remember. No engine call when unchanged. |
+| `arms.hand(rec, bss)` | when `rec.hand ~= bss`: every valid out arm of both lanes `inserter_stack_size_override = bss`; `rec.hand = bss`. No engine call when unchanged. |
+| `arms.held(rec, lane) -> list` | out arms of lane holding items: array of `{ arm = k, name =, quality = <quality name>, count = }` in arm order (`held_stack.valid_for_read`, `.name`, `.quality.name`, `.count`). List and its entries are reused by next call (caller must not keep them). |
+| `arms.clear_held(rec, lane, k)` | `rec.out[lane][k].held_stack.clear()` when arm valid. |
+| `arms.drain_hands(rec) -> items` | fresh array `{ name =, quality =, count =, lane = }` for every valid arm (in and out, both lanes) that holds items; clears each such hand. Nil / invalid parts skipped. |
+| `arms.ensure(rec) -> rebuilt` | as v15, plus broken when `rec.out` missing, an out arm invalid, or count per lane `~= N.OUT_ARMS` (v15 saves have no `rec.out`). |
+
+### scripts/ledger.lua (lane 049) - pure, plain data
+
+`opts = { tick =, bss =, stack_size = function(name) -> n, timeout_ticks = n (0 = off), slots =, slots_used =, need_slot = bool, flush_all = bool, n_out = n }`. `S(name) = min(bss, stack_size(name))`. Key of kind = `name .. "\0" .. quality`.
+
+| Signature | Does |
+|---|---|
+| `ledger.scan(state, lane, contents, opts) -> flush, want_hands` | `contents` = `get_contents()` shape. Makes missing memory tables. Clock `state.left[lane][key]`: set to `tick` when kind first seen with `count < S`; removed when kind gone or `count >= S`. `flush` (reused array of reused pieces `{ name=, quality=, count= }`, valid until next call) = leftovers (`count < S`) that must leave now: all of them when `flush_all`; those with `timeout_ticks > 0 and tick - clock >= timeout_ticks`; plus, when `need_slot and slots_used >= slots`, the oldest leftover (smallest clock, tie name then quality) if not listed yet. Flushed kinds lose their clock. `state.ready[lane]`: looks in a row with some kind `count >= S` (reset to 0 otherwise). `want_hands = flush_all or state.ready[lane] >= 2 or tick >= (state.sweep[lane] or 0)`. |
+| `ledger.hands(state, lane, held, opts) -> arms` | called only when `want_hands`. `held` = list of `arms.held`. Partial hand = `count < S(name)`. Returns reused ascending array of arm indexes whose hand must be flushed: all partial hands when `flush_all`; all partial hands when `state.ready[lane] >= 2 and #held >= n_out` (every arm busy: jam); and, when `tick >= (state.sweep[lane] or 0)` (sweep): partial hands whose key equals `state.held[lane][arm]` remembered at previous sweep (only when `timeout_ticks > 0`). At a sweep, memory `state.held[lane]` is rewritten to the partial hands not flushed (arm -> key) and `state.sweep[lane] = tick + max(60, floor(timeout_ticks / 2))` (`tick + 600` when `timeout_ticks == 0`). |
+
+`plan`, `hoard`, `led`, `new` unchanged (script mode, LED).
+
+### tick (lane 050), lifecycle (lane 051), belt_io (integrator)
+
+- `belt_io.front_ok(rec) -> bool` (integrator, done): front belt-like entity exists by push rules.
+- `tick.on_tick`: script-mode boxes: v15 path + `arms.pause_out(rec, lane, true)`. Engine-mode box is looked at when `(tick + rec.unit_number) % N.LOOK == 0`, or by v15 interval rule while `rec.extra` exists. Look: `circuit.evaluate`; `stopped = not enabled or rec.decon or not belt_io.front_ok(rec)`; `arms.hand(rec, bss)`; per lane: extra items first as v15 (in and out arms of lane paused while lane has extra); else `arms.pause(rec, lane, circuit off or decon)`, `arms.pause_out(rec, lane, stopped)`, `arms.skip(rec, lane, {})`; not stopped: `contents = rec.invs[lane].get_contents()`, slots as v15, `flush, want = ledger.scan(...)`; each flush piece: `belt_io.push(rec, lane, piece, bss) > 0` then `rec.invs[lane].remove(piece)`, stop at first failed push; when `want`: `held = arms.held(rec, lane)`, each index of `ledger.hands(...)`: push `{ name, quality, count }` of that hand, on success `arms.clear_held`. `rec.used[lane]`, LED as v15.
+- `registry`: mined box: `arms.drain_hands(rec)` items join store items in `e.buffer`; died box: spilled with store items. Called before `arms.destroy`.

@@ -495,3 +495,26 @@ Reading: putting stacks on belt and taking them from store (work that must happe
 Not tried: skipping read + rules on visits where store did not change; one rules pass for several pushes. No claim on gain before a bench of real code (FRC-0043).
 
 Verified-by: `~/wt-sushi-packer-prof-v15/build/bench-2.0/benchmark.log` (yellow run; turbo line from run before it, copied here from tool output), patch `prof_patch.py` (session scratchpad, plus `PS.reset()` fix)
+
+## FND-0046 - v16 S0: engine can do output (out arms). Probes P1..P12 + scratch bench
+
+Measured 2026-10-01 20:50-22:30 UTC, dev-vm (load1 5..11, other jobs on host), 2.0.77 + 2.1.20, scratch branch `probe/v16` (`~/wt-sushi-packer-probe-v16`, never merged), file `tests/game/test_probe_v16.lua`, test-env prototypes `sp-test-out*`, `sp-test-store`.
+
+| # | Result |
+|---|---|
+| P1 lane | 4 directions: left-store kinds only on left lane, right-store kinds only on right lane (`dir1..4 L[copper-plate=396,iron-plate=348] R[electronic-circuit=348,steel-plate=396]`), 2.0 and 2.1. `pickup_target` writable, picks store among two on tile. Drop lane = front tile centre +- 0.25 across travel. |
+| P2 stacks | all belt items `stacks[4=186]` at belt stack 4. Set `nosa` (no Space Age mod, flag off): items leave single (`stacks[1=136]`), as box does today without stacking research. |
+| P3 leftover | arm takes 3 plates into hand and waits forever (store 0, nothing out); arm takes last slot first (3 gears in last slot taken while 400 copper present). Variant `wait_for_full_hand = false` drops partial stacks at once (not used). |
+| P5 rate, no script at all | feed = full belt of mixed stacks 1..4, 5 kinds, 1200 ticks: 8 out arms: yellow 99.7 / 99.2 %, red 100.8 / 99.2, blue 98.9 / 99.4, turbo 100.4 / 101.0, 270/s 100.2 / 99.8; 4 arms: yellow 100 %, turbo 99.9 / 81.7; belt stack 1: 100 % every tier with 4 and 8 arms. |
+| P10 jam | 8 rare kinds (1..3 items each, once): no script -> red, turbo, 270/s lanes at 0 % (every arm holds a rare leftover). Filter steering every 30 ticks + hand return: 98.4..100.8 % but costs script (below). Cheap rule (look at hands only when store had a full stack two looks in a row; flush partial hands when every arm holds): 8 arms 100.0..102.4 % (270/s row fed 71 % of belt: stores full of rare leftovers, needs full-store flush F-1); 12 kinds: 96.6..103 %, 6..8 % of stacks leave below full size on slow tiers. |
+| P11 | no stack with mixed kinds; below-size stacks only from flush. |
+| hand size | prototype hand = engine max; `inserter_stack_size_override = bss`: stacks exactly 2 / 4 / 20; bss 1: nothing waits (`hands=0,0,0,0`). |
+| P7 front | splitter half: lanes kept (`L[iron-plate=200] R[copper-plate=200]`), underground entrance same, 1x1 loader into chest all 400 items; sideways belt: arms drop onto it (all on one lane) -> script must pause out arms without valid front. |
+| P12 outside inserters | store without `no-automated-item-removal`: outside inserter `pickup_target=sushi-packer-lane-store` (takes lane-store items); giver `drop_target` = box. Tiny off-centre store: still targeted. |
+| P6 pause, P9 two loaders, P4 order | not run (pause proven for in arms FND-0042; loaders not needed; order dropped V16-2). |
+
+Scratch bench (200 boxes, flow stacks, 3600 ticks, 8 out arms, script = look every 30 ticks: circuit, 2 x `get_contents`, LED; no flush, no jam rule): turbo 2.0 script 0.226 ms, whole 5.529 (belt-only whole 2.891); yellow script 0.214, whole 3.864 (belt-only 1.363); `full_lane_looks=0` (stores never full). Reference same day: v1.14 turbo 20.0 / whole 23.9, v1.15 turbo 5.6 / 9.0; v1.14 yellow 5.1 / 6.3, v1.15 yellow 1.7 / 3.7..3.9. With naive filter steering each look: turbo 1.532, yellow 1.217 (2.1 turbo 1.131) -> rejected.
+Gate (plan v16): lane-true yes, stacked yes, no jam with cheap rule yes, scratch >= x10 yes (x24 yellow, x88 turbo, scratch without flush rules). Product number comes from bench of real code.
+Also seen: v1.15 loses items held in arm hands when box is mined or rotated (`arms.create` / `arms.destroy` destroy arms with items; registry returns store items only). Not reproduced as test yet; fixed by seam (`arms.create` saves hands, `arms.drain_hands`).
+
+Verified-by: `~/wt-sushi-packer-probe-v16` (`make test-one FV=2.0|2.1 T='tests/game/test_probe_v16.lua::probe v16 > <name>'`, names: out arm lane stack leftover, pipe bss4 no script, pipe bss1 no script, pipe 12 kinds no script, pipe rare no script, pipe rare steer30, pipe 12 kinds steer30, pipe rare jamflush, pipe 12 kinds jamflush, outside inserters, small stores off centre, hand bss*, front variants); bench lines in session log 2026-10-01

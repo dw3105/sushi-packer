@@ -140,6 +140,13 @@ function M.need_slot(rec, lane, contents)
   return false
 end
 
+-- v16 seam stubs (lane 048 fills): docs/CONTRACT.md "v16 engine output seam".
+function M.pause_out(rec, lane, paused) error("stub: arms.pause_out") end
+function M.hand(rec, bss) error("stub: arms.hand") end
+function M.held(rec, lane) error("stub: arms.held") end
+function M.clear_held(rec, lane, index) error("stub: arms.clear_held") end
+function M.drain_hands(rec) error("stub: arms.drain_hands") end
+
 function M.ensure(rec)
   local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
   local broken = false

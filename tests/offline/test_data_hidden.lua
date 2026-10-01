@@ -45,9 +45,10 @@ local empty = { filename = "__core__/graphics/empty.png", size = 1 }
 describe("data hidden", function()
   it("makes arm and store", function()
     local result = parts()
-    eq(#result, 2)
+    eq(#result, 3)
     eq({ result[1].type, result[1].name }, { "inserter", N.ARM })
     eq({ result[2].type, result[2].name }, { "container", N.STORE })
+    eq({ result[3].type, result[3].name }, { "inserter", N.OUT })
   end)
 
   it("arm fields", function()
@@ -84,7 +85,8 @@ describe("data hidden", function()
         "not-upgradable", "not-flammable", "not-in-kill-statistics" }) do ok(has_flag(p, flag), "missing " .. flag) end
       for _, field in ipairs({ "corpse", "dying_explosion", "open_sound", "close_sound", "working_sound" }) do eq(p[field], nil, field) end
     end
-    for _, flag in ipairs({ "no-automated-item-removal", "no-automated-item-insertion" }) do ok(has_flag(result[2], flag), "store missing " .. flag) end
+    ok(has_flag(result[2], "no-automated-item-insertion"), "store missing no-automated-item-insertion")
+    ok(not has_flag(result[2], "no-automated-item-removal"), "v16: out arms must be able to take from store")
   end)
 
   it("parts draw nothing", function()
@@ -99,6 +101,34 @@ describe("data hidden", function()
     eq(store.draw_circuit_wires, false); eq(store.draw_copper_wires, false)
     ok(store.circuit_connector ~= nil)
     ok(store.circuit_wire_max_distance > 0)
+  end)
+
+  it("out arm stacks only with space travel flag", function()
+    _G.feature_flags = { space_travel = false }
+    local out = parts()[3]
+    eq(out.max_belt_stack_size, nil); eq(out.wait_for_full_hand, nil)
+    eq(out.stack_size_bonus, N.MAX_BELT_STACK - 1)
+    eq(out.filter_count, N.ARM_FILTERS); eq(out.allow_custom_vectors, true); eq(out.collision_mask, { layers = {} })
+    _G.feature_flags = { space_travel = true }
+    out = parts()[3]
+    eq(out.max_belt_stack_size, N.MAX_BELT_STACK); eq(out.wait_for_full_hand, true); eq(out.grab_less_to_match_belt_stack, true)
+    _G.feature_flags = nil
+  end)
+
+  it("finalize widens out arm hand to engine max belt stack", function()
+    _G.feature_flags = { space_travel = true }
+    local out = parts()[3]
+    local raw = { inserter = { [N.OUT] = out }, ["utility-constants"] = { default = { max_belt_stack_size = 20 } } }
+    require("prototypes.hidden").finalize(raw)
+    eq(out.stack_size_bonus, 19); eq(out.max_belt_stack_size, 20)
+    raw["utility-constants"].default.max_belt_stack_size = 2
+    require("prototypes.hidden").finalize(raw)
+    eq(out.stack_size_bonus, N.MAX_BELT_STACK - 1, "never below default hand")
+    _G.feature_flags = { space_travel = false }
+    local plain = parts()[3]
+    require("prototypes.hidden").finalize({ inserter = { [N.OUT] = plain }, ["utility-constants"] = { default = { max_belt_stack_size = 20 } } })
+    eq(plain.max_belt_stack_size, nil)
+    _G.feature_flags = nil
   end)
 
   it("source prototypes untouched", function()

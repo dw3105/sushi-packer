@@ -27,7 +27,6 @@ local function hide(p, store)
   for _, flag in ipairs({ "placeable-off-grid", "not-on-map", "not-blueprintable", "not-deconstructable",
     "not-upgradable", "not-flammable", "not-in-kill-statistics" }) do add_flag(p.flags, flag) end
   if store then
-    add_flag(p.flags, "no-automated-item-removal")
     add_flag(p.flags, "no-automated-item-insertion")
   end
 end
@@ -65,7 +64,28 @@ function M.make()
   store.draw_copper_wires = false
   hide(store, true)
 
-  return { arm, store }
+  -- v16 out arm: same hidden inserter, takes from lane store, drops belt stacks on front belt lane.
+  -- Stacking fields exist only with space travel feature flag (engine refuses them otherwise): then items leave unstacked.
+  local out = table.deepcopy(arm)
+  out.name = N.OUT
+  out.stack_size_bonus = N.MAX_BELT_STACK - 1
+  if feature_flags and feature_flags.space_travel then
+    out.max_belt_stack_size = N.MAX_BELT_STACK
+    out.wait_for_full_hand = true
+    out.grab_less_to_match_belt_stack = true
+  end
+
+  return { arm, store, out }
+end
+
+-- data-final-fixes: other mods may raise engine max belt stack; out arm hand must reach it (runtime narrows it).
+function M.finalize(raw)
+  local out = raw.inserter[N.OUT]
+  local max = raw["utility-constants"]["default"].max_belt_stack_size or N.MAX_BELT_STACK
+  if max < N.MAX_BELT_STACK then max = N.MAX_BELT_STACK end
+  if max > 255 then max = 255 end
+  out.stack_size_bonus = max - 1
+  if out.max_belt_stack_size ~= nil then out.max_belt_stack_size = max end
 end
 
 return M

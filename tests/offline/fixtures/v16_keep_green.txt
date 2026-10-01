@@ -1,0 +1,274 @@
+tests/offline/test_belt_io.lua::belt_io > pull reports eta of front item per lane
+tests/offline/test_belt_io.lua::belt_io > eta zero when item at exit, nil when lane empty
+tests/offline/test_belt_io.lua::belt_io > eta computed when budget empty
+tests/offline/test_belt_io.lua::belt_io > no eta read on lane that took an item
+tests/offline/test_belt_io.lua::belt_io > belt stack follows research up to engine max
+tests/offline/test_belt_io.lua::belt_io > full box shares freed slot between lanes
+tests/offline/test_belt_io.lua::belt_io > full box shares slot freed every fourth poll
+tests/offline/test_belt_io.lua::belt_io > splitter behind feeds from its output half
+tests/offline/test_belt_io.lua::belt_io > splitter in front takes output into its input half
+tests/offline/test_belt_io.lua::belt_io > loaders and linked belts connect like belts
+tests/offline/test_belt_io.lua::belt_io > front accepts same direction belt
+tests/offline/test_belt_io.lua::belt_io > front refuses sideways belt
+tests/offline/test_belt_io.lua::belt_io > front refuses belt facing box
+tests/offline/test_belt_io.lua::belt_io > front accepts underground input same direction
+tests/offline/test_belt_io.lua::belt_io > behind still requires belt moving into box
+tests/offline/test_belt_io_cache.lua::belt_io cache > cached belt visit reads valid and direction only
+tests/offline/test_belt_io_cache.lua::belt_io cache > lines fetched once while belt cached
+tests/offline/test_belt_io_cache.lua::belt_io cache > push uses cached front lines
+tests/offline/test_belt_io_cache.lua::belt_io cache > moved belt dropped within 60 ticks
+tests/offline/test_belt_io_cache.lua::belt_io cache > rotated belt dropped at once
+tests/offline/test_belt_io_cache.lua::belt_io cache > splitter neighbour keeps full check
+tests/offline/test_belt_io_cache.lua::belt_io cache > dropped belt clears cached lines
+tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt takes item arriving this tick
+tests/offline/test_belt_io_fast.lua::belt_io fast > 270 per s belt takes every item within one tick of end
+tests/offline/test_belt_io_fast.lua::belt_io fast > budget still caps fast take
+tests/offline/test_belt_io_fast.lua::belt_io fast > turbo and slower take item reaching end this tick
+tests/offline/test_belt_io_fast.lua::belt_io fast > yellow and red take resting items only
+tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt eta counts to take window not belt end
+tests/offline/test_belt_io_fast.lua::belt_io fast > refused item stops fast lane
+tests/offline/test_belt_io_front.lua::belt_io front > front_ok true with belt of same direction in front
+tests/offline/test_belt_io_front.lua::belt_io front > front_ok false without front or with sideways belt
+tests/offline/test_bench_builder.lua::bench builder > default scene unchanged
+tests/offline/test_bench_builder.lua::bench builder > tier sets belt placer loader
+tests/offline/test_bench_builder.lua::bench builder > extra tier uses row names
+tests/offline/test_bench_builder.lua::bench builder > box false places belt instead of packer
+tests/offline/test_bench_builder.lua::bench builder > unknown tier errors
+tests/offline/test_bench_builder.lua::bench builder > unknown flow errors
+tests/offline/test_bench_builder.lua::bench builder > stacks layout
+tests/offline/test_bench_builder.lua::bench builder > stacks column pitch 16
+tests/offline/test_bench_builder.lua::bench builder > plan same seed same plan
+tests/offline/test_bench_builder.lua::bench builder > plan varies across boxes
+tests/offline/test_bench_builder.lua::bench builder > control passes settings and logs counters
+tests/offline/test_bench_run.lua::bench run > stale settings removed before init create
+tests/offline/test_bench_run.lua::bench run > belt only row marked box no
+tests/offline/test_bench_run.lua::bench run > parser prints old fields then new
+tests/offline/test_bench_run.lua::bench run > parser without counter lines says na
+tests/offline/test_bench_run.lua::bench run > parser rejects wrong tick count
+tests/offline/test_bench_run.lua::bench run > dry run prints resolved row
+tests/offline/test_bench_run.lua::bench run > defaults
+tests/offline/test_bench_run.lua::bench run > bad args exit 2
+tests/offline/test_bench_run.lua::bench run > modlist keeps stage entries adds bench
+tests/offline/test_bench_run.lua::bench run > makefile has bench-all rows
+tests/offline/test_bench_run.lua::bench run > run.sh no longer overwrites mod list
+tests/offline/test_circuit.lua::circuit > compare all six comparators
+tests/offline/test_circuit.lua::circuit > compare unknown comparator is false
+tests/offline/test_circuit.lua::circuit > compare false cases
+tests/offline/test_circuit.lua::circuit > enable nil means condition off
+tests/offline/test_circuit.lua::circuit > enable true applies condition
+tests/offline/test_copy.lua::copy > library record does not crash
+tests/offline/test_copy.lua::copy > library record gets tags
+tests/offline/test_copy.lua::copy > read-only record skipped
+tests/offline/test_copy.lua::copy > non-blueprint record skipped
+tests/offline/test_copy.lua::copy > stack still read as stack
+tests/offline/test_copy.lua::copy > blueprint renames variant to placer without mapping
+tests/offline/test_copy.lua::copy > blueprint adds tags when rec found
+tests/offline/test_copy.lua::copy > blueprint leaves other entities alone
+tests/offline/test_copy.lua::copy clone > clone owns copied lane store items
+tests/offline/test_core.lua::core > new box is idle and green
+tests/offline/test_core.lua::core > same item on two lanes keeps two buffers
+tests/offline/test_core.lua::core > quality is separate buffer
+tests/offline/test_core.lua::core > full stack becomes ready on its lane
+tests/offline/test_core.lua::core > ready stacks leave in ready order
+tests/offline/test_core.lua::core > arrival after ready starts new partial
+tests/offline/test_core.lua::core > accept splits across ready and new partial
+tests/offline/test_core.lua::core > used slots counts ready and partials
+tests/offline/test_core.lua::core > full box flushes oldest partial and accepts zero
+tests/offline/test_core.lua::core > oldest partial chosen across lanes
+tests/offline/test_core.lua::core > all ready refuses input
+tests/offline/test_core.lua::core > passthrough uses hold not slots
+tests/offline/test_core.lua::core > hold busy refuses second passthrough
+tests/offline/test_core.lua::core > hold waits while stack run started
+tests/offline/test_core.lua::core > hold goes before unstarted stack
+tests/offline/test_core.lua::core > take out last piece may be small
+tests/offline/test_core.lua::core > timeout flushes old partial only
+tests/offline/test_core.lua::core > timeout zero is off
+tests/offline/test_core.lua::core > flush partials queues all in arrival order
+tests/offline/test_core.lua::core > remove external takes newest partial first
+tests/offline/test_core.lua::core > adopt external lands on lane one
+tests/offline/test_core.lua::core > led yellow with items and red when full
+tests/offline/test_core.lua::core > totals sums lanes sorted
+tests/offline/test_core.lua::core > box is plain data
+tests/offline/test_core.lua::core > counters track partial and ready per lane
+tests/offline/test_core.lua::core > counters rebuilt for old box
+tests/offline/test_core.lua::core > accept passes item stack to room stubs
+tests/offline/test_core_cap.lua::cap > ore stops at 50 per lane
+tests/offline/test_core_cap.lua::cap > other lane same item unaffected
+tests/offline/test_core_cap.lua::cap > modded stack size 7 honored
+tests/offline/test_core_cap.lua::cap > quality separate
+tests/offline/test_core_cap.lua::cap > partial belt item accepted up to cap
+tests/offline/test_core_cap.lua::cap > drain reopens intake
+tests/offline/test_core_cap.lua::cap > no item stack means no cap
+tests/offline/test_core_fast.lua::core fast > same trace as v114
+tests/offline/test_core_fast.lua::core fast > keys built once per item
+tests/offline/test_core_fast.lua::core fast > take out does not rebuild head table
+tests/offline/test_core_fast.lua::core fast > full stack leaves partial list without scan
+tests/offline/test_core_quota.lua::quota > blocked lane never takes 25th slot
+tests/offline/test_core_quota.lua::quota > other lane keeps 24 slots
+tests/offline/test_core_quota.lua::quota > flush picks oldest partial same lane
+tests/offline/test_core_quota.lua::quota > led red when one lane full
+tests/offline/test_core_quota.lua::quota > old box over quota drains
+tests/offline/test_counters.lua::counters > off by default
+tests/offline/test_counters.lua::counters > on starts at zero
+tests/offline/test_counters.lua::counters > counters returns copy
+tests/offline/test_counters.lua::counters > on again resets
+tests/offline/test_counters.lua::counters > pull counts belt items and items
+tests/offline/test_counters.lua::counters > partial accept counts accepted only
+tests/offline/test_counters.lua::counters > refused item counts nothing
+tests/offline/test_counters.lua::counters > reads count each detailed call
+tests/offline/test_counters.lua::counters > push counts belt item and items
+tests/offline/test_counters.lua::counters > visit counted once per gate pass
+tests/offline/test_data.lua::data > own subgroup row after belts
+tests/offline/test_data.lua::data > order yellow red blue turbo
+tests/offline/test_data.lua::data > item names follow vanilla series
+tests/offline/test_data.lua::data > simulations call scene with mods
+tests/offline/test_data.lua::data > simulations pre-run 900 ticks
+tests/offline/test_data.lua::data > placer joins belt group variants do not
+tests/offline/test_data.lua::data > yellow recipe matches table
+tests/offline/test_data.lua::data > chained tiers use previous box
+tests/offline/test_data.lua::data > craft times 30 45 60 120
+tests/offline/test_data.lua::data > recipes disabled until research
+tests/offline/test_data.lua::data > tech prereqs include ingredient unlock techs
+tests/offline/test_data.lua::data > tech count is belt count x 1.5
+tests/offline/test_data.lua::data > tech ingredients are union over prereqs
+tests/offline/test_data.lua::data > tech unlocks its recipe
+tests/offline/test_data.lua::data > next_upgrade chain keeps direction
+tests/offline/test_data.lua::data > item weight 20 kg
+tests/offline/test_data.lua::data > no surface conditions
+tests/offline/test_data_extra.lua::data extra > vanilla prototypes identical to v8
+tests/offline/test_data_extra.lua::data extra > no mods no extra tiers
+tests/offline/test_data_extra.lua::data extra > arig adds hyper after turbo
+tests/offline/test_data_extra.lua::data extra > hidden belt skipped
+tests/offline/test_data_extra.lua::data extra > k2so hidden advanced belt ignored
+tests/offline/test_data_extra.lua::data extra > arig k2so chain turbo hyper superior
+tests/offline/test_data_extra.lua::data extra > all mods sorted by speed tie by row order
+tests/offline/test_data_extra.lua::data extra > belt tech without unit skipped
+tests/offline/test_data_extra.lua::data extra > missing tech skipped
+tests/offline/test_data_extra.lua::data extra > recipe chains previous tier
+tests/offline/test_data_extra.lua::data extra > tech prereqs belt tech previous tier and ingredient unlocks
+tests/offline/test_data_extra.lua::data extra > tech cost belt count x 1.5 and pack union
+tests/offline/test_data_extra.lua::data extra > next_upgrade chain keeps direction
+tests/offline/test_data_extra.lua::data extra > item order after turbo in chain order
+tests/offline/test_data_extra.lua::data extra > extra graphics paths use tier key
+tests/offline/test_data_extra.lua::data extra > info lists belt mods as visible optional deps
+tests/offline/test_data_extra.lua::data extra > nosa no turbo tier
+tests/offline/test_data_extra.lua::data extra > nosa extras chain after blue
+tests/offline/test_data_extra.lua::data extra > nosa extra recipe bulk inserter processing unit
+tests/offline/test_data_extra.lua::data extra > sa extra recipe unchanged
+tests/offline/test_data_extra.lua::data extra > owner missing row skipped
+tests/offline/test_data_extra.lua::data extra > ab-sa ub-ultimate not live
+tests/offline/test_data_extra.lua::data extra > ab-sa ab rows after turbo
+tests/offline/test_data_extra.lua::data extra > splitter missing row skipped logged
+tests/offline/test_data_extra.lua::data extra > speed at or below top vanilla skipped
+tests/offline/test_data_extra.lua::data extra > own_role keeps slow row
+tests/offline/test_data_extra.lua::data extra > se chain space root then deep space
+tests/offline/test_data_extra.lua::data extra > container allowed in se space
+tests/offline/test_data_extra.lua::data extra > ab four rows speed order
+tests/offline/test_data_extra.lua::data extra > upgrade chain from top vanilla
+tests/offline/test_data_extra.lua::data extra > info lists space-age as optional
+tests/offline/test_data_extra.lua::data extra > extra box matches resized vanilla box
+tests/offline/test_data_extra.lua::data extra > extra box matches mask of vanilla box
+tests/offline/test_data_extra.lua::data extra > extra mask copied into every chain
+tests/offline/test_data_extra.lua::data extra > nil mask stays nil
+tests/offline/test_data_extra.lua::data extra > se space root recipe
+tests/offline/test_data_extra.lua::data extra > se space root tech
+tests/offline/test_data_extra.lua::data extra > se deep space recipe needs space box
+tests/offline/test_data_extra.lua::data extra > after target inactive skips row
+tests/offline/test_data_extra.lua::data extra > se plus k2 two chains
+tests/offline/test_data_extra.lua::data extra > yellow recipe unchanged by root rule
+tests/offline/test_data_hidden.lua::data hidden > makes arm and store
+tests/offline/test_data_hidden.lua::data hidden > arm fields
+tests/offline/test_data_hidden.lua::data hidden > store fields
+tests/offline/test_data_hidden.lua::data hidden > parts are hidden and untouchable
+tests/offline/test_data_hidden.lua::data hidden > parts draw nothing
+tests/offline/test_data_hidden.lua::data hidden > out arm stacks only with space travel flag
+tests/offline/test_data_hidden.lua::data hidden > finalize widens out arm hand to engine max belt stack
+tests/offline/test_data_hidden.lua::data hidden > source prototypes untouched
+tests/offline/test_filter.lua::filter > ≥ uncommon matches rare not normal
+tests/offline/test_filter.lua::filter > nil quality matches any
+tests/offline/test_filter.lua::filter > nil comparator means equals
+tests/offline/test_filter.lua::filter > all six comparators
+tests/offline/test_filter.lua::filter > other item never matches
+tests/offline/test_filter.lua::filter > empty slot false skipped
+tests/offline/test_guard.lua::guard > contract frozen
+tests/offline/test_guard.lua::guard > no require inside runtime functions
+tests/offline/test_guard.lua::guard > names frozen
+tests/offline/test_gui.lua::gui > anchored right of container
+tests/offline/test_gui.lua::gui > sections order skip timeout circuit
+tests/offline/test_gui.lua::gui > ten slots show filters
+tests/offline/test_gui.lua::gui > empty slot shows empty
+tests/offline/test_gui.lua::gui > slot click opens editor
+tests/offline/test_gui.lua::gui > editor writes comparator and quality
+tests/offline/test_gui.lua::gui > any quality clears quality
+tests/offline/test_gui.lua::gui > clearing slot writes false
+tests/offline/test_gui.lua::gui > quality list sorted by level with any first
+tests/offline/test_gui.lua::gui > one quality hides picker
+tests/offline/test_gui.lua::gui > quality mod shows picker
+tests/offline/test_gui.lua::gui > one quality filter saves item only
+tests/offline/test_gui.lua::gui > one quality stored quality filter loads
+tests/offline/test_gui.lua::gui > timeout switch and seconds written
+tests/offline/test_gui.lua::gui > bad timeout text ignored
+tests/offline/test_gui.lua::gui > circuit enable and condition written
+tests/offline/test_gui.lua::gui > flush checkbox and signal written
+tests/offline/test_gui.lua::gui > foreign gui events ignored
+tests/offline/test_gui.lua::gui > rows use aligned styles
+tests/offline/test_gui.lua::gui lanes > section has two rows of twelve slots
+tests/offline/test_gui.lua::gui lanes > slot shows item count quality
+tests/offline/test_gui.lua::gui lanes > click moves stack to player
+tests/offline/test_gui.lua::gui lanes > full player leaves stack unchanged
+tests/offline/test_gui.lua::gui lanes > click on empty slot does nothing
+tests/offline/test_gui.lua::gui lanes > rec without stores shows empty rows
+tests/offline/test_gui.lua::gui lanes > refresh updates open window
+tests/offline/test_locale.lua::locale > vanilla style names
+tests/offline/test_locale.lua::locale > every prototype has name and description
+tests/offline/test_locale.lua::locale > recipes and setting described
+tests/offline/test_locale.lua::locale > tips entry has locale and prototype
+tests/offline/test_locale.lua::locale > mod name and description
+tests/offline/test_locale_de.lua::locale de > same keys as en
+tests/offline/test_locale_de.lua::locale de > no empty value
+tests/offline/test_locale_de.lua::locale de > tier names end with Sushi-Packer
+tests/offline/test_locale_de.lua::locale de > names follow table
+tests/offline/test_locale_de.lua::locale de > same parameters as en
+tests/offline/test_locale_de.lua::locale de > vanilla German terms
+tests/offline/test_locale_extra.lua::locale extra > every extra tier has names and descriptions
+tests/offline/test_locale_extra.lua::locale extra > names mirror belt names
+tests/offline/test_locale_extra.lua::locale extra > descriptions name source mod
+tests/offline/test_locale_extra.lua::locale extra > readme and portal list every supported mod
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.9 and 0.1.9
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.11 and 0.1.11
+tests/offline/test_locale_extra.lua::locale extra > se space name
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.12 and 0.1.12
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.13 and 0.1.13
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.14 and 0.1.14
+tests/offline/test_locale_extra.lua::locale extra > readme lists space tier
+tests/offline/test_migration.lua::migration > maps every old name to new
+tests/offline/test_migration.lua::migration > both version files identical
+tests/offline/test_perf.lua::perf > circuit off makes no network calls
+tests/offline/test_perf.lua::perf > behind belt looked up once while valid
+tests/offline/test_perf.lua::perf > missing belt rescanned at most every 60 ticks
+tests/offline/test_perf.lua::perf > rotated cached belt is dropped
+tests/offline/test_perf.lua::perf scan > front rescan not starved by missing behind
+tests/offline/test_perf2.lua::perf2 > pull reads front item without detailed contents
+tests/offline/test_perf2.lua::perf2 > pull skips lane when no item at exit
+tests/offline/test_perf2.lua::perf2 > pull removes only accepted part of front item
+tests/offline/test_perf2.lua::perf2 > core finds partial by key with 47 others present
+tests/offline/test_sim.lua::sim > four infinity chests bottom pair one tile upstream
+tests/offline/test_sim.lua::sim > inserters between chests and belt
+tests/offline/test_sim.lua::sim > machinery off frame
+tests/offline/test_sim.lua::sim > power off frame
+tests/offline/test_sim.lua::sim > inserter hand size one
+tests/offline/test_sim.lua::sim > belt box and sink
+tests/offline/test_sim.lua::sim > camera centered on box
+tests/offline/test_sim.lua::sim > unknown kind errors
+tests/offline/test_stage.lua::stage > release info has no test dependency
+tests/offline/test_stage.lua::stage > versions are 0.1.15 and 0.2.15
+tests/offline/test_stage.lua::stage > release ships thumbnail and changelog
+tests/offline/test_stage.lua::stage > thumbnail is 144 by 144 png
+tests/offline/test_stage.lua::stage > release stage needs no Factorio
+tests/offline/test_stage.lua::stage > portal logo and description in repo
+tests/offline/test_stage.lua::stage > release ships MIT license
+tests/offline/test_stage.lua::stage > changelog format valid
+tests/offline/test_text_v15.lua::text v15 > gui lane keys in en and de
+tests/offline/test_text_v15.lua::text v15 > no stale slot counts
+tests/offline/test_text_v15.lua::text v15 > changelog has 0.1.15 and 0.2.15
+tests/offline/test_text_v15.lua::text v15 > german avoids banned words
