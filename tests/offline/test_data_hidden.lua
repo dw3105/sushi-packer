@@ -131,6 +131,28 @@ describe("data hidden", function()
     _G.feature_flags = nil
   end)
 
+  it("out arm swing follows belt speed", function()
+    -- 8 arms, one swing = T ticks: 8 * 60 / T belt stacks per second per lane >= 1.6 x lane rate (speed * 240)
+    eq(N.out_swing(0.03125), 40); eq(N.out_swing(0.0625), 20); eq(N.out_swing(0.09375), 12); eq(N.out_swing(0.125), 10)
+    eq(N.out_swing(0.1875), 6); eq(N.out_swing(0.5625), 2); eq(N.out_swing(2), 2); eq(N.out_swing(0.001), 60)
+    eq(N.out_name(0.125), N.OUT .. "-10")
+  end)
+
+  it("finalize makes one out arm per tier belt speed", function()
+    _G.feature_flags = { space_travel = true }
+    local out = parts()[3]
+    local raw = { inserter = { [N.OUT] = out }, ["utility-constants"] = { default = { max_belt_stack_size = 4 } },
+      ["transport-belt"] = { [N.TIER.yellow.belt] = { speed = 0.03125 }, [N.TIER.turbo.belt] = { speed = 0.125 } } }
+    require("prototypes.hidden").finalize(raw)
+    local y, t = raw.inserter[N.OUT .. "-40"], raw.inserter[N.OUT .. "-10"]
+    ok(y ~= nil and t ~= nil, "per-speed prototypes made")
+    eq(y.name, N.OUT .. "-40"); eq(y.rotation_speed, 0.5 / 21); eq(t.rotation_speed, 0.5 / 6)
+    eq(y.max_belt_stack_size, 4); eq(y.stack_size_bonus, 3); eq(y.hidden, true)
+    eq(raw.inserter[N.OUT .. "-20"], nil, "red belt prototype absent in this fixture: no arm for it")
+    ok(raw.inserter[N.OUT] == out and out.rotation_speed == 0.5, "base out arm kept as fast fallback")
+    _G.feature_flags = nil
+  end)
+
   it("source prototypes untouched", function()
     local arm, store = fixture()
     local before_arm, before_store = copy(arm), copy(store)

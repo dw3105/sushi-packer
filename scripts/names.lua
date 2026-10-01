@@ -16,7 +16,19 @@ N.ARM_HAND = 4
 -- v16: out arms put belt stacks from lane store onto front belt lane (FND-0046). Same count on every tier.
 N.OUT = "sushi-packer-out-arm"
 N.OUT_ARMS = 8
-N.LOOK = 30  -- ticks between slow looks of one box                             -- items one arm may hold (prototype stack_size_bonus = hand - 1). Was 12: arms kept items
+N.LOOK = 30  -- ticks between slow looks of one box
+-- Out arm speed per tier (V16-9, probe FND-0046): one swing takes T ticks when rotation_speed = 0.5 / (T / 2 + 1).
+-- 8 arms move 8 * 60 / T belt stacks per second per lane; T chosen so that this is at least 1.6 x lane rate
+-- (speed * 240): arms waiting with a leftover in hand leave enough arms for a full belt; cheap box on a faster belt
+-- passes about 1.6 .. 1.8 x its own tier, not everything.
+N.OUT_MARGIN = 1.6
+function N.out_swing(speed)
+  local t = 2 * math.floor(N.OUT_ARMS * 60 / N.OUT_MARGIN / (speed * 240) / 2)
+  if t < 2 then t = 2 end
+  if t > 60 then t = 60 end
+  return t
+end
+function N.out_name(speed) return N.OUT .. "-" .. N.out_swing(speed) end                             -- items one arm may hold (prototype stack_size_bonus = hand - 1). Was 12: arms kept items
                                            -- in hand until 12 of one kind while lane store ran empty (trace 2026-10-01, blue dip)
 -- arms per lane by belt speed (tiles per tick), first row whose `max` >= speed (FND-0042)
 -- hand 4: 270/s needs 12 (8 gave 1271 of 1350); yellow needs 4 (2 passed 95.7 % of a belt of mixed stacks, bench 2026-10-01)

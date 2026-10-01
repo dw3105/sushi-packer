@@ -227,14 +227,14 @@ local function engine_look(rec, tick, bss, flush_all)
     else
       arms.pause(rec, lane, rec.enabled == false or rec.decon == true)
       arms.pause_out(rec, lane, stopped)
+      local inv = rec.invs[lane]
+      local contents = inv.get_contents()
+      local n = #contents
+      local used = 0
+      for i=1,n do used = used + math.ceil(contents[i].count / stack_size(contents[i].name)) end
       if stopped then
-        rec.used[lane] = 0
+        rec.used[lane] = used  -- stopped box still shows what it holds (LED)
       else
-        local inv = rec.invs[lane]
-        local contents = inv.get_contents()
-        local n = #contents
-        local used = 0
-        for i=1,n do used = used + math.ceil(contents[i].count / stack_size(contents[i].name)) end
         if used >= N.STORE_SLOTS then
           if inv.count_empty_stacks() == 0 then
             used = N.STORE_SLOTS
@@ -265,6 +265,8 @@ local function engine_look(rec, tick, bss, flush_all)
         end
         if want then
           local held=arms.held(rec,lane)
+          rec.hands = rec.hands or { 0, 0 }
+          rec.hands[lane] = #held  -- LED: items waiting in out-arm hands count as held (known only at hand looks)
           local indices, merges=ledger.hands(rec.ledger,lane,held,opts)
           -- V16-8: partial hands of one kind that together make a belt stack leave as one full stack
           for i=1,#merges do
@@ -299,7 +301,13 @@ end
 
 local function update_led(rec)
   local used = rec.used
-  local state = ledger.led(used and used[1] or 0, used and used[2] or 0, N.STORE_SLOTS)
+  local hands = rec.hands
+  local u1, u2 = used and used[1] or 0, used and used[2] or 0
+  if hands then  -- v16: leftovers wait in out-arm hands, not in store
+    if u1 == 0 and hands[1] > 0 then u1 = 1 end
+    if u2 == 0 and hands[2] > 0 then u2 = 1 end
+  end
+  local state = ledger.led(u1, u2, N.STORE_SLOTS)
   local visible = rec.enabled ~= false and not rec.decon
   if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
 end

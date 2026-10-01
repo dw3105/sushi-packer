@@ -124,6 +124,16 @@ describe("arms", function()
   local function set_hand(a,name,count,quality)
     a.held_stack={valid_for_read=true,name=name,count=count,quality={name=quality or "normal"},clear=function() a.held_stack.valid_for_read=false end}
   end
+  it("create uses out arm of tier speed when that prototype exists", function()
+    local rec, surface, created = setup()
+    prototypes.entity[N.OUT .. "-10"] = {}
+    rec.entity.surface = surface
+    arms.create(rec)
+    local tier, plain = 0, 0
+    for _, v in ipairs(created) do if v.spec.name == N.OUT .. "-10" then tier = tier + 1 elseif v.spec.name == N.OUT then plain = plain + 1 end end
+    eq({ tier, plain }, { 2 * N.OUT_ARMS, 0 })
+  end)
+
   it("create makes out arms per lane", function()
     local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec)
     eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{false,false}); eq(rec.hand,nil)

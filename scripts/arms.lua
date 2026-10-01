@@ -100,8 +100,10 @@ function M.create(rec)
     local fx, fy = _delta(rec.dir)
     local s = lane == 1 and 0.25 or -0.25
     local drop = { x = pos.x + fx + fy * s, y = pos.y + fy - fx * s }
+    local out_name = N.out_name(speed)
+    if not prototypes.entity[out_name] then out_name = N.OUT end  -- belt of tier changed after data stage: fast arm
     for _ = 1, N.OUT_ARMS do
-      local arm = surface.create_entity { name = N.OUT, position = pos, force = force }
+      local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
       arm.pickup_position = pos
       arm.pickup_target = rec.stores[lane]

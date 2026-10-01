@@ -86,6 +86,20 @@ function M.finalize(raw)
   if max > 255 then max = 255 end
   out.stack_size_bonus = max - 1
   if out.max_belt_stack_size ~= nil then out.max_belt_stack_size = max end
+  -- one out arm prototype per distinct swing time of existing tier belts (V16-9)
+  for _, T in pairs(N.TIER) do
+    local belt = raw["transport-belt"] and raw["transport-belt"][T.belt]
+    if belt and belt.speed then
+      local swing = N.out_swing(belt.speed)
+      local name = N.OUT .. "-" .. swing
+      if not raw.inserter[name] then
+        local arm = table.deepcopy(out)
+        arm.name = name
+        arm.rotation_speed = 0.5 / (swing / 2 + 1)
+        raw.inserter[name] = arm
+      end
+    end
+  end
 end
 
 return M
