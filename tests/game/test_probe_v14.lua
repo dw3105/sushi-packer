@@ -324,4 +324,74 @@ describe("probe v14", function()
       end
     end)
   end)
+  it("arms lane lock and rate", function()
+    -- Way A: belt dead-ends at box tile; n hidden arms per lane, each locked to one lane, each told its own pot.
+    -- Left lane fed iron, right lane copper: any copper in left pot = lane leak.
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    force.belt_stack_size_bonus = 3
+    local rigs = {}
+    local variants = {
+      { belt = "transport-belt", n = 1 }, { belt = "turbo-transport-belt", n = 1 }, { belt = "turbo-transport-belt", n = 2 },
+      { belt = "turbo-transport-belt", n = 4 }, { belt = "sp-test-belt-270", n = 2 }, { belt = "sp-test-belt-270", n = 4 },
+      { belt = "sp-test-belt-270", n = 8 }, { belt = "turbo-transport-belt", n = 1, stack = 4 }, { belt = "turbo-transport-belt", n = 2, stack = 4 },
+      { belt = "sp-test-belt-270", n = 4, stack = 4 },
+    }
+    for i, v in ipairs(variants) do
+      local y = i * 4
+      for x = 12, 7, -1 do surface.create_entity({ name = v.belt, position = { x + 0.5, y + 0.5 }, direction = WEST, force = force }) end
+      local pots, notes = {}, {}
+      for lane = 1, 2 do pots[lane] = surface.create_entity({ name = "sp-test-r2-chest", position = { 6.5, y + 0.5 }, force = force }) end
+      local arms = 0
+      for lane = 1, 2 do
+        for k = 1, v.n do
+          local arm = surface.create_entity({ name = "sp-test-arm", position = { 6.5, y + 0.5 }, direction = WEST, force = force })
+          if arm then
+            arms = arms + 1
+            local function try(tag, f) local ok, e = pcall(f); if not ok then notes[tag] = tostring(e):sub(1, 80) end end
+            try("pickup_position", function() arm.pickup_position = { 7.5, y + 0.5 } end)
+            try("drop_position", function() arm.drop_position = { 6.5, y + 0.5 } end)
+            try("lane", function() arm.pickup_from_left_lane = lane == 1; arm.pickup_from_right_lane = lane == 2 end)
+            try("drop_target", function() arm.drop_target = pots[lane] end)
+          end
+        end
+      end
+      rigs[#rigs + 1] = { v = v, feed = surface.find_entity(v.belt, { 12.5, y + 0.5 }), pots = pots, arms = arms, notes = notes, fed = { 0, 0 }, got = { {}, {} } }
+    end
+    local t = 0
+    on_tick(function()
+      t = t + 1
+      for _, r in ipairs(rigs) do
+        local c = r.v.stack or 1
+        for lane = 1, 2 do
+          local line = r.feed.get_transport_line(lane)
+          local k = 0
+          while k < 4 and line.can_insert_at_back() do
+            k = k + 1
+            if t > 600 then r.fed[lane] = r.fed[lane] + c end
+            line.insert_at_back({ name = lane == 1 and "iron-plate" or "copper-plate", count = c }, c)
+          end
+          if t % 20 == 0 then
+            local inv = r.pots[lane].get_inventory(defines.inventory.chest)
+            if t > 600 then for _, x in ipairs(inv.get_contents()) do r.got[lane][x.name] = (r.got[lane][x.name] or 0) + x.count end end
+            inv.clear()
+          end
+        end
+      end
+      if t >= 1200 then
+        local rep = {}
+        for _, r in ipairs(rigs) do
+          local want = prototypes.entity[r.feed.name].belt_speed * 4 * 600 * (r.v.stack or 1)
+          local n = {}
+          for k, e in pairs(r.notes) do n[#n + 1] = k .. ":" .. e end
+          rep[#rep + 1] = string.format("%s n=%d stack=%d arms=%d | fed L=%d R=%d want=%.0f | potL iron=%d copper=%d | potR iron=%d copper=%d | %s",
+            r.feed.name, r.v.n, r.v.stack or 1, r.arms, r.fed[1], r.fed[2], want,
+            r.got[1]["iron-plate"] or 0, r.got[1]["copper-plate"] or 0, r.got[2]["iron-plate"] or 0, r.got[2]["copper-plate"] or 0, table.concat(n, " "))
+        end
+        local text = table.concat(rep, " ;; ")
+        log("v14 probe arms: " .. text)
+        error(text)
+      end
+    end)
+  end)
 end)

@@ -371,3 +371,15 @@ Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20 identical unless said, `tests/gam
 Open (not probed): script-side output cost for candidate G, loader visuals / rotation / blueprint on box tile, circuit wires on chest with loader on top, pass-through and timeout rules without per-item arrival data.
 
 Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v14.lua::probe v14 > r2 loader pair on one tile'`, `... > r2 engine input into box chest'`, `... > can_insert_at vs front item position'` (temporary index entry; second one same on `FV=2.1`)
+
+## FND-0040 - Way A probe: hidden inserters locked to one belt lane keep lanes exactly, reach full belt rate
+
+Source of idea (web, read 2026-10-01): Miniloader Redux (`github.com/hgschmie/factorio-miniloader-redux`, `scripts/controller.lua`): hidden inserters with `pickup_from_left_lane` / `pickup_from_right_lane` (LuaEntity, read/write, 2.0.72 + 2.1.20 docs; added 2.0.56). Inserters are not belt-connectables, so many share one tile (unlike loaders, FND-0039).
+
+Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20 identical, `tests/game/test_probe_v14.lua` (NOT in index, SP-10), test-env `sp-test-arm` (`bulk-inserter` copy: `allow_custom_vectors`, `chases_belt_items = false`, `stack_size_bonus = 11`, `uses_inserter_stack_size_bonus = false`, `rotation_speed = 0.5`, `extension_speed = 1`, void energy, empty collision mask). Rig: belt dead-ends at box tile; on box tile 2 chests `sp-test-r2-chest` (one per lane) + n arms per lane, each with `pickup_position` = belt tile behind, `drop_position` = box tile, lane flags, `drop_target` = its lane chest. Left lane fed `iron-plate`, right lane `copper-plate` (one kind per lane); warm-up 600, measured 600 ticks, chests read + emptied every 20 ticks. Every property write accepted on both versions.
+- Lane lock exact: left chest 0 copper, right chest 0 iron in all 10 rigs.
+- `drop_target` picks one of two chests on same tile.
+- Rate, belt items accepted per lane vs want: yellow 1 arm 75 / 75; turbo 1, 2, 4 arms 300 / 300; 270/s belt 2 arms 1108 / 1350 (82 %), 4 and 8 arms 1350 / 1350 (full: no 240/s loader cap). Belt stacks of 4: turbo 1 arm 1200 / 1200 items, 270/s belt 4 arms 5400 / 5400.
+- Caveat found in scratch bench (same day, 5 turbo boxes, flow `stacks` = 4 kinds mixed per lane, 1200 ticks, load 28-41): one arm carries one kind per swing, so mixed lanes need more arms: items through per arms-per-lane 1 / 2 / 4 / 8 = 2248 / 6024 / 14140 / 14164 (engine loader same scene: 14360). Turbo mixed flow needs 4 arms per lane.
+
+Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v14.lua::probe v14 > arms lane lock and rate'` (temporary index entry; same on `FV=2.1`); scratch bench `~/wt-sushi-packer-r2-v14` `tools/bench/run.sh 2.0 --tier turbo --flow stacks --boxes 5 --ticks 1300 --arms <n>`

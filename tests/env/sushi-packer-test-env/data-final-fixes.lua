@@ -34,3 +34,23 @@ do
   c.collision_mask = { layers = {} }
   data:extend({ c })
 end
+-- Test-only (v14 P1 probes, Way A "arms"): hidden inserter that may be locked to one belt lane at runtime
+-- (LuaEntity.pickup_from_left_lane / pickup_from_right_lane). Settings after Miniloader Redux prototypes/functions.lua.
+do
+  local a = table.deepcopy(data.raw.inserter["bulk-inserter"])
+  a.name, a.minable, a.next_upgrade = "sp-test-arm", nil, nil
+  a.allow_custom_vectors, a.chases_belt_items = true, false
+  a.uses_inserter_stack_size_bonus, a.stack_size_bonus, a.bulk = false, 11, true
+  a.rotation_speed, a.extension_speed = 0.5, 1
+  a.energy_source = { type = "void" }
+  a.energy_per_movement, a.energy_per_rotation = "1J", "1J"
+  a.collision_mask = { layers = {} }
+  a.flags = { "placeable-off-grid", "not-on-map", "not-blueprintable", "not-deconstructable" }
+  a.filter_count = 0
+  data:extend({ a })
+  for _, s in ipairs({ 0.5625, 2, 4 }) do
+    local l = table.deepcopy(data.raw["loader-1x1"]["sp-test-r2-in"])
+    l.name, l.speed = "sp-test-r2-in-" .. tostring(s):gsub("%.", "_"), s
+    data:extend({ l })
+  end
+end
