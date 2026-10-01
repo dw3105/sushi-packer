@@ -73,31 +73,76 @@ describe("ledger look", function()
     local old=a[1]; local b=ledger.scan(s,1,{c("gear",2)},opts({flush_all=true}))
     ok(a==b); ok(old==b[1]); eq(old.name,"gear") -- result pieces are overwritten by the next call
   end)
-  it("hands jam flushes every partial hand", function()
+  local function h(arm, name, count, quality) return { arm=arm, name=name, quality=quality or "normal", count=count } end
+  local function merges(ms)
+    local r={}; for i,m in ipairs(ms) do local a={}; for j,x in ipairs(m.arms) do a[j]=x end; r[i]={name=m.name,quality=m.quality,total=m.total,arms=a} end; return r
+  end
+  local function copy(a) local r={}; for i,x in ipairs(a) do r[i]=x end; return r end
+  -- v16 INT (V16-8): hands of one kind that together hold a full belt stack are merged, never flushed as partials.
+  it("hands merges partial hands of one kind into a stack", function()
+    local s=ledger.new(); s.sweep={1000,1000}
+    local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",3),h(4,"copper",1),h(6,"iron",1)},opts({tick=0}))
+    eq(copy(flush),{}); eq(merges(merge),{{name="iron",quality="normal",total=5,arms={1,3}}})
+  end)
+  it("hands merge needs a full stack and same quality", function()
+    local s=ledger.new(); s.sweep={1000,1000}
+    local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(2,"iron",1),h(3,"iron",2,"rare")},opts({tick=0}))
+    eq(copy(flush),{}); eq(merges(merge),{})
+    flush, merge = ledger.hands(s,1,{h(1,"iron",4),h(2,"iron",3)},opts({tick=1}))
+    eq(merges(merge),{}, "full hands are not merge material")
+  end)
+  it("hands merge one stack per kind per call, several kinds", function()
+    local s=ledger.new(); s.sweep={1000,1000}
+    local _, merge = ledger.hands(s,1,{h(1,"iron",3),h(2,"copper",3),h(3,"iron",3),h(4,"copper",2),h(5,"iron",3),h(6,"iron",3)},opts({tick=0}))
+    eq(merges(merge),{{name="iron",quality="normal",total=6,arms={1,3}},{name="copper",quality="normal",total=5,arms={2,4}}})
+  end)
+  it("hands merge uses item stack size", function()
+    local s=ledger.new(); s.sweep={1000,1000}
+    local _, merge = ledger.hands(s,1,{h(1,"iron",10),h(2,"iron",15)},opts({tick=0,bss=20}))
+    eq(merges(merge),{{name="iron",quality="normal",total=25,arms={1,2}}})
+  end)
+  it("hands jam flushes partial hands that can not merge", function()
+    local s=ledger.new(); s.ready={2,0}; s.sweep={1000,1000}
+    local held={h(1,"a",4),h(2,"b",4),h(3,"iron",2),h(4,"c",4),h(5,"d",4),h(6,"iron",2),h(7,"gear",1),h(8,"e",4)}
+    local flush, merge = ledger.hands(s,1,held,opts({tick=0}))
+    eq(copy(flush),{7}); eq(merges(merge),{{name="iron",quality="normal",total=4,arms={3,6}}})
+    table.remove(held)  -- one arm free: no jam
+    flush = ledger.hands(s,1,held,opts({tick=1})); eq(copy(flush),{})
+  end)
+  it("hands sweep flushes hand stuck longer than timeout", function()
+    local s=ledger.new(); local x={h(2,"iron",3)}
+    eq(copy(ledger.hands(s,1,x,opts({tick=0}))),{}); eq(s.held[1][2],"iron\0normal"); eq(s.since[1][2],0); eq(s.sweep[1],120)
+    eq(copy(ledger.hands(s,1,x,opts({tick=60}))),{}, "no sweep due: nothing"); eq(s.since[1][2],0)
+    eq(copy(ledger.hands(s,1,x,opts({tick=120}))),{}); eq(s.since[1][2],0); eq(s.sweep[1],240)
+    eq(copy(ledger.hands(s,1,x,opts({tick=240}))),{})
+    eq(copy(ledger.hands(s,1,x,opts({tick=360}))),{2}, "300 ticks passed"); eq(s.held[1][2],nil)
+    local t=ledger.new(); ledger.hands(t,1,{h(2,"iron",3)},opts({tick=0}))
+    ledger.hands(t,1,{h(2,"copper",1)},opts({tick=120})); eq(t.held[1][2],"copper\0normal"); eq(t.since[1][2],120)
+    ledger.hands(t,1,{h(2,"iron",4)},opts({tick=240})); eq(t.held[1][2],nil)
+    ledger.hands(t,1,{},opts({tick=360})); eq(t.held[1][2],nil)
+  end)
+  it("hands timeout zero never sweeps hands out", function()
+    local s=ledger.new(); local x={h(2,"iron",3)}
+    for _,tick in ipairs({0,120,240,3600}) do eq(copy(ledger.hands(s,1,x,opts({tick=tick,timeout_ticks=0}))),{}) end
+  end)
+  it("hands sweep comes sooner after a merge", function()
+    local s=ledger.new()
+    ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",3)},opts({tick=10})); eq(s.sweep[1],40)
+    ledger.hands(s,1,{h(1,"iron",2)},opts({tick=40})); eq(s.sweep[1],160)
+  end)
+  it("hands flush_all flushes all partial hands that can not merge", function()
+    local s=ledger.new()
+    local flush, merge = ledger.hands(s,1,{h(1,"iron",4),h(2,"iron",2),h(3,"gear",1),h(4,"iron",3)},opts({flush_all=true}))
+    eq(copy(flush),{3}); eq(merges(merge),{{name="iron",quality="normal",total=5,arms={2,4}}})
+  end)
+  it("hands results are ascending and reused", function()
     local s=ledger.new(); s.ready={2,0}
-    eq(ledger.hands(s,1,held({4,4,2,4,4,2,4,4}),opts()),{3,6})
-    eq(ledger.hands(s,1,held({4,4,2,4,4,2,4}),opts({tick=1})),{})
+    local held={h(1,"z",1),h(2,"y",1),h(3,"x",1),h(4,"w",1),h(5,"v",1),h(6,"u",1),h(7,"t",1),h(8,"s",1)}
+    local a, m = ledger.hands(s,1,held,opts({tick=0}))
+    eq(copy(a),{1,2,3,4,5,6,7,8}); local b, m2 = ledger.hands(s,1,{},opts({tick=1})); ok(a==b); ok(m==m2); eq(copy(b),{})
   end)
-  it("hands sweep flushes hand stuck since previous sweep", function()
-    local s=ledger.new(); local h={{arm=2,name="iron",quality="normal",count=3}}
-    eq(ledger.hands(s,1,h,opts({tick=0})),{}); eq(s.held[1][2],"iron\0normal"); eq(s.sweep[1],150)
-    eq(ledger.hands(s,1,h,opts({tick=100})),{}); eq(s.held[1][2],"iron\0normal")
-    eq(ledger.hands(s,1,h,opts({tick=150})),{2}); eq(s.held[1][2],nil); eq(s.sweep[1],300)
-    local t=ledger.new(); eq(ledger.hands(t,1,{{arm=2,name="iron",quality="normal",count=3}},opts({tick=0})),{})
-    eq(ledger.hands(t,1,{{arm=2,name="copper",quality="normal",count=1}},opts({tick=150})),{}); eq(t.held[1][2],"copper\0normal")
-    eq(ledger.hands(t,1,{{arm=2,name="iron",quality="normal",count=4}},opts({tick=300})),{}); eq(t.held[1][2],nil)
-  end)
-  it("hands sweep period", function()
-    local s=ledger.new(); ledger.hands(s,1,{},opts({tick=7,timeout_ticks=60})); eq(s.sweep[1],67)
-    local t=ledger.new(); t.held={ {[1]={[2]="iron\0normal"}}, {} }; ledger.hands(t,1,{},opts({tick=5,timeout_ticks=0}))
-    eq(t.sweep[1],605); eq(t.held[1][2],nil)
-  end)
-  it("hands flush_all flushes all partial hands", function()
-    local s=ledger.new(); eq(ledger.hands(s,1,held({4,2,1,4}),opts({flush_all=true})),{2,3})
-  end)
-  it("hands result is ascending without duplicates and reused", function()
-    local s=ledger.new(); s.ready={2,0}; s.held={ {[3]="iron\0normal"}, {} }; s.sweep={0,0}
-    local a=ledger.hands(s,1,held({4,4,2,4,4,4,4,4}),opts({tick=0}))
-    eq(a,{3}); local b=ledger.hands(s,1,{},opts({tick=1})); ok(a==b)
+  it("hands lanes are separate", function()
+    local s=ledger.new(); ledger.hands(s,1,{h(2,"iron",3)},opts({tick=0}))
+    eq(s.held[2][2],nil); eq(s.sweep[2] or 0,0)
   end)
 end)

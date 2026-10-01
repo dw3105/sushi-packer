@@ -11,6 +11,8 @@ local function inv(contents)
   function x.get_contents() x.reads=x.reads+1; local a={}; for i,v in ipairs(x.items) do a[i]={name=v.name,quality=v.quality,count=v.count} end; return a end
   function x.count_empty_stacks() return 12-#x.items end
   function x.remove(v) x.removed[#x.removed+1]=v; return v.count end
+  x.inserted={}; x.room=1000
+  function x.insert(v) local n=math.min(v.count,x.room); x.inserted[#x.inserted+1]={name=v.name,quality=v.quality,count=v.count}; return n end
   function x.is_empty() return #x.items==0 end
   return setmetatable(x,{__len=function() return 12 end})
 end
@@ -24,13 +26,13 @@ local function fixture()
   local rec={entity={valid=true,unit_number=30,force={index=1},get_inventory=function() return box end},unit_number=30,tier="yellow",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv(),inv()},arms={{},{}},out={{},{}},paused={false,false},out_paused={false,false},skip={"",""},ledger=ledger.new(),used={0,0},out_credit={0,0},next_poll=0,last_poll=0,extra=nil,led={state="green",visible=true}}
   storage.boxes[30]=rec
   local orig={front=belt.front_ok,can=belt.can_push,push=belt.push,bss=belt.belt_stack_size,eval=circuit.evaluate,scan=ledger.scan,hands=ledger.hands,plan=ledger.plan,hoard=ledger.hoard,pause=arms.pause,pause_out=arms.pause_out,hand=arms.hand,held=arms.held,clear=arms.clear_held,skip=arms.skip,need=arms.need_slot,behind=belt.behind_kinds,led=ledger.led,set=led.set}
-  local f={rec=rec,box=box,pushes={},scans={},evals=0,plans=0,hoards=0,pauses={},outs={},hands={},held_calls={},clears={},skips={},need_calls={},ledcalls={},front=true,enabled=true,flush=false,flushes={{},{}},wants={false,false},held_values={{},{}},hand_indices={{},{}},can_pushes=0}
+  local f={hand_merges={},rec=rec,box=box,pushes={},scans={},evals=0,plans=0,hoards=0,pauses={},outs={},hands={},held_calls={},clears={},skips={},need_calls={},ledcalls={},front=true,enabled=true,flush=false,flushes={{},{}},wants={false,false},held_values={{},{}},hand_indices={{},{}},can_pushes=0}
   belt.front_ok=function() return f.front end; belt.can_push=function() f.can_pushes=f.can_pushes+1; return true end
   belt.belt_stack_size=function() return 4 end
   belt.push=function(r,l,p,bss) f.pushes[#f.pushes+1]={lane=l,piece={name=p.name,quality=p.quality,count=p.count},bss=bss}; if f.fail_at==#f.pushes then return 0 end; return p.count end
   circuit.evaluate=function() f.evals=f.evals+1; return f.enabled,f.flush end
   ledger.scan=function(state,lane,contents,opts) local copy={}; for k,v in pairs(opts) do copy[k]=v end; f.scans[#f.scans+1]={lane=lane,contents=contents,opts=opts,snapshot=copy}; return f.flushes[lane],f.wants[lane] end
-  ledger.hands=function(state,lane,held,opts) f.hands[#f.hands+1]={lane=lane,held=held,opts=opts}; return f.hand_indices[lane] end
+  ledger.hands=function(state,lane,held,opts) f.hands[#f.hands+1]={lane=lane,held=held,opts=opts}; return f.hand_indices[lane] or {}, f.hand_merges[lane] or {} end
   ledger.plan=function() f.plans=f.plans+1; return {} end; ledger.hoard=function() f.hoards=f.hoards+1; return {} end
   arms.pause=function(r,l,p) f.pauses[#f.pauses+1]={l,p} end
   arms.pause_out=function(r,l,p) f.outs[#f.outs+1]={l,p} end
@@ -64,5 +66,26 @@ describe("tick look",function()
   it("led and used slots",function() local f=fixture(); f.rec.invs[1]=inv({{name="iron",quality="normal",count=5}}); f.run(30); eq(f.rec.used[1],1); eq(f.ledcalls,{{"yellow",true}}); f.restore() end)
   it("mode switch",function() local f=fixture(); f.run(30); f.rec.settings.filters={{name="iron"}}; f.rec.next_poll=30; f.run(31); eq(f.outs[#f.outs],{2,true}); f.rec.settings.filters={}; f.skips={}; f.run(60); eq(f.skips,{{1,{}},{2,{}}}); eq(f.outs[#f.outs],{2,false}); f.restore() end)
   it("look reuses option table",function() local f=fixture(); f.run(30); local o=f.scans[1].opts; f.run(60); eq(f.scans[3].opts,o); f.restore() end)
+  it("merge pushes one full stack clears hands and returns rest to store",function()
+    local f=fixture(); f.wants[1]=true
+    f.held_values[1]={{arm=1,name="iron",quality="normal",count=2},{arm=3,name="iron",quality="normal",count=3},{arm=4,name="gear",quality="normal",count=1}}
+    f.hand_merges[1]={{name="iron",quality="normal",total=5,arms={1,3}}}; f.hand_indices[1]={4}
+    f.run(30)
+    eq(f.pushes[1].piece,{name="iron",quality="normal",count=4}); eq(f.pushes[2].piece,{name="gear",quality="normal",count=1})
+    eq(f.clears,{{1,1},{1,3},{1,4}}); eq(f.rec.invs[1].inserted,{{name="iron",quality="normal",count=1}})
+    f.restore()
+  end)
+  it("merge does nothing when belt refuses",function()
+    local f=fixture(); f.wants[1]=true; f.fail_at=1
+    f.held_values[1]={{arm=1,name="iron",quality="normal",count=2},{arm=3,name="iron",quality="normal",count=3}}
+    f.hand_merges[1]={{name="iron",quality="normal",total=5,arms={1,3}}}
+    f.run(30); eq(#f.clears,0); eq(#f.rec.invs[1].inserted,0); f.restore()
+  end)
+  it("merge rest that store refuses goes to box container",function()
+    local f=fixture(); f.wants[1]=true; f.rec.invs[1].room=0
+    f.held_values[1]={{arm=1,name="iron",quality="normal",count=3},{arm=3,name="iron",quality="normal",count=3}}
+    f.hand_merges[1]={{name="iron",quality="normal",total=6,arms={1,3}}}
+    f.run(30); eq(f.rec.entity.get_inventory().inserted,{{name="iron",quality="normal",count=2}}); f.restore()
+  end)
   it("counters count looks",function() local f=fixture(); tick.counters_on(); f.run(30); eq(storage.sp_counters.visits,1); f.restore() end)
 end)

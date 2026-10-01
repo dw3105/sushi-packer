@@ -228,7 +228,6 @@ local SCAN_OUT, SCAN_POOL = {}, {}
 local SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS = {}, {}, {}, {}, {}
 local SCAN_PRESENT = {}
 local HANDS_OUT = {}
-local HANDS_NEXT = { {}, {} }
 local function look_key(name, quality) return name .. "\0" .. quality end
 function M.scan(state, lane, contents, opts)
   local left = state.left
@@ -295,6 +294,14 @@ function M.scan(state, lane, contents, opts)
   return SCAN_OUT, want
 end
 
+-- v16 INT (V16-8). Called only when scan wants hands. Returns (both reused, valid until next call):
+--   flush: ascending out-arm indexes whose partial hand is pushed out as it is;
+--   merge: at most one entry per kind: { name=, quality=, total=, arms = { ascending arm indexes } }: partial hands of
+--          one kind that together hold at least one belt stack. Caller clears those hands, pushes one full stack,
+--          puts the rest (total - S) back into the lane store.
+local SWEEP, SWEEP_SOON = 120, 30
+local MERGE_OUT, MERGE_POOL = {}, {}
+local HAND_SIZE, HAND_KEY, HAND_MERGED = {}, {}, {}
 function M.hands(state, lane, held, opts)
   local ready = state.ready
   if not ready then ready = { 0, 0 }; state.ready = ready end
@@ -302,34 +309,80 @@ function M.hands(state, lane, held, opts)
   if not sweep then sweep = { 0, 0 }; state.sweep = sweep end
   local memories = state.held
   if not memories then memories = { {}, {} }; state.held = memories end
-  local memory = memories[lane]
-  local tick, timeout = opts.tick, opts.timeout_ticks
+  local sinces = state.since
+  if not sinces then sinces = { {}, {} }; state.since = sinces end
+  local memory, since = memories[lane], sinces[lane]
+  local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
+  local n = #held
   local do_sweep = tick >= (sweep[lane] or 0)
-  local jam = (ready[lane] or 0) >= 2 and #held >= opts.n_out
-  local out_n, old = 0, memory
-  local next_memory = HANDS_NEXT[lane]
-  for arm in pairs(next_memory) do next_memory[arm] = nil end
-  local flush_all = opts.flush_all
-  for i = 1, #held do
+  local jam = (ready[lane] or 0) >= 2 and n >= opts.n_out
+
+  -- per hand: belt stack size of its kind (0 = full hand, not our business), key
+  for i = 1, n do
     local h = held[i]
-    local size = opts.bss
+    local size = bss
     local item_size = opts.stack_size(h.name)
     if item_size < size then size = item_size end
-    if h.count < size then
-      local key = look_key(h.name, h.quality)
-      local flush = flush_all or jam or (do_sweep and timeout > 0 and old[h.arm] == key)
+    if h.count < size then HAND_SIZE[i] = size; HAND_KEY[i] = look_key(h.name, h.quality) else HAND_SIZE[i] = 0; HAND_KEY[i] = false end
+    HAND_MERGED[i] = false
+  end
+  for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i] = nil, nil, nil end
+
+  -- merges: first kind (arm order) whose partial hands reach one stack; shortest prefix of its hands
+  local merge_n = 0
+  for i = 1, n do
+    local key = HAND_KEY[i]
+    if key and not HAND_MERGED[i] then
+      local total, last = 0, nil
+      for j = i, n do
+        if HAND_KEY[j] == key then
+          total = total + held[j].count
+          if total >= HAND_SIZE[i] then last = j; break end
+        end
+      end
+      if last then
+        merge_n = merge_n + 1
+        local m = MERGE_POOL[merge_n]
+        if not m then m = { arms = {} }; MERGE_POOL[merge_n] = m end
+        local arms, an = m.arms, 0
+        for j = i, last do if HAND_KEY[j] == key then an = an + 1; arms[an] = held[j].arm; HAND_MERGED[j] = true end end
+        for j = an + 1, #arms do arms[j] = nil end
+        m.name, m.quality, m.total = held[i].name, held[i].quality, total
+        MERGE_OUT[merge_n] = m
+        -- other hands of this kind wait for a later call: mark them so they are neither merged twice nor flushed now
+        for j = last + 1, n do if HAND_KEY[j] == key then HAND_MERGED[j] = true end end
+      end
+    end
+  end
+  for i = merge_n + 1, #MERGE_OUT do MERGE_OUT[i] = nil end
+
+  local out_n = 0
+  for i = 1, n do
+    local key = HAND_KEY[i]
+    if key and not HAND_MERGED[i] then
+      local arm = held[i].arm
+      local flush = flush_all or jam
+      if do_sweep and not flush then
+        if memory[arm] == key then
+          if timeout > 0 and tick - since[arm] >= timeout then flush = true end
+        else
+          memory[arm], since[arm] = key, tick
+        end
+      end
       if flush then
-        out_n = out_n + 1; HANDS_OUT[out_n] = h.arm
-      elseif do_sweep and timeout > 0 then
-        next_memory[h.arm] = key
+        out_n = out_n + 1; HANDS_OUT[out_n] = arm
+        memory[arm], since[arm] = nil, nil
       end
     end
   end
   if do_sweep then
-    for arm, key in pairs(next_memory) do memory[arm] = key end
-    for arm in pairs(memory) do if next_memory[arm] == nil then memory[arm] = nil end end
-    local period = timeout == 0 and 600 or math.max(60, math.floor(timeout / 2))
-    sweep[lane] = tick + period
+    -- forget arms that no longer hold the remembered partial hand
+    for arm, key in pairs(memory) do
+      local still = false
+      for i = 1, n do if held[i].arm == arm and HAND_KEY[i] == key and not HAND_MERGED[i] then still = true; break end end
+      if not still then memory[arm], since[arm] = nil, nil end
+    end
+    sweep[lane] = tick + (merge_n > 0 and SWEEP_SOON or SWEEP)
   end
   for i = 2, out_n do
     local arm, j = HANDS_OUT[i], i - 1
@@ -337,7 +390,7 @@ function M.hands(state, lane, held, opts)
     HANDS_OUT[j + 1] = arm
   end
   for i = out_n + 1, #HANDS_OUT do HANDS_OUT[i] = nil end
-  return HANDS_OUT
+  return HANDS_OUT, MERGE_OUT
 end
 
 function M.led(used_left, used_right, slots)

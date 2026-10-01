@@ -265,7 +265,21 @@ local function engine_look(rec, tick, bss, flush_all)
         end
         if want then
           local held=arms.held(rec,lane)
-          local indices=ledger.hands(rec.ledger,lane,held,opts)
+          local indices, merges=ledger.hands(rec.ledger,lane,held,opts)
+          -- V16-8: partial hands of one kind that together make a belt stack leave as one full stack
+          for i=1,#merges do
+            local m=merges[i]
+            local size=stack_size(m.name); if bss<size then size=bss end
+            held_piece.name, held_piece.quality, held_piece.count = m.name, m.quality, size
+            if belt_io.push(rec,lane,held_piece,bss)<=0 then break end
+            for j=1,#m.arms do arms.clear_held(rec,lane,m.arms[j]) end
+            local rest=m.total-size
+            if rest>0 then
+              held_piece.count=rest
+              local put=inv.insert(held_piece)
+              if put<rest then held_piece.count=rest-put; rec.entity.get_inventory(defines.inventory.chest).insert(held_piece) end
+            end
+          end
           for i=1,#indices do
             local k=indices[i]
             local hand
