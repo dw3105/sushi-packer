@@ -1,141 +1,114 @@
 local N = require("scripts.names")
-local core = require("scripts.core")
 local belt_io = require("scripts.belt_io")
 local circuit = require("scripts.circuit")
+local ledger = require("scripts.ledger")
+local arms = require("scripts.arms")
 local led = require("scripts.led")
 local tick = require("scripts.tick")
 
-local function fixture(tier)
-  defines = {direction={north=0,east=4,south=8,west=12},inventory={chest=1},gui_type={entity=1,item=3},wire_connector_id={circuit_red=1,circuit_green=2}}
-  storage = {boxes={},belt_stack={}}
-  settings = {global={[N.SETTING_TIMEOUT]={value=0}}}
-  prototypes = {entity=require("tests.offline.belts"),item={iron={stack_size=100},copper={stack_size=100}},quality={normal={level=0},uncommon={level=1},rare={level=2},legendary={level=5}}}
-  game = {connected_players={}}
-  local inv={contents={}}
-  function inv.insert(x)
-    local n=x.count; if inv.limit then n=math.min(n,inv.limit) end
-    local key=x.name.."/"..tostring(x.quality); local found
-    for _,v in ipairs(inv.contents) do if v.name==x.name and v.quality==x.quality then found=v end end
-    if found then found.count=found.count+n else if n>0 then inv.contents[#inv.contents+1]={name=x.name,quality=x.quality,count=n} end end
-    return n
-  end
+local function inventory(contents)
+  local inv = { contents = contents or {}, removes = {}, reads = 0 }
+  function inv.get_contents() inv.reads=inv.reads+1; local a={}; for i,x in ipairs(inv.contents) do a[i]={name=x.name,quality=x.quality,count=x.count} end; return a end
+  function inv.is_empty() return #inv.contents==0 end
   function inv.remove(x)
+    inv.removes[#inv.removes+1]={name=x.name,quality=x.quality,count=x.count}
     local left=x.count
-    for i=#inv.contents,1,-1 do local v=inv.contents[i]; if v.name==x.name and v.quality==x.quality then local n=math.min(left,v.count); v.count=v.count-n; left=left-n; if v.count==0 then table.remove(inv.contents,i) end end end
+    for i=#inv.contents,1,-1 do local y=inv.contents[i]; if y.name==x.name and y.quality==x.quality then local n=math.min(left,y.count); y.count=y.count-n; left=left-n; if y.count==0 then table.remove(inv.contents,i) end end end
     return x.count-left
   end
-  function inv.get_contents() local a={}; for i,v in ipairs(inv.contents) do a[i]={name=v.name,quality=v.quality,count=v.count} end; return a end
-  local ent={valid=true,unit_number=1,position={x=0,y=0},surface={},force={index=1,belt_stack_size_bonus=0}}
-  function ent.get_inventory() return inv end
-  local rec={entity=ent,unit_number=1,tier=tier or "yellow",dir="north",box=core.new_box(),settings={timeout_mode="global",timeout_s=0,filters={},circuit={}},enabled=true,out_credit={0,0},in_credit={0,0},next_poll=0}
-  storage.boxes[1]=rec
-  local original={pull=belt_io.pull,push=belt_io.push,speed=belt_io.speed,bss=belt_io.belt_stack_size,evaluate=circuit.evaluate,set=led.set}
-  local feeds, pushes, blocked, verdict, ledcalls={},{{},{}},{}, {true,false},{}
-  belt_io.belt_stack_size=function(force) return 1+(force.belt_stack_size_bonus or 0) end
-  belt_io.pull=function(r,budget,sink)
-    local taken={0,0}
-    for l=1,2 do local f=feeds[l]; if f and budget[l]>0 then local n=sink(f.name,f.quality,l,f.count); if n>0 then taken[l]=1 end end end
-    return taken
-  end
-  belt_io.push=function(r,l,piece,bss) if blocked[l] then return 0 end; pushes[l][#pushes[l]+1]={name=piece.name,quality=piece.quality,count=piece.count}; return piece.count end
-  circuit.evaluate=function() return verdict[1],verdict[2] end
-  led.set=function(r,s,v) ledcalls[#ledcalls+1]={state=s,visible=v} end
-  return rec,inv,feeds,pushes,blocked,verdict,ledcalls,original
+  function inv.count_empty_stacks() return 12-#inv.contents end
+  return setmetatable(inv,{__len=function() return 12 end})
 end
-local function run(t, rec) if rec then rec.next_poll=0 end; tick.on_tick({tick=t or 1}) end
+
+local function fixture(tier)
+  defines={inventory={chest=1},gui_type={entity=1}}
+  storage={boxes={},belt_stack={[1]=4}}
+  settings={global={[N.SETTING_TIMEOUT]={value=0}}}
+  prototypes={item={iron={stack_size=100},copper={stack_size=100}},quality={normal={level=0}},entity=require("tests.offline.belts")}
+  game={connected_players={}}
+  local boxinv=inventory()
+  local entity={valid=true,unit_number=1,force={index=1},get_inventory=function() return boxinv end}
+  local invs={inventory(),inventory()}
+  local rec={entity=entity,unit_number=1,tier=tier or "yellow",dir="north",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs=invs,arms={{},{}},paused={false,false},skip={"",""},ledger=ledger.new(),extra=nil,out_credit={0,0},next_poll=0,last_poll=0,led={state="green",visible=true}}
+  storage.boxes[1]=rec
+  local orig={push=belt_io.push,rate=belt_io.lane_rate,eval=circuit.evaluate,plan=ledger.plan,hoard=ledger.hoard,ledger_led=ledger.led,pause=arms.pause,skip=arms.skip,set=led.set}
+  local pushes, plans, pauses, skips, ledcalls={}, {}, {}, {}, {}
+  local blocked_after
+  belt_io.lane_rate=function() return 0.125 end
+  belt_io.push=function(r,l,piece,bss)
+    pushes[#pushes+1]={lane=l,piece={name=piece.name,quality=piece.quality,count=piece.count},inv=r._pushing_inv}
+    if blocked_after and #pushes==blocked_after then return 0 end
+    if storage.sp_counters then storage.sp_counters.pushes=storage.sp_counters.pushes+1; storage.sp_counters.items_out=storage.sp_counters.items_out+piece.count end
+    return piece.count
+  end
+  circuit.evaluate=function() return true,false end
+  ledger.plan=function(_,lane,contents,opts) plans[#plans+1]={lane=lane,contents=contents,opts=opts}; return {} end
+  ledger.hoard=function(contents) return #contents>0 and {{name=contents[1].name,quality=contents[1].quality}} or {} end
+  ledger.led=function(a,b,slots) return a+b==0 and "green" or "yellow" end
+  arms.pause=function(r,l,p) if r.paused[l]~=p then pauses[#pauses+1]={l,p}; r.paused[l]=p end end
+  arms.skip=function(r,l,k) skips[#skips+1]={l,k} end
+  led.set=function(r,s,v) ledcalls[#ledcalls+1]={s,v}; r.led={state=s,visible=v} end
+  local f={rec=rec,invs=invs,boxinv=boxinv,pushes=pushes,plans=plans,pauses=pauses,skips=skips,ledcalls=ledcalls,orig=orig}
+  function f.block_after(n) blocked_after=n end
+  function f.restore() belt_io.push=orig.push; belt_io.lane_rate=orig.rate; circuit.evaluate=orig.eval; ledger.plan=orig.plan; ledger.hoard=orig.hoard; ledger.led=orig.ledger_led; arms.pause=orig.pause; arms.skip=orig.skip; led.set=orig.set end
+  function f.run(t) tick.on_tick({tick=t or 1}) end
+  return f
+end
+
+describe("tick arms", function()
+  it("pushes ledger pieces on own lane and removes them", function()
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs; f.rec.out_credit[1]=2
+    ledger.plan=function(_,lane) if lane==1 then return {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} end return {} end
+    f.run(1); eq(#f.pushes,2); eq(f.pushes[1].lane,1); eq(f.pushes[2].lane,1); eq(#f.invs[1].removes,2); eq(#f.invs[2].removes,0); f.restore()
+  end)
+  it("stops at blocked lane", function()
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=8}}); f.rec.invs=f.invs; f.rec.out_credit={2,0}; f.blocked_after=2
+    ledger.plan=function(_,lane,contents) if lane~=1 then return {} end; if contents[1] and contents[1].count>=8 then return {{name="iron",quality="normal",count=4},{name="iron",quality="normal",count=4}} end; return {{name="iron",quality="normal",count=4}} end
+    f.block_after(2); f.run(1); eq(#f.invs[1].removes,1); f.rec.next_poll=0; f.block_after(nil); f.run(9); eq(#f.invs[1].removes,2); f.restore()
+  end)
+  it("rate cap by credit", function()
+    local f=fixture("yellow"); f.invs[1]=inventory({{name="iron",quality="normal",count=100}}); f.rec.invs=f.invs
+    ledger.plan=function(_,lane) local a={}; for i=1,100 do a[i]={name="iron",quality="normal",count=1} end; return lane==1 and a or {} end
+    for t=1,40 do f.rec.next_poll=0; f.run(t) end
+    ok(#f.invs[1].removes<=0.125*40+1); f.restore()
+  end)
+  it("passes rules to ledger", function()
+    local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.invs[1]=inventory({{name="iron",quality="normal",count=4}}); f.rec.invs=f.invs
+    ledger.plan=function(_,lane,contents,opts) if lane==1 then f.seen=opts end; return {} end
+    circuit.evaluate=function() return true,true end; f.run(1); local o=f.seen
+    eq(o.tick,1); eq(o.bss,4); eq(o.timeout_ticks,0); eq(o.slots,N.STORE_SLOTS); eq(o.slots_used,1); eq(o.flush_all,true); ok(o.skip("iron","normal")); eq(o.stack_size("iron"),100); f.restore()
+  end)
+  it("circuit off pauses both lanes", function()
+    local f=fixture(); circuit.evaluate=function() return false,false end; f.run(1); eq(f.pauses,{{1,true},{2,true}}); eq(#f.pushes,0); while #f.pauses>0 do table.remove(f.pauses) end; circuit.evaluate=function() return true,false end; f.rec.next_poll=0; f.run(9); eq(f.pauses,{{1,false},{2,false}}); f.restore()
+  end)
+  it("hoard kinds go to arms", function()
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=100}}); f.rec.invs=f.invs; f.run(1); eq(f.skips,{{1,{{name="iron",quality="normal"}}},{2,{}}}); f.restore()
+  end)
+  it("extra leaves first and pauses its lane", function()
+    local f=fixture(); f.rec.extra={{name="iron",quality="normal",count=9,lane=1}}; f.boxinv.contents={{name="iron",quality="normal",count=9}}; f.rec.out_credit[1]=4; belt_io.lane_rate=function() return 4 end
+    local got={}; belt_io.push=function(r,l,p,bss) got[#got+1]={lane=l,count=p.count,source=p.name=="iron" and f.boxinv or f.invs[l]}; return p.count end
+    f.invs[1]=inventory({{name="copper",quality="normal",count=4}}); f.rec.invs=f.invs
+    ledger.plan=function(_,lane) return lane==1 and {{name="copper",quality="normal",count=4}} or {} end
+    f.run(1); eq(got[1],{lane=1,count=4,source=f.boxinv}); eq(got[2],{lane=1,count=4,source=f.boxinv}); eq(got[3],{lane=1,count=1,source=f.boxinv}); eq(got[4].source,f.invs[1]); eq(f.rec.extra,nil); eq(f.pauses,{{1,true},{1,false}}); f.restore()
+  end)
+  it("led from used slots", function()
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=1}}); f.rec.invs=f.invs; f.run(1); eq(f.ledcalls,{{"yellow",true}}); f.rec.next_poll=0; f.run(9); eq(#f.ledcalls,1); f.restore()
+  end)
+  it("empty box sleeps 15 ticks", function() local f=fixture(); f.run(1); eq(f.rec.next_poll,16); f.restore() end)
+  it("sleeping box costs no engine read", function()
+    local f=fixture(); f.rec.next_poll=100; local reads=0; f.rec.entity=setmetatable({}, {__index=function() reads=reads+1; error("unexpected engine read") end}); for t=1,50 do f.run(t) end; eq(reads,0); f.restore()
+  end)
+  it("unmigrated rec skipped", function() local f=fixture(); f.rec.stores=nil; local calls=0; circuit.evaluate=function() calls=calls+1; return true,false end; f.run(1); eq(calls,0); eq(#f.pushes,0); f.restore() end)
+  it("counters", function()
+    local f=fixture(); f.invs[1]=inventory({{name="iron",quality="normal",count=2}}); f.rec.invs=f.invs; f.rec.out_credit={1,0}; storage.sp_counters={visits=0,reads=0,pulls=0,pushes=0,items_in=0,items_out=0}
+    ledger.plan=function(_,lane) return lane==1 and {{name="iron",quality="normal",count=2}} or {} end
+    f.run(1); eq(storage.sp_counters,{visits=1,reads=0,pulls=0,pushes=1,items_in=2,items_out=2}); f.restore()
+  end)
+end)
 
 describe("tick", function()
- it("wakes on eta tick not on cadence", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); local calls=0
-   belt_io.speed=function() return 0.1 end
-   belt_io.pull=function() calls=calls+1; return {1,0},{3,nil} end
-   tick.on_tick({tick=7}); eq(calls,1); eq(r.next_poll,10)
-   tick.on_tick({tick=9}); eq(calls,1); tick.on_tick({tick=10}); eq(calls,2)
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("eta zero never wakes early", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); local calls=0
-   belt_io.speed=function() return nil end
-   belt_io.pull=function() calls=calls+1; return {0,0},{0,nil} end
-   tick.on_tick({tick=7}); eq(r.next_poll,37); tick.on_tick({tick=8}); eq(calls,1)
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("idle sleep shorter than tile crossing", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); belt_io.speed=function() return 0.2 end
-   belt_io.pull=function() return {0,0},{nil,nil} end
-   tick.on_tick({tick=7}); eq(r.next_poll,11)
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("idle box wakes on eta", function()
-   -- FND-0013 review: idle box with item on the way must wake on arrival, not after idle sleep.
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); belt_io.speed=function() return 0.03125 end
-   belt_io.pull=function() return {0,0},{nil,20} end
-   tick.on_tick({tick=7}); eq(r.next_poll,27)
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("credit accrues by elapsed ticks", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); r.last_poll=10; r.next_poll=14
-   belt_io.speed=function() return nil end
-   belt_io.pull=function() return {0,0},{nil,nil} end
-   tick.on_tick({tick=14}); eq(r.in_credit,{0.5,0.5}); eq(r.out_credit,{0.5,0.5})
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("rate cap holds with early wakes", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); local pulled={0,0}
-   core.accept(r.box,"iron","normal",1,1,1000,0,false)
-   belt_io.speed=function() return nil end
-   belt_io.pull=function(_,budget) local got={0,0}; for i=1,2 do got[i]=math.min(1,budget[i]); pulled[i]=pulled[i]+got[i] end; return got,{1,1} end
-   for t=1,600 do tick.on_tick({tick=t}) end
-   for i=1,2 do ok(pulled[i] <= N.TIER[r.tier].lane_rate*600+2) end
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("old rec without last_poll works", function()
-   local r,inv,f,p,b,v,l,o=fixture("yellow"); r.last_poll=nil; r.next_poll=nil
-   belt_io.speed=function() return nil end
-   belt_io.pull=function() return {0,0},{nil,nil} end
-   tick.on_tick({tick=7}); ok(r.last_poll==7); eq(r.next_poll,37)
-   belt_io.pull=o.pull; belt_io.speed=o.speed; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("timeout ticks custom and global", function()
-   local rec=fixture(); rec.settings.timeout_mode="custom"; rec.settings.timeout_s=3; eq(tick.timeout_ticks(rec),180); rec.settings.timeout_mode="global"; settings.global[N.SETTING_TIMEOUT].value=7; eq(tick.timeout_ticks(rec),420)
- end)
- it("on research caches belt stack size", function() local _,_,_,_,_,_,_,o=fixture(); belt_io.belt_stack_size=function(f) return f.index+2 end; tick.on_research({research={force={index=4}}}); eq(storage.belt_stack[4],6); belt_io.belt_stack_size=o.bss end)
- it("invalid entity drops rec", function() local r=fixture(); r.entity.valid=false; run(1); eq(storage.boxes[1],nil) end)
- it("disabled box moves nothing and hides led", function() local r,inv,f,p,b,v,l,o=fixture(); v[1]=false; f[1]={name="iron",quality="normal",count=1}; run(7,r); eq(r.box.stored_count,0); eq(#p[1],0); eq(l[#l].visible,false); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("flush signal queues partials", function() local r,inv,f,p,b,v,l,o=fixture(); core.accept(r.box,"iron","normal",1,2,100,1,false); inv.insert({name="iron",quality="normal",count=2}); v[2]=true; run(7,r); eq(#r.box.ready[1],1); eq(#r.box.partials,0); eq(p[1],{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("intake budget follows tier rate", function() local r,inv,f,p,b,v,l,o=fixture("yellow"); run(7,r); eq(r.in_credit,{1,1}); r.next_poll=0; run(15,r); eq(r.in_credit,{2,2}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("stored item goes to core and chest", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=4; f[1]={name="iron",quality="normal",count=1}; for t=1,9 do run(t,r) end; eq(r.box.stored_count,1); eq(inv.get_contents(),{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("filtered item goes to hold not chest", function() local r,inv,f,p,b,v,l,o=fixture(); r.settings.filters={{name="iron",quality="normal"}}; b[1]=true; f[1]={name="iron",quality="normal",count=1}; for t=1,9 do run(t,r) end; eq(core.hold_items(r.box),{{name="iron",quality="normal",count=1}}); eq(inv.get_contents(),{}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("filter without quality matches any quality", function() local r,inv,f,p,b,v,l,o=fixture(); r.settings.filters={{name="iron"}}; b[1]=true; f[1]={name="iron",quality="legendary",count=1}; for t=1,9 do run(t,r) end; eq(core.hold_items(r.box),{{name="iron",quality="legendary",count=1}}); eq(inv.get_contents(),{}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("output piece capped at belt stack size", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=2; core.accept(r.box,"iron","normal",1,5,5,1,false); core.flush_partials(r.box,1); inv.insert({name="iron",quality="normal",count=5}); run(7,r); eq(p[1],{{name="iron",quality="normal",count=2}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("output removes stored items from chest", function() local r,inv,f,p,b,v,l,o=fixture(); core.accept(r.box,"iron","normal",1,1,1,1,false); core.flush_partials(r.box,1); inv.insert({name="iron",quality="normal",count=1}); run(7,r); eq(inv.get_contents(),{}); eq(r.box.stored_count,0); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("passthrough output leaves chest alone", function() local r,inv,f,p,b,v,l,o=fixture(); core.accept(r.box,"iron","normal",1,1,100,1,true); run(7,r); eq(inv.get_contents(),{}); eq(p[1],{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("output rate never above tier rate", function() local r,inv,f,p,b,v,l,o=fixture("yellow"); core.adopt_external(r.box,"iron","normal",100,100,1); inv.insert({name="iron",quality="normal",count=100}); for t=1,40 do run(t,r) end; local pushed=0; for _,piece in ipairs(p[1]) do pushed=pushed+piece.count end; ok(pushed <= N.TIER[r.tier].lane_rate * 40); eq(p[2],{}); eq(core.totals(r.box),{{name="iron",quality="normal",count=100-pushed}}); eq(inv.get_contents(),{{name="iron",quality="normal",count=100-pushed}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("blocked lane does not stall other lane", function() local r,inv,f,p,b,v,l,o=fixture(); b[1]=true; for lane=1,2 do core.accept(r.box,lane==1 and "iron" or "copper","normal",lane,1,1,1,false); core.flush_partials(r.box,1); inv.insert({name=lane==1 and "iron" or "copper",quality="normal",count=1}); r.out_credit[lane]=1 end; run(7,r); eq(#p[1],0); eq(p[2],{{name="copper",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("led follows core state", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",1,100,1); run(1,r); eq(l[#l].state,core.led_state(r.box)); eq(l[#l].visible,true); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("opened box reconciles next tick", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",3,100,1); inv.insert({name="iron",quality="normal",count=1}); game.connected_players={{opened=r.entity,opened_gui_type=1}}; run(1,r); eq(r.box.stored_count,1); eq(inv.get_contents(),{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("opened blueprint does not crash", function()
-   -- author 2026-09-27: saving blueprint crashed tick.lua:74 (LuaItemStack doesn't contain key unit_number).
-   local r,inv,f,p,b,v,l,o=fixture()
-   local stack=setmetatable({},{__index=function(_,k) error("LuaItemStack doesn't contain key "..k) end})
-   game.connected_players={{opened=stack,opened_gui_type=3},{opened=r.entity,opened_gui_type=1}}
-   core.adopt_external(r.box,"iron","normal",3,100,1); inv.insert({name="iron",quality="normal",count=1})
-   run(1,r); eq(r.box.stored_count,1)
-   belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set
- end)
- it("closed box reconciles every 60 ticks", function() local r,inv,f,p,b,v,l,o=fixture(); core.adopt_external(r.box,"iron","normal",3,100,1); inv.insert({name="iron",quality="normal",count=1}); run(58,r); eq(r.box.stored_count,3); run(59,r); eq(r.box.stored_count,1); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("idle box sleeps 30 ticks", function() local r,inv,f,p,b,v,l,o=fixture(); belt_io.speed=function() return nil end; run(7,r); eq(r.next_poll,37); belt_io.speed=o.speed; belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("belt stack computed when cache empty", function() local r,inv,f,p,b,v,l,o=fixture(); r.entity.force.belt_stack_size_bonus=2; core.accept(r.box,"iron","normal",1,4,4,1,false); core.flush_partials(r.box,1); inv.insert({name="iron",quality="normal",count=4}); run(7,r); eq(storage.belt_stack[1],3); eq(p[1],{{name="iron",quality="normal",count=3}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("releases at belt stack", function() local r,inv,f,p,b,v,l,o=fixture("turbo"); storage.belt_stack[1]=4; local arrivals=0; belt_io.pull=function(_,budget,sink) if budget[1]>0 and arrivals<4 then arrivals=arrivals+1; sink("iron","normal",1,1); return {1,0} end; return {0,0} end; for _,t in ipairs({1,3,5,7}) do run(t,r) end; eq(p[1],{{name="iron",quality="normal",count=4}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("belt stack 1 passes through", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=1; f[1]={name="iron",quality="normal",count=1}; run(7,r); eq(p[1],{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("sink passes item stack size to core", function() local r,inv,f,p,b,v,l,o=fixture(); prototypes.item.ore={stack_size=50}; storage.belt_stack[1]=4; local seen; local real=core.accept; core.accept=function(...) seen=select(9,...); return real(...) end; f[1]={name="ore",quality="normal",count=1}; run(7,r); core.accept=real; eq(seen,50); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("item stack size caps release", function() local r,inv,f,p,b,v,l,o=fixture(); prototypes.item.small={stack_size=2}; storage.belt_stack[1]=4; f[1]={name="small",quality="normal",count=2}; run(7,r); eq(p[1],{{name="small",quality="normal",count=2}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("research raise changes next release size", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=1; f[1]={name="iron",quality="normal",count=2}; belt_io.belt_stack_size=function() return 2 end; tick.on_research({force={index=1}}); run(7,r); eq(p[1],{{name="iron",quality="normal",count=2}}); belt_io.pull=o.pull; belt_io.push=o.push; belt_io.belt_stack_size=o.bss; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("adopt uses belt stack", function() local r,inv,f,p,b,v,l,o=fixture(); storage.belt_stack[1]=4; inv.insert({name="iron",quality="normal",count=8}); game.connected_players={{opened=r.entity,opened_gui_type=1}}; run(1,r); eq(#r.box.ready[1],2); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("filter uses quality rule", function() local r,inv,f,p,b,v,l,o=fixture(); prototypes.quality={normal={level=0},uncommon={level=1},rare={level=2},legendary={level=5}}; r.settings.filters={{name="iron",quality="uncommon",comparator="≥"}}; b[1]=true; f[1]={name="iron",quality="rare",count=1}; run(7,r); eq(core.hold_items(r.box),{{name="iron",quality="rare",count=1}}); f[1]={name="iron",quality="normal",count=1}; run(15,r); eq(inv.get_contents(),{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("decon marked stops input and output", function() local r,inv,f,p,b,v,l,o=fixture(); f[1]={name="iron",quality="normal",count=1}; core.accept(r.box,"copper","normal",1,1,1,1,false); core.flush_partials(r.box,1); inv.insert({name="copper",quality="normal",count=1}); tick.on_decon({entity=r.entity},true); run(7,r); eq(r.box.stored_count,1); eq(#p[1],0); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("decon cancel resumes", function() local r,inv,f,p,b,v,l,o=fixture(); f[1]={name="iron",quality="normal",count=1}; tick.on_decon({entity=r.entity},true); tick.on_decon({entity=r.entity},false); run(7,r); eq(p[1],{{name="iron",quality="normal",count=1}}); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("decon hides led", function() local r,inv,f,p,b,v,l,o=fixture(); tick.on_decon({entity=r.entity},true); run(1,r); eq(l[#l].visible,false); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
- it("decon on unknown entity ignored", function() local r,inv,f,p,b,v,l,o=fixture(); local other={unit_number=99}; tick.on_decon({entity=other},true); eq(r.decon,nil); eq(storage.boxes[99],nil); belt_io.pull=o.pull; belt_io.push=o.push; circuit.evaluate=o.evaluate; led.set=o.set end)
-
+  it("timeout ticks custom and global", function() local r=fixture().rec; r.settings.timeout_mode="custom"; r.settings.timeout_s=3; eq(tick.timeout_ticks(r),180); r.settings.timeout_mode="global"; settings.global[N.SETTING_TIMEOUT].value=7; eq(tick.timeout_ticks(r),420) end)
+  it("on research caches belt stack size", function() local f=fixture(); local old=belt_io.belt_stack_size; belt_io.belt_stack_size=function(x) return x.index+2 end; tick.on_research({force={index=4}}); eq(storage.belt_stack[4],6); belt_io.belt_stack_size=old; f.restore() end)
+  it("invalid entity drops rec", function() local f=fixture(); f.rec.entity.valid=false; f.run(1); eq(storage.boxes[1],nil); f.restore() end)
+  it("decon stops visits and pauses arms", function() local f=fixture(); tick.on_decon({entity=f.rec.entity},true); f.run(1); eq(#f.pushes,0); eq(f.pauses,{{1,true},{2,true}}); eq(f.ledcalls[#f.ledcalls],{"green",false}); f.restore() end)
 end)
