@@ -178,9 +178,9 @@ describe("modtiers", function()
     -- Per tier (turbo = control): 3 own belts behind, box, 12 own belts in front, north. Belt stack 1 = every item
     -- leaves at once (C-2). Both lanes saturated from far behind; last front tile emptied each tick and counted.
     -- Warm-up 540 ticks, measure 600. Want belt items per lane = belt_speed * 4 * 600 (M-6), within 3 % + 2.
-    -- v15 arms box: warm-up was 180 (blue transit 160). Arms settle once after start: probe `rate diag` (2026-10-01,
-    -- per 60 ticks, blue lane 1: 0 0 3 22 23 22 23 14 23 22 23 22) shows one short dip near tick 450, then steady full
-    -- rate. Test checks steady rate, so warm-up covers that settling (SP-14).
+    -- v15 arms box: warm-up was 180 (blue transit 160); arm swing adds a few ticks before first items leave, so warm-up
+    -- covers start (SP-14). Dips inside the window = defect: arms with hand 12 held items while lane store ran empty
+    -- (blue 213..216 of 225); hand 4 (`N.ARM_HAND`) gives 22 / 23 per 60 ticks without gap (probe `rate diag`).
     force.belt_stack_size_bonus = 0
     local rigs = {}
     -- FND-0030: blue always measured (was only a chain tier without space-age; 200/225 per lane before fix).

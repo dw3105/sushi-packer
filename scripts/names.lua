@@ -12,7 +12,8 @@ N.ARM = "sushi-packer-arm"                 -- hidden inserter, locked to one bel
 N.STORE = "sushi-packer-lane-store"        -- hidden chest, one per lane
 N.STORE_SLOTS = 12                         -- slots per lane store (author 2026-10-01)
 N.ARM_FILTERS = 5                          -- skip-kind filter slots per arm (engine max)
-N.ARM_HAND = 12                            -- items one arm may hold (prototype stack_size_bonus 11 + 1)
+N.ARM_HAND = 4                             -- items one arm may hold (prototype stack_size_bonus = hand - 1). Was 12: arms kept items
+                                           -- in hand until 12 of one kind while lane store ran empty (trace 2026-10-01, blue dip)
 -- arms per lane by belt speed (tiles per tick), first row whose `max` >= speed (FND-0042)
 N.ARMS = { { max = 0.03125, n = 2 }, { max = 0.125, n = 4 }, { max = math.huge, n = 8 } }
 

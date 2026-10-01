@@ -181,6 +181,13 @@ describe("probe v15", function()
           local c = out.get_item_count()
           if t > 600 then r.got[lane] = r.got[lane] + c end
           if lane == 1 then r.b = r.b or {}; local k = math.floor((t - 1) / 60) + 1; r.b[k] = (r.b[k] or 0) + c end
+          -- dip trace: what does lane 1 store / arms look like while nothing reaches the far tile
+          if lane == 1 and r.tier == "blue" and t > 300 and t <= 900 then
+            r.tr = r.tr or {}
+            local held = 0
+            for _, a in ipairs(r.rec.arms[1]) do if a.held_stack.valid_for_read then held = held + a.held_stack.count end end
+            r.tr[#r.tr + 1] = string.format("%d:s%d,h%d,b%d,%s", t, r.rec.invs[1].get_item_count(), held, r.feed.get_transport_line(1).get_item_count() , tostring(r.rec.skip[1] ~= ""))
+          end
           out.clear()
         end
       end
@@ -199,6 +206,14 @@ describe("probe v15", function()
           rep[#rep + 1] = r.tier .. " stores " .. table.concat(kinds, " ")
         end
         for _, r in ipairs(rigs) do local o = {}; for k = 1, 12 do o[k] = r.b[k] or 0 end; rep[#rep + 1] = r.tier .. " lane1 per 60 ticks: " .. table.concat(o, " ") end
+        for _, r in ipairs(rigs) do if r.tr then
+          -- print 40 ticks around the lowest store count
+          local low, at = 1e9, 1
+          for i, x in ipairs(r.tr) do local sc = tonumber(x:match(":s(%d+)")); if sc < low then low, at = sc, i end end
+          local o = {}
+          for i = math.max(1, at - 25), math.min(#r.tr, at + 15) do o[#o + 1] = r.tr[i] end
+          rep[#rep + 1] = "trace(tick:store,held,belt_behind_far,skipped) " .. table.concat(o, " ")
+        end end
         local c = remote.call("sushi-packer", "counters")
         rep[#rep + 1] = string.format("counters visits=%d pushes=%d items_out=%d", c.visits, c.pushes, c.items_out)
         storage.sp_counters = nil

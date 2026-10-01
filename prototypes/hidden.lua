@@ -38,7 +38,7 @@ function M.make()
   arm.allow_custom_vectors = true
   arm.chases_belt_items = false
   arm.uses_inserter_stack_size_bonus = false
-  arm.stack_size_bonus = 11
+  arm.stack_size_bonus = N.ARM_HAND - 1
   arm.bulk = true
   arm.rotation_speed = 0.5
   arm.extension_speed = 1
