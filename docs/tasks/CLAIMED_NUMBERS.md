@@ -38,3 +38,6 @@
 | `034` | `sushi-packer/agent` | v14 bench-scene: builder tier / flow / seed, bench mod settings + loader + counter log | 2026-10-01 |
 | `035` | `sushi-packer/agent` | v14 bench-run: run.sh tier / mod set / flow, parser per box + per item, bench-all | 2026-10-01 |
 | `036` | `sushi-packer/agent` | v14 counters: work counts in tick + belt_io, off unless asked | 2026-10-01 |
+| `037` | `sushi-packer/agent` | v14 rung 1 core: cheaper bookkeeping, same behaviour | 2026-10-01 |
+| `038` | `sushi-packer/agent` | v14 rung 1 belt_io: cheap neighbour check, cached lines | 2026-10-01 |
+| `039` | `sushi-packer/agent` | v14 rung 1 tick: sleeping boxes cost no engine read | 2026-10-01 |
