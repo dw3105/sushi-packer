@@ -136,6 +136,54 @@ local function build_circuit(box, unit, circuit)
   if circuit.flush_signal then flush_signal.elem_value = signal_elem(circuit.flush_signal) end
 end
 
+local function lane_stack(inv, slot)
+  if not inv then return nil end
+  local stack = inv[slot]
+  if stack and stack.valid_for_read then return stack end
+end
+
+local function refresh_lane_buttons(frame, rec)
+  if not frame or not frame.valid or not frame.lanes_section then return end
+  for lane = 1, 2 do
+    local row = frame.lanes_section["lane_" .. lane]
+    if row then
+      for slot = 1, N.STORE_SLOTS do
+        local button = row["lane_slot_" .. slot]
+        local stack = lane_stack(rec.invs and rec.invs[lane], slot)
+        if button then
+          if stack then
+            button.sprite = "item/" .. stack.name
+            button.number = stack.count
+            button.tooltip = stack.quality and stack.quality.name or stack.name
+          else
+            button.sprite = nil
+            button.number = nil
+            button.tooltip = nil
+          end
+        end
+      end
+    end
+  end
+end
+
+function M._refresh(player, rec)
+  if not player or not rec then return end
+  refresh_lane_buttons(frame_for(player), rec)
+end
+
+local function build_lanes(frame, unit, rec)
+  local box = section(frame, { "gui.lanes" }, "lanes_section")
+  for lane = 1, 2 do
+    local row = aligned(box, "lane_" .. lane)
+    for slot = 1, N.STORE_SLOTS do
+      local button = add(row, { type = "sprite-button", name = "lane_slot_" .. slot, style = "slot_button" }, unit, "lane_slot")
+      set_tag(button, "lane", lane)
+      set_tag(button, "slot", slot)
+    end
+  end
+  refresh_lane_buttons(frame, rec)
+end
+
 local function build(player, rec)
   local old = frame_for(player)
   if old then old.destroy() end
@@ -148,6 +196,7 @@ local function build(player, rec)
     anchor = { gui = defines.relative_gui_type.container_gui, position = defines.relative_gui_position.right, names = variant_names },
   })
   local settings, unit = rec.settings, rec.unit_number
+  build_lanes(frame, unit, rec)
   local filters = section(frame, { "gui.filters" }, "filters_section"); build_filters(filters, frame, unit, settings)
   local timeout = section(frame, { "gui.timeout" }, "timeout_section"); build_timeout(timeout, unit, settings)
   local circuit = section(frame, { "gui.circuit-network" }, "circuit_section"); build_circuit(circuit, unit, settings.circuit)
@@ -181,7 +230,20 @@ function M.on_event(e)
   local rec = storage.boxes and storage.boxes[unit]
   if not rec or not rec.settings then return end
   local s, c = rec.settings, rec.settings.circuit
-  if field == "timeout_mode" then
+  if field == "lane_slot" and e.name == defines.events.on_gui_click then
+    local player = game.players[e.player_index]
+    local lane, slot = el.tags.lane, el.tags.slot
+    local stack = lane and slot and lane_stack(rec.invs and rec.invs[lane], slot)
+    if player and stack then
+      local name, count, quality = stack.name, stack.count, stack.quality and stack.quality.name or "normal"
+      local inserted = player.insert({ name = name, count = count, quality = quality }) or 0
+      if inserted > 0 then
+        if inserted >= count then stack.clear()
+        else stack.count = count - inserted end
+        M._refresh(player, rec)
+      end
+    end
+  elseif field == "timeout_mode" then
     s.timeout_mode = el.switch_state == "right" and "custom" or "global"
   elseif field == "timeout_s" then
     local n = timeout_number(el.text, 3600); if n then s.timeout_s = n end
