@@ -272,3 +272,12 @@ tests/offline/test_text_v15.lua::text v15 > gui lane keys in en and de
 tests/offline/test_text_v15.lua::text v15 > no stale slot counts
 tests/offline/test_text_v15.lua::text v15 > changelog has 0.1.15 and 0.2.15
 tests/offline/test_text_v15.lua::text v15 > german avoids banned words
+tests/offline/test_registry.lua::registry > upgrade mine stashes rec
+tests/offline/test_registry.lua::registry > upgrade build takes stash
+tests/offline/test_registry.lua::registry > upgraded rec keeps settings and lane parts
+tests/offline/test_registry.lua::registry > upgraded rec gets tier and dir from new entity
+tests/offline/test_registry.lua::registry > stash from older tick ignored and pruned
+tests/offline/test_registry.lua::registry > stash other force ignored
+tests/offline/test_registry.lua::registry > normal mine removes lane parts
+tests/offline/test_registry.lua::registry > upgrade reconnects missing wires
+tests/offline/test_registry.lua::registry > player mine of marked box removes parts

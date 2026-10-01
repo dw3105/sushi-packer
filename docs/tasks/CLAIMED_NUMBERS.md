@@ -48,3 +48,7 @@
 | `044` | `sushi-packer/agent` | v15 tick: visit loop on lane stores | 2026-10-01 |
 | `045` | `sushi-packer/agent` | v15 lifecycle: hidden parts follow box, old saves | 2026-10-01 |
 | `046` | `sushi-packer/agent` | v15 text: locale en + de, changelog, README, portal | 2026-10-01 |
+| `048` | `sushi-packer/agent` | v16 arms: out arms of one box | 2026-10-01 |
+| `049` | `sushi-packer/agent` | v16 ledger: slow-look rules | 2026-10-01 |
+| `050` | `sushi-packer/agent` | v16 tick: slow look for engine-mode boxes | 2026-10-01 |
+| `051` | `sushi-packer/agent` | v16 lifecycle: arm hand items on mine / death | 2026-10-01 |
