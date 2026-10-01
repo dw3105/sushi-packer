@@ -8,3 +8,10 @@ for _, t in ipairs({ { "sp-test-belt-90", 0.1875 }, { "sp-test-belt-135", 0.2812
   b.minable = nil
   data:extend({ b })
 end
+-- Test-only loader (v14 S0 feed probe): 1x1, never slower than any test belt, may stack on belt.
+do
+  local l = table.deepcopy(data.raw["loader-1x1"]["loader-1x1"])
+  l.name, l.speed, l.max_belt_stack_size, l.adjustable_belt_stack_size = "sp-test-loader", 1, 4, true
+  l.minable, l.next_upgrade = nil, nil
+  data:extend({ l })
+end

@@ -6,6 +6,12 @@
       "url": "/download/AdvancedBeltsUpdated/69112657be9823949ac1fbcc",
       "version": "2.4.0"
     },
+    "BeltSpeedMultiplier": {
+      "file": "BeltSpeedMultiplier_1.0.4.zip",
+      "sha1": "8b531f394fd1c9731dba7171074861102fe202ba",
+      "url": "/download/BeltSpeedMultiplier/6abaaf6d77eac2e3a83bdb82",
+      "version": "1.0.4"
+    },
     "BetterBelts": {
       "file": "BetterBelts_1.4.1.zip",
       "sha1": "9a90684def0fb1391593778528c2eb8e5a369216",
@@ -210,6 +216,18 @@
       "url": "/download/se-space-trains/6a09a8c5b45f34dd88bc7c03",
       "version": "1.0.12"
     },
+    "sei-library": {
+      "file": "sei-library_1.0.17.zip",
+      "sha1": "a71fb6f509e4f0df238cffc04717eb6dacd75737",
+      "url": "/download/sei-library/699e767eddfb4912f5c0fe26",
+      "version": "1.0.17"
+    },
+    "sei-stack-inserters": {
+      "file": "sei-stack-inserters_1.0.10.zip",
+      "sha1": "2603525f4dd9f4bcf0fec59868a40ff96654df32",
+      "url": "/download/sei-stack-inserters/6a3e94322020ee94ff46cf84",
+      "version": "1.0.10"
+    },
     "shield-projector": {
       "file": "shield-projector_0.2.2.zip",
       "sha1": "b38f2d3efa04d91550bef133dd103bf6c015f091",
@@ -299,6 +317,12 @@
       "sha1": "d6ecccfc3205a0cdac647f127d71969317eea06f",
       "url": "/download/space-exploration-postprocess/69e5238ce47d8455bd3cfb6a",
       "version": "0.7.5"
+    },
+    "stack-inserters": {
+      "file": "stack-inserters_1.0.1.zip",
+      "sha1": "0e44b0e296589e82790ca54952c46962ce740c21",
+      "url": "/download/stack-inserters/673167881c74e5a306b34c03",
+      "version": "1.0.1"
     },
     "thinking_brain": {
       "file": "thinking_brain_1.2.4.zip",

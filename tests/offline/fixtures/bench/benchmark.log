@@ -1,0 +1,12 @@
+   1.765 Checksum for script __sushi-packer__/control.lua: 4151979888
+  Performed 5 updates in 17.671 ms
+  avg: 3.534 ms, min: 2.052 ms, max: 5.349 ms
+  checksum: 1559853848
+run 1:
+tick,timestamp,wholeUpdate,latencyUpdate,gameUpdate,planetsUpdate,controlBehaviorUpdate,transportLinesUpdate,electricHeatFluidCircuitUpdate,electricNetworkUpdate,heatNetworkUpdate,fluidFlowUpdate,entityUpdate,turretTargetAcquisition,lightningUpdate,tileHeatingUpdate,particleUpdate,mapGenerator,mapGeneratorBasicTilesSupportCompute,mapGeneratorBasicTilesSupportApply,mapGeneratorCorrectedTilesPrepare,mapGeneratorCorrectedTilesCompute,mapGeneratorCorrectedTilesApply,mapGeneratorVariations,mapGeneratorEntitiesPrepare,mapGeneratorEntitiesCompute,mapGeneratorEntitiesApply,spacePlatforms,collectorNavMesh,collectorNavMeshPathfinding,collectorNavMeshRaycast,crcComputation,consistencyScraper,logisticManagerUpdate,constructionManagerUpdate,pathFinder,trains,trainPathFinder,commander,chartRefresh,luaGarbageIncremental,chartUpdate,scriptUpdate,
+t0,49,5348823,0,2164121,618,86616,279450,80065,110,0,78,1617692,0,0,0,0,621,0,0,0,0,0,0,0,0,0,341,0,0,0,0,1048,1702,9287,0,814,0,1216,0,69595,0,3100318,
+t1,5369082,3118997,0,1143880,495,89919,209236,28422,201,0,107,801528,0,0,0,0,531,0,0,0,0,0,0,0,0,0,295,0,0,0,0,735,1394,2159,0,722,0,881,0,205532,0,1766514,
+t2,8491446,4313119,0,1474636,834,116223,410374,81485,106,0,55,839141,0,0,0,0,528,0,0,0,0,0,0,0,0,0,221,0,0,0,0,12560,1709,2100,0,749,0,849,0,766865,0,2068099,
+t3,12808320,2838489,0,438791,356,49155,294176,47371,75,0,51,36542,0,0,0,0,655,0,0,0,0,0,0,0,0,0,129,0,0,0,0,483,1337,1925,0,387,0,825,0,54195,0,2343018,
+t4,15648769,2052046,0,388293,560,47629,234427,65971,73,0,50,30454,0,0,0,0,379,0,0,0,0,0,0,0,0,0,226,0,0,0,0,538,1009,1134,0,412,0,655,0,29585,0,1631790,
+  19.978 Goodbye

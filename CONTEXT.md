@@ -12,4 +12,8 @@
 
 **Tier chain** — order in which each box recipe needs box before it; upgrade planner follows same order. Main chain = belt speed order. Tier may name its own previous tier instead; that starts separate chain. Space Exploration: main chain yellow → red → blue (→ other mods' tiers by speed), separate chain space → deep space.
 
+**Full flow** — both input lanes of box packed at belt speed with mixed items in belt stacks of 1 to 4, output never blocked.
+
+**Bench row** — one tier, 200 boxes, full flow, belt stack 4. Standing rows: yellow, red, blue, turbo, fastest extra tier live for that game version.
+
 **Root tier** — tier at start of chain; recipe needs no earlier box. Yellow; Space Exploration space tier.

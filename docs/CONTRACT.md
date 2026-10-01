@@ -15,6 +15,7 @@ Changes only by integrator decision recorded in `docs/DECISIONS.md`. Guard tests
 ```lua
 storage.boxes = { [unit_number] = rec }        -- one rec per placed box
 storage.belt_stack = { [force_index] = n }      -- cached 1 + belt_stack_size_bonus, max 4 (O-3)
+storage.sp_counters = nil | { visits = n, reads = n, pulls = n, pushes = n, items_in = n, items_out = n }  -- v14 bench seam, nil = off (normal play), owned by scripts/tick.lua
 storage.upgrade_stash = { [key] = { rec = rec, tick = uint, force = uint } }  -- U-3, key = surface_index..":"..x..":"..y, owned by scripts/registry.lua
 rec = {
   entity = LuaEntity,                            -- container variant
@@ -150,7 +151,23 @@ N-2 read contents = container's native circuit output (items live in inventory, 
 | `tick.on_tick(e)` | per box: circuit → pull → core → push → LED; idle skip; reconcile every 60 ticks |
 | `tick.on_research(e)` | refresh `storage.belt_stack[force.index]` |
 | `tick.timeout_ticks(rec) -> n` | global setting or custom × 60 |
+| `tick.counters_on()` | v14: `storage.sp_counters` = all six fields 0 (restart from 0 when already on) |
+| `tick.counters() -> table\|nil` | v14: plain copy of `storage.sp_counters`, nil when off |
 | `tick.on_decon(e, marked)` | E-8: rec of `e.entity` → `rec.decon = marked`; while true visit skips pull + push, LED hidden |
+
+Counters (v14, only while `storage.sp_counters` is a table; nil = no count, no table write): `visits` +1 per box visit that passes the poll gate in `tick.on_tick` (circuit evaluated); `reads` +1 per `get_detailed_contents()` call in `belt_io.pull`; `pulls` +1 per belt item taken off belt; `items_in` + its accepted item count; `pushes` +1 per belt item put on belt; `items_out` + its item count. `belt_io` reads `storage.sp_counters` itself (no new argument). Remote: `remote.call("sushi-packer", "counters_on")`, `remote.call("sushi-packer", "counters")`.
+
+## Bench seam (v14) - tests/game/bench_builder.lua, tools/bench/
+
+| Thing | Rule |
+|---|---|
+| `builder.build(surface, force, n, origin, opts) -> positions` | `opts` nil or `{}` = old scene, byte-same entity list as v1.14 (yellow, `single`). `opts.tier` = key of `N.TIER` (default `"yellow"`): feed belts, box placer, splitters follow `N.TIER[tier].belt` / `.splitter`, `N.placer(tier)`. `opts.flow` = `"single"` (default) or `"stacks"`. `opts.seed` = integer (default 1). `opts.loader` = loader entity name (default: `"loader-1x1"` when tier yellow + flow single, else `"sushi-packer-bench-loader"`). Returns box positions, one per box, as before. |
+| flow `single` | one infinity chest -> output loader -> belts -> box -> belts -> input loader -> void chest (old scene). Engine fact: loader takes only first chest item, belt stack 1 -> single `iron-plate` only (FND-0036). |
+| flow `stacks` | per box 4 infinity chests (one item each, `at-least`) -> 4 output loaders with `loader_belt_stack_size_override` 1, 2, 3, 4 -> 2 tier splitters -> 1 tier splitter -> belts -> box. Engine gives full belt rate, belt stacks 1..4 in even shares, fixed cycle (FND-0036). Seed picks, per box, which 4 of 5 item names and which loader row carries which stack size. No script feed. |
+| bench mod startup settings | `sushi-packer-bench-boxes` (int, 1..1000, default 200), `sushi-packer-bench-tier` (string, default `yellow`), `sushi-packer-bench-flow` (string, `single` \| `stacks`, default `single`), `sushi-packer-bench-seed` (int, default 1) |
+| bench mod prototype | `sushi-packer-bench-loader`: `loader-1x1` copy, `speed = 1`, `max_belt_stack_size = 4`, `adjustable_belt_stack_size = true`, made in bench mod `data-final-fixes.lua` |
+| bench mod log line | every 600 ticks: `sushi-packer-bench counters tick=<game.tick> visits=<n> reads=<n> pulls=<n> pushes=<n> items_in=<n> items_out=<n>` via `log()` |
+| `tools/bench/run.sh` result line | `bench FV=<fv> boxes=<n> ticks=<n> script_ms_avg=<f> whole_ms_avg=<f> tier=<key> modset=<set\|none> flow=<flow> ms_per_box=<f> items_in=<n> us_per_item=<f\|na> load1=<f>` (old five fields first, unchanged) |
 
 ## scripts/filter.lua — pass-through rule (lane 015, v6)
 

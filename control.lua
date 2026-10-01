@@ -76,7 +76,12 @@ for _, ev in ipairs({
 end
 
 -- U-8: simulations (Factoriopedia, tips) load this control.lua via `mods`; their init calls scene.
-remote.add_interface(N.SIM_INTERFACE, { scene = function(kind) sim.scene(kind) end })
+-- v14 bench seam: work counters, off until asked (tools/bench only; no caller in normal play).
+remote.add_interface(N.SIM_INTERFACE, {
+  scene = function(kind) sim.scene(kind) end,
+  counters_on = function() tick.counters_on() end,
+  counters = function() return tick.counters() end,
+})
 
 -- In-game tests (FactorioTest). Absent in release zip: tests/ not shipped, mod not active.
 if script.active_mods["factorio-test"] then

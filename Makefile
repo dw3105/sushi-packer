@@ -42,7 +42,7 @@ load-check: ## Headless load of release files on FV, zero errors. MODSET=<set> a
 	$(if $(MODSET),tools/fetch_mods.py fetch $(FV) $(MODSET) &&) MODSET=$(MODSET) tools/load_check.sh $(FV)
 
 test-modsets: ## v9: tests/game/test_modtiers.lua once per mod set of FV (fetch + run). Integrator only
-	@set -e; for s in $$(python3 -c "import json,sys; d=json.load(open('tools/modsets.json')); print(' '.join(k for k,v in d.items() if not k.startswith('_') and '$(FV)' in v['fv']))"); do \
+	@set -e; for s in $$(python3 -c "import json,sys; d=json.load(open('tools/modsets.json')); print(' '.join(k for k,v in d.items() if not k.startswith('_') and '$(FV)' in v['fv'] and not v.get('bench_only')))"); do \
 	  tools/fetch_mods.py fetch $(FV) $$s; echo "== modset $$s"; MODSET=$$s $(GATE) tools/run_tests.sh $(FV) --modtiers || fail="$$fail $$s"; done; \
 	  test -z "$$fail" || { echo "test-modsets-$(FV) FAIL:$$fail"; exit 1; }; echo "test-modsets-$(FV)-ok"
 

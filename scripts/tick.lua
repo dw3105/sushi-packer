@@ -169,6 +169,10 @@ function M.on_tick(e)
   end
 end
 
+-- v14 bench seam (docs/CONTRACT.md): work counters in storage.sp_counters, nil = off. Stubs until lane 036.
+function M.counters_on() end
+function M.counters() return nil end
+
 -- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off.
 function M.on_decon(e, marked)
   local entity = e and e.entity

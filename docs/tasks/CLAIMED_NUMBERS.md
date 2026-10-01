@@ -35,3 +35,6 @@
 | `031` | `sushi-packer/agent` | v11 locale: SE space text, German locale | 2026-09-29 |
 | `032` | `sushi-packer/agent` | v12 copy: library record guard (FND-0033) | 2026-09-30 |
 | `033` | `sushi-packer/agent` | v13 extra: copy collision mask to extra tiers (FND-0034) | 2026-09-30 |
+| `034` | `sushi-packer/agent` | v14 bench-scene: builder tier / flow / seed, bench mod settings + loader + counter log | 2026-10-01 |
+| `035` | `sushi-packer/agent` | v14 bench-run: run.sh tier / mod set / flow, parser per box + per item, bench-all | 2026-10-01 |
+| `036` | `sushi-packer/agent` | v14 counters: work counts in tick + belt_io, off unless asked | 2026-10-01 |
