@@ -128,10 +128,13 @@ function M.on_removed(e)
     M.stash(rec)
     return
   end
+  local held = arms.drain_hands and arms.drain_hands(rec) or {}
   if e.buffer then
     for _, item in ipairs(store_items(rec)) do e.buffer.insert({ name = item.name, count = item.count, quality = item.quality }) end
+    for _, item in ipairs(held) do e.buffer.insert({ name = item.name, count = item.count, quality = item.quality }) end
   else
     spill(entity, store_items(rec))
+    spill(entity, held)
   end
   arms.destroy(rec)
   led.destroy(rec)
@@ -143,8 +146,10 @@ function M.on_died(e)
   local rec = M.get(entity)
   if not rec then return end
   local contents = inventory_items(entity)
+  local held = arms.drain_hands and arms.drain_hands(rec) or {}
   spill(entity, contents_as_array(contents))
   spill(entity, store_items(rec))
+  spill(entity, held)
   arms.destroy(rec)
   led.destroy(rec)
   boxes()[rec.unit_number] = nil
