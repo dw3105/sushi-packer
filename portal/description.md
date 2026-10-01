@@ -2,6 +2,8 @@
 
 **Turn a mixed "sushi" belt into neat stacked belt items — without splitting lanes.**
 
+The box uses much less script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them.
+
 Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind ride in on both lanes. The box keeps the two lanes apart, gathers each item kind until it fills one belt stack, then sends that stack out on the same lane it came in on. One belt, many item kinds, fully stacked — no splitters, no filter inserters, no sorting spaghetti.
 
 ## How it works
@@ -9,9 +11,9 @@ Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind rid
 - **Lanes kept.** Left lane stays left, right lane stays right. Nothing crosses over.
 - **Release at belt stack.** A stack leaves as soon as one item kind fills a belt stack: 1 item before belt stacking research (pass-through), then whatever research sets — 4 in vanilla Space Age, more when a mod raises it. Never more than the item's own stack size.
 - **Flush timeout.** Partial stacks older than the timeout leave anyway (map default, or per box). `0` = never.
-- **Lanes never starve each other.** Each lane owns 24 of the 48 slots. A blocked output lane fills only its own half; the other lane keeps flowing.
+- **Separate lanes.** Each lane has 12 slots. A blocked output lane fills only its own store; the other lane keeps flowing.
 - **One stack per item.** Each lane holds at most one full item stack of each item and quality (e.g. 50 ore, modded stack sizes included). More of that item waits on the belt.
-- **Nothing lost.** When a lane's 24 slots are used, the box flushes that lane's oldest partial stack to make room. If the belt in front is blocked, that lane fills up and its lane on the belt behind backs up — no item is ever dropped.
+- **Nothing lost.** If the belt in front is blocked, that lane fills up and its lane on the belt behind backs up — no item is ever dropped.
 - **Keeps up with its belt.** Each tier moves exactly its belt's throughput, and items never stop at the belt end in front of the box.
 
 ## Tiers
@@ -54,7 +56,7 @@ Each tier has its own technology after its belt technology. Upgrade planner swap
 - 10 skip filters with splitter-style quality rule (`=`, `≠`, `>`, `<`, `≥`, `≤`, or any quality): matching items are never stored and go straight out on the same lane.
 - Circuit network: reads contents as signals, enable/disable condition, flush signal.
 - Own flush timeout or map default.
-- Status light: green = empty, yellow = holding items, red = a lane is full (its 24 slots used).
+- Status light: green = empty, yellow = holding items, red = a lane is full (its 12 slots used).
 
 ## Good to know
 
