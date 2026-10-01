@@ -109,3 +109,6 @@ Mod sets (`make test-modsets`): 2.0 arig, hyarion, arig-off, k2so, arig-k2so, bo
 | R-1 (v14 text, v1.15) | PASS (2 pairs per row, no A/A run) | PASS (not slower) | FND-0043: FV 2.0 yellow -62 / -68 %, red -73 / -66 %, blue -66 / -64 %, turbo -76 / -73 %, `ub-ultimate` -79 / -79 %, player rig `g433` -58 / -65 %; FV 2.1 yellow -68 / -67 %, turbo -74 / -72 %, `kr-superior` -70 / -71 %. Rule text asks mean of >= 6 pairs after A/A band: not done as written. |
 | R-3 (v1.15) | NOT-TESTED | NOT-TESTED | `make bench-all` not run as such; same rows measured as pairs (FND-0043). |
 | T-2 (v1.15) | NOT-TESTED | NOT-TESTED | no multiplayer run; old-save load tested on 2.0 only (FND-0043); hidden parts are engine entities, script state in `storage` |
+| R-1 (v14 text, v1.15, final) | PASS | PASS (not slower) | FND-0044: A/A band +-6.4 %, 6 alternating pairs per row, mean cut 62.7..77.8 % on FV 2.0 rows + player rig (worst pair 57.8 %), FV 2.1 67.8..71.9 % less. Gain x2.7..x4.5, not x10. |
+| R-3 (v1.15, final) | PASS | PASS | FND-0044: `make bench-all FV=2.0` and `FV=2.1` logged, 5 rows each. |
+| old save (V14-11) | PASS | PASS | FND-0043: 0.1.14 -> 0.1.15 and 0.2.14 -> 0.2.15: `fed=593 front1=229 front2=279 store=85 mismatch[] lane_cross=0`. |

@@ -86,6 +86,6 @@ for pair in "boxes $BOXES" "tier $TIER" "flow $FLOW" "seed $SEED" "box $BOXV"; d
   set -- $pair
   (cd "$FT" && npx fmtk settings set startup "sushi-packer-bench-$1" "$2" --modsPath "$OUT/mods")
 done
-"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$SAVE" >"$OUT/create.log" 2>&1 || step_fail create "$OUT/create.log"
+"$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$SAVE" --map-gen-seed 1 >"$OUT/create.log" 2>&1 || step_fail create "$OUT/create.log"
 "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --benchmark "$SAVE" --benchmark-ticks "$TICKS" --benchmark-runs 1 --benchmark-verbose all >"$LOG" 2>&1 || step_fail benchmark "$LOG"
 python3 "$ROOT/tools/bench/parse.py" "$LOG" "$OUT/write/factorio-current.log" "$FV" "$BOXES" "$TICKS" "$TIER" "$MODSET" "$FLOW" "$BOX"

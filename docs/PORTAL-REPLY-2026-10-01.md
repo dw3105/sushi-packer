@@ -12,11 +12,11 @@ You were right, and thanks for measuring it. The figure I gave before (about 0.0
 Measured on my test machine (a slow shared VM), packers at full belt, script time before → after:
 
 - your setup (Space Exploration + Advanced Belts 2.0 + Belt Speed Multiplier ×2 + SE stacking), 5 extreme packers: about 1.0 ms → 0.4 ms in total, of which the packers themselves about 0.85 ms → 0.25 ms
-- 200 yellow packers: 5.2 ms → 1.8 ms
-- 200 turbo packers: 22 ms → 5.7 ms
-- 200 packers on a 270 items/s belt: 67 ms → 14 ms
+- 200 yellow packers: 5.1 ms → 1.7 ms
+- 200 turbo packers: 20 ms → 5.6 ms
+- 200 packers on a 270 items/s belt: 61 ms → 13.5 ms
 
-So roughly 3 to 5 times less script time, on every tier. Your PC should show smaller numbers than these.
+So roughly 3 to 4 times less script time, on every tier. Your PC should show smaller numbers than these.
 
 What you will notice in game:
 

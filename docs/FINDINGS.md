@@ -449,3 +449,29 @@ R-1 (v14 text): every FV 2.0 row and player rig at least 50 % below v1.14 code: 
 Rig numbers of FND-0041 (x10..x20) were not reached: real loop keeps order, timers, hoarding rule, LED, pause and extra items.
 
 Verified-by: logs `~/.cache/sushi-packer/v14/logs/full-2.0-v15-r5.log`, `full-2.1-v15-r5.log`, `pairs-v15.txt`, `pairs-v15-yellow4.txt`; old save `~/.cache/sushi-packer/v15/oldsave/` (`run-old.log`, `run-new-final.log`, mod `sp-oldsave`), `~/.cache/sushi-packer/v15/oldsave21/` (`run-old.log`, `run-new.log`); scripts `~/.cache/sushi-packer/v14/pairs-v15.sh`, `pairs-yellow.sh`
+
+## FND-0044 - v1.15 speed proof as R-1 words it: noise check, 6 pairs, bench-all; bench map was random
+
+Measured 2026-10-01 17:36-20:16 UTC, dev-vm, load1 1.9..7. Adds to FND-0043 (rounds 1-2); rounds 3-6 same script, new code `4b22600`. Yellow rounds 1-2 = 4-arm reruns.
+
+Noise (A/A, v1.14 code against itself, FV 2.0, alternating): yellow 5.032 / 5.355 (+6.4 %), 5.883 / 5.710 (-2.9 %); turbo 23.525 / 22.119 (-6.0 %), 22.891 / 21.847 (-4.6 %). Band: +-6.4 %.
+
+| FV | Row | Pairs | Base mean | New mean | Mean cut | Worst pair | Gain |
+|---|---|---|---|---|---|---|---|
+| 2.0 | yellow | 6 | 5.127 | 1.723 | 66.4 % | 62.3 % | x3.0 |
+| 2.0 | red | 6 | 9.562 | 3.179 | 66.4 % | 63.1 % | x3.0 |
+| 2.0 | blue | 6 | 21.157 | 7.874 | 62.7 % | 60.7 % | x2.7 |
+| 2.0 | turbo | 6 | 19.981 | 5.592 | 71.7 % | 62.8 % | x3.6 |
+| 2.0 | `ub-ultimate` | 6 | 61.091 | 13.518 | 77.8 % | 75.5 % | x4.5 |
+| 2.0 | player rig `g433` | 6 | 1.015 | 0.370 | 63.4 % | 57.8 % | x2.7 |
+| 2.1 | yellow | 6 | 5.149 | 1.654 | 67.8 % | 66.8 % | x3.1 |
+| 2.1 | turbo | 6 | 20.354 | 5.718 | 71.9 % | 69.6 % | x3.6 |
+| 2.1 | `kr-superior` | 6 | 35.019 | 10.345 | 70.5 % | 65.0 % | x3.4 |
+
+Verdict R-1 (v14 text): every FV 2.0 row and player rig: mean cut 62.7..77.8 %, worst pair 57.8 %, band 6.4 % -> at least 50 % below v1.14: MET. FV 2.1 not slower: MET. Not x10..x20 of rig (FND-0041): gain x2.7..x4.5.
+
+R-3 `make bench-all` (new code, one run per row, 200 boxes, script ms): FV 2.0 yellow 1.508, red 2.835, blue 6.616, turbo 5.030, `ub-ultimate` 12.236; FV 2.1 yellow 1.449, red 2.474, blue 6.050, turbo 5.106, `kr-superior` 8.490.
+
+Bench flaw found: `tools/bench/run.sh` made save with random map seed. On `g433` (Space Exploration terrain) `items_in` differed between runs of same code: new 92300 x4, 86348, 54924; base 92372 x5, 78742. With `--map-gen-seed 1`: new 86012 in 3 of 3 runs, base 86444: counts repeat, both codes alike on same map -> difference came from map, not from box code. Which rig part the terrain blocks: not looked at. Fix: seed pinned in `run.sh` (rows from now on not comparable in `items_in` to rows above on `g433`; vanilla rows showed no such spread).
+
+Verified-by: `~/.cache/sushi-packer/v14/logs/pairs-v15.txt`, `pairs-v15-yellow4.txt`, `pairs-v15-r3-6.txt`, `pairs-v15-aa.txt`, `bench-all-2.0-v15.log`, `bench-all-2.1-v15.log`
