@@ -193,4 +193,135 @@ describe("probe v14", function()
       end
     end)
   end)
+  it("can_insert_at vs front item position", function()
+    -- rung 1 helper: can a few can_insert_at(q) calls replace get_detailed_contents for "front item within x of end"?
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    local belt = surface.create_entity({ name = "turbo-transport-belt", position = { 0.5, 0.5 }, direction = WEST, force = force })
+    local line = belt.get_transport_line(1)
+    local rep = {}
+    for _, x in ipairs({ 0, 0.03, 0.0625, 0.1, 0.125, 0.2, 0.25, 0.3, 0.5 }) do
+      line.clear()
+      local ok = line.insert_at(x, { name = "iron-plate", count = 1 })
+      local d = line.get_detailed_contents()
+      local row = {}
+      for _, q in ipairs({ 0, 0.03, 0.0625, 0.1, 0.125, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75 }) do row[#row + 1] = line.can_insert_at(q) and "1" or "0" end
+      rep[#rep + 1] = string.format("x=%.4f ins=%s pos=%s can[%s]", x, tostring(ok), d[1] and string.format("%.4f", d[1].position) or "-", table.concat(row))
+    end
+    rep[#rep + 1] = "line_length=" .. tostring(line.line_length)
+    local text = table.concat(rep, " ;; ")
+    log("v14 probe caninsert: " .. text)
+    error(text)
+  end)
+  it("r2 loader pair on one tile", function()
+    -- rung 2: belt -> in-loader -> chest (same tile) -> out-loader (waits for full stacks) -> belt. Zero script.
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    force.belt_stack_size_bonus = 3
+    local rigs = {}
+    for i, v in ipairs({ { belt = "transport-belt", out = "sp-test-r2-out" }, { belt = "turbo-transport-belt", out = "sp-test-r2-out" }, { belt = "turbo-transport-belt", out = "sp-test-r2-out-lanes" } }) do
+      local y = i * 6
+      -- feed: lane-distinct items so lane mixing shows: left lane iron (stacks of 1) + copper (2); right lane gears (3) + circuits (1)
+      for x = 12, 7, -1 do surface.create_entity({ name = v.belt, position = { x + 0.5, y + 0.5 }, direction = WEST, force = force }) end
+      local errs = {}
+      local function mk(spec) local ok, e = pcall(surface.create_entity, spec); if not ok then errs[#errs + 1] = tostring(e) end; return ok and e or nil end
+      local chest = mk({ name = "sp-test-r2-chest", position = { 6.5, y + 0.5 }, force = force })
+      local lin = mk({ name = "sp-test-r2-in", position = { 6.5, y + 0.5 }, direction = WEST, force = force, type = "input" })
+      local lout = mk({ name = v.out, position = { 6.5, y + 0.5 }, direction = WEST, force = force, type = "output" })
+      local outb
+      for x = 5, 0, -1 do outb = surface.create_entity({ name = v.belt, position = { x + 0.5, y + 0.5 }, direction = WEST, force = force }) end
+      rigs[#rigs + 1] = { tag = v.belt .. "/" .. v.out, feed = surface.find_entity(v.belt, { 12.5, y + 0.5 }), last = outb, chest = chest, lin = lin, lout = lout, errs = errs,
+        got = { {}, {} }, n = { 0, 0 }, hist = {}, fed = { 0, 0 } }
+    end
+    local t = 0
+    local left, right = { { "iron-plate", 1 }, { "copper-plate", 2 } }, { { "iron-gear-wheel", 3 }, { "electronic-circuit", 1 } }
+    on_tick(function()
+      t = t + 1
+      for _, r in ipairs(rigs) do
+        for lane = 1, 2 do
+          local line = r.feed.get_transport_line(lane)
+          local src = lane == 1 and left or right
+          local k = 0
+          while k < 4 and line.can_insert_at_back() do
+            r.fed[lane] = r.fed[lane] + 1; k = k + 1
+            local e = src[r.fed[lane] % 2 + 1]
+            line.insert_at_back({ name = e[1], count = e[2] }, e[2])
+          end
+          local out = r.last.get_transport_line(lane)
+          if t > 600 then
+            for _, d in ipairs(out.get_detailed_contents()) do
+              r.n[lane] = r.n[lane] + 1
+              local key = d.stack.name:sub(1, 6) .. d.stack.count
+              r.got[lane][key] = (r.got[lane][key] or 0) + 1
+            end
+          end
+          out.clear()
+        end
+      end
+      if t >= 1200 then
+        local rep = {}
+        for _, r in ipairs(rigs) do
+          local function show(m) local o = {}; for k, c in pairs(m) do o[#o + 1] = k .. "x" .. c end; table.sort(o); return table.concat(o, " ") end
+          local inv = r.chest and r.chest.valid and r.chest.get_inventory(defines.inventory.chest)
+          local cont = {}
+          if inv then for _, c in ipairs(inv.get_contents()) do cont[#cont + 1] = c.name:sub(1, 6) .. c.count end end
+          rep[#rep + 1] = string.format("%s errs[%s] in=%s out=%s incont=%s outcont=%s belt_items_out L=%d R=%d want=%.0f L[%s] R[%s] chest[%s] feed_back L=%d R=%d",
+            r.tag, table.concat(r.errs, "|"), tostring(r.lin and r.lin.valid), tostring(r.lout and r.lout.valid),
+            tostring(r.lin and r.lin.valid and r.lin.loader_container and r.lin.loader_container.name), tostring(r.lout and r.lout.valid and r.lout.loader_container and r.lout.loader_container.name),
+            r.n[1], r.n[2], prototypes.entity[r.last.name].belt_speed * 4 * 600, show(r.got[1]), show(r.got[2]), table.concat(cont, " "), r.fed[1], r.fed[2])
+        end
+        local text = table.concat(rep, " ;; ")
+        log("v14 probe r2pair: " .. text)
+        error(text)
+      end
+    end)
+  end)
+  it("r2 engine input into box chest", function()
+    -- rung 2 candidate G: belt -> in-loader (box tile) -> chest on same tile. Rate per lane, stop by script, chest full.
+    local surface, force = game.surfaces[1], game.forces.player
+    clear(surface)
+    force.belt_stack_size_bonus = 3
+    local rigs = {}
+    for i, v in ipairs({ { belt = "transport-belt" }, { belt = "turbo-transport-belt" }, { belt = "sp-test-belt-270" }, { belt = "turbo-transport-belt", stop = "active" }, { belt = "turbo-transport-belt", stop = "disabled_by_script" }, { belt = "turbo-transport-belt", stacks = true } }) do
+      local y = i * 4
+      for x = 12, 7, -1 do surface.create_entity({ name = v.belt, position = { x + 0.5, y + 0.5 }, direction = WEST, force = force }) end
+      local chest = surface.create_entity({ name = "sp-test-r2-chest", position = { 6.5, y + 0.5 }, force = force })
+      local lin = surface.create_entity({ name = "sp-test-r2-in", position = { 6.5, y + 0.5 }, direction = WEST, force = force, type = "input" })
+      rigs[#rigs + 1] = { v = v, feed = surface.find_entity(v.belt, { 12.5, y + 0.5 }), chest = chest, lin = lin, fed = { 0, 0 }, at600 = 0, at900 = 0, note = "" }
+    end
+    local t = 0
+    on_tick(function()
+      t = t + 1
+      for _, r in ipairs(rigs) do
+        local inv = r.chest.get_inventory(defines.inventory.chest)
+        for lane = 1, 2 do
+          local line = r.feed.get_transport_line(lane)
+          local k = 0
+          while k < 4 and line.can_insert_at_back() do
+            k = k + 1; r.fed[lane] = r.fed[lane] + 1
+            local c = r.v.stacks and (r.fed[lane] % 4 + 1) or 1
+            line.insert_at_back({ name = lane == 1 and "iron-plate" or "copper-plate", count = c }, c)
+          end
+        end
+        if t % 30 == 0 and not r.v.full then inv.clear() end  -- keep chest empty: measure pure rate
+        if t == 600 then r.fed600 = { r.fed[1], r.fed[2] } end
+        if t == 900 then
+          r.fed900 = { r.fed[1], r.fed[2] }
+          if r.v.stop == "active" then local ok, e = pcall(function() r.lin.active = false end); r.note = "set=" .. tostring(ok) .. " " .. tostring(not ok and e or r.lin.active) end
+          if r.v.stop == "disabled_by_script" then local ok, e = pcall(function() r.lin.disabled_by_script = true end); r.note = "set=" .. tostring(ok) .. " read=" .. tostring(r.lin.disabled_by_script) end
+        end
+      end
+      if t >= 1200 then
+        local rep = {}
+        for _, r in ipairs(rigs) do
+          local want = prototypes.entity[r.feed.name].belt_speed * 4 * 300
+          rep[#rep + 1] = string.format("%s%s%s belt_items 600-900 L=%d R=%d want=%.0f | 900-1200 L=%d R=%d %s", r.feed.name, r.v.stop and ("/stop:" .. r.v.stop) or "", r.v.stacks and "/stacks" or "",
+            r.fed900[1] - r.fed600[1], r.fed900[2] - r.fed600[2], want, r.fed[1] - r.fed900[1], r.fed[2] - r.fed900[2], r.note)
+        end
+        local text = table.concat(rep, " ;; ")
+        log("v14 probe r2in: " .. text)
+        error(text)
+      end
+    end)
+  end)
 end)

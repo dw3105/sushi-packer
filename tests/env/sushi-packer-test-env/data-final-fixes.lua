@@ -15,3 +15,22 @@ do
   l.minable, l.next_upgrade = nil, nil
   data:extend({ l })
 end
+-- Test-only (v14 rung 2 probes, FND-0039): engine movers. Two 1x1 loaders reaching a chest on their own tile,
+-- output loader waits for full belt stacks, optional per-lane filters; chest without collision.
+do
+  local function loader(name, fields)
+    local l = table.deepcopy(data.raw["loader-1x1"]["loader-1x1"])
+    l.name, l.speed, l.minable, l.next_upgrade = name, 1, nil, nil
+    l.container_distance = 0
+    l.max_belt_stack_size, l.adjustable_belt_stack_size = 4, true
+    for k, v in pairs(fields) do l[k] = v end
+    data:extend({ l })
+  end
+  -- Engine rule (probe 2026-10-01): every belt-connectable must collide with every other one -> one loader per tile.
+  loader("sp-test-r2-in", {})
+  loader("sp-test-r2-out", { wait_for_full_stack = true })
+  local c = table.deepcopy(data.raw.container["steel-chest"])
+  c.name, c.minable, c.next_upgrade = "sp-test-r2-chest", nil, nil
+  c.collision_mask = { layers = {} }
+  data:extend({ c })
+end
