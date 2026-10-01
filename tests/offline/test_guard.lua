@@ -6,7 +6,7 @@ describe("guard", function()
     local mods = {}
     for m in pairs(C) do mods[#mods + 1] = m end
     table.sort(mods)
-    eq(mods, { "belt_io", "circuit", "copy", "core", "filter", "gui", "led", "registry", "sim", "tick" }, "modules")
+    eq(mods, { "arms", "belt_io", "circuit", "copy", "core", "filter", "gui", "led", "ledger", "registry", "sim", "tick" }, "modules")
     for _, m in ipairs(mods) do
       package.loaded["scripts." .. m] = nil
       local M = require("scripts." .. m)
@@ -20,7 +20,7 @@ describe("guard", function()
 
   it("no require inside runtime functions", function()
     -- Factorio: "Require can't be used outside of control.lua parsing" (v9 S2, belt_io.lane_rate crash on 2.0.77).
-    for _, f in ipairs({ "control.lua", "scripts/belt_io.lua", "scripts/circuit.lua", "scripts/copy.lua", "scripts/core.lua",
+    for _, f in ipairs({ "control.lua", "scripts/arms.lua", "scripts/ledger.lua", "scripts/belt_io.lua", "scripts/circuit.lua", "scripts/copy.lua", "scripts/core.lua",
         "scripts/filter.lua", "scripts/gui.lua", "scripts/led.lua", "scripts/registry.lua", "scripts/sim.lua", "scripts/tick.lua" }) do
       local n = 0
       for line in io.lines(f) do

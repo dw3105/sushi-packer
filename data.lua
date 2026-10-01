@@ -2,6 +2,7 @@ local N = require("scripts.names")
 
 require("prototypes.packer")
 require("prototypes.tips")
+data:extend(require("prototypes.hidden").make())  -- v15 arms box hidden parts
 
 local leds = {}
 for _, state in ipairs(N.LED_STATES) do

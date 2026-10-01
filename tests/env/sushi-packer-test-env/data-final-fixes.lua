@@ -57,3 +57,9 @@ do
     data:extend({ l })
   end
 end
+-- Test-only (v15 S0): arm with filter slots (skip-kind probe).
+do
+  local a = table.deepcopy(data.raw.inserter["sp-test-arm"])
+  a.name, a.filter_count = "sp-test-arm-f", 5
+  data:extend({ a })
+end

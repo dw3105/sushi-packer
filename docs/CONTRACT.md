@@ -189,3 +189,55 @@ Counters (v14, only while `storage.sp_counters` is a table; nil = no count, no t
 | `extra.top_vanilla(raw) -> key` | v10: last of `N.TIERS` that is built: always for strict tiers; `N.OPTIONAL_VANILLA` tier only when its belt (`raw["transport-belt"]`) and tech (`raw.technology`, with `unit`) exist. `"turbo"` with space-age, `"blue"` without. |
 | `extra.tiers(raw, mods) -> { {key=, prev=, speed=}, ... }` | active `N.EXTRA` rows. v10 (Q11): some `row.owners[i]` loaded (`mods[name]`), belt exists + not `hidden`, splitter exists, tech exists + not `hidden` + has `unit` (M-1); belt `speed` > top vanilla belt speed unless `row.own_role` (Q7). Sorted by belt `speed`, tie by row order (M-4); `prev` = previous entry key, first = `top_vanilla(raw)`. v11 (M-4, V11-2): row with `after` -> `prev = row.after` (target not active -> row skipped); `own_role` row without `after` -> `prev = nil` (root); both leave main chain, other rows keep speed chain. Every skip `log()`s key + reason. `mods` = data-stage global `mods`. |
 | `extra.build(raw)` | for each of `tiers(raw, mods)`: item, recipe (M-5; v10: `N.EXTRA_RECIPE` when items `stack-inserter` + `quantum-processor` exist, else `N.EXTRA_RECIPE_NOSA`), tech (U-1 rule), placer, 4 variants, remnant via `prototypes/tier.lua`; top vanilla variants + each extra `next_upgrade` = next in chain, same direction. v11: root (`prev = nil`) recipe = `N.EXTRA_RECIPE_ROOT.base` 1 + inserters and circuits × `mult`, no previous tier tech; `next_upgrade` only within one chain (U-3). Called by `data-final-fixes.lua`. |
+
+## v15 arms box seam (V15-1) - frozen for lanes 040..046
+
+Box = visible container variant (unchanged prototype, 48 slots: holds only extra items of old saves and items put in from outside) + hidden parts on same tile: 2 lane stores (`N.STORE`, `N.STORE_SLOTS` = 12 slots) + n arms per lane (`N.ARM`, n = `arms.count(belt speed)`). Arms take items from tile behind box, each arm from one belt lane only, into its lane store. Script moves nothing in; it only pushes belt stacks out of each lane store onto same lane of front belt (`belt_io.push`).
+
+Lane index: 1 = left, 2 = right, facing belt motion (as everywhere). Kind = (item name, quality name). Belt stack N for a kind = `min(bss, item stack_size)`.
+
+### rec fields (new, in `storage.boxes[unit_number]`)
+
+```lua
+rec.stores = { LuaEntity, LuaEntity }          -- lane stores, owned by scripts/arms.lua
+rec.invs = { LuaInventory, LuaInventory }      -- their chest inventories (cached), owned by scripts/arms.lua
+rec.arms = { { LuaEntity, ... }, { ... } }     -- arms per lane, owned by scripts/arms.lua
+rec.paused = { bool, bool }                    -- last pause state per lane, owned by scripts/arms.lua
+rec.skip = { string, string }                  -- signature of last skip-kind filter set per lane, owned by scripts/arms.lua
+rec.ledger = <ledger state>                    -- owned by scripts/ledger.lua, plain data
+rec.extra = { { name=, quality=, count=, lane= }, ... } | nil   -- old-save items still in box container, leave first (V14-11); owned by scripts/registry.lua (made) and scripts/tick.lua (drained)
+```
+
+`rec.box` (old core box) exists only in recs of old saves until migrated, then nil. `rec.in_credit` unused. Other fields as above.
+
+### scripts/ledger.lua - pure, no game global, plain data only (lane 041)
+
+| Signature | Does |
+|---|---|
+| `ledger.new() -> state` | `{ seen = { {}, {} } }`: per lane map `name .. "\0" .. quality` -> tick kind was first seen in store |
+| `ledger.plan(state, lane, contents, opts) -> list` | `contents` = array `{ name=, quality=, count= }` (shape of `LuaInventory.get_contents()`), `opts = { tick=, bss=, stack_size = function(name) -> n, timeout_ticks = n (0 = off), slots_used = n, slots = n, skip = function(name, quality) -> bool or nil, flush_all = bool }`. First updates `state.seen[lane]`: kind present and unknown -> `tick`; kind no longer present -> removed. Returns belt items to push, in order, each `{ name=, quality=, count= }` with `count <= N`: (1) skip-list kinds (`opts.skip` true): whole count, pieces of N, last piece smaller, kinds ordered by first seen then name then quality; (2) full stacks: kinds with `count >= N`, `floor(count / N)` pieces of N each, kinds ordered by first seen, tie name then quality; (3) flush pieces (`count % N`, after that kind's full stacks): every kind when `opts.flush_all`; kinds with `timeout_ticks > 0 and tick - seen >= timeout_ticks`; and when `slots_used >= slots` and steps 1-2 gave nothing: oldest kind only. Never changes `contents`. Same input -> same output (no `pairs` order in result). |
+| `ledger.hoard(contents, stack_size) -> kinds` | C-6: kinds whose `count >= stack_size(name)`: array `{ name=, quality= }`, sorted by name then quality, at most `N.ARM_FILTERS` (largest count first when more) |
+| `ledger.led(used_left, used_right, slots) -> "green"\|"yellow"\|"red"` | used slots per lane store: both 0 -> green; either `>= slots` -> red; else yellow (V-2..V-4 on lane stores) |
+
+### scripts/arms.lua - hidden parts adapter (lane 042)
+
+| Signature | Does |
+|---|---|
+| `arms.count(speed) -> n` | arms per lane from `N.ARMS`: first row with `max >= speed` |
+| `arms.create(rec)` | needs `rec.entity`, `rec.tier`, `rec.dir`. Lane stores: reuse valid `rec.stores[lane]`, else `surface.create_entity{ name = N.STORE, position = box position, force = box force }`; `rec.invs[lane] = store.get_inventory(defines.inventory.chest)`. Destroys old arms, then per lane `arms.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)` arms: `create_entity{ name = N.ARM, position = box position, force = }`, `pickup_position` = centre of tile behind box (opposite `rec.dir`), `drop_position` = box position, `pickup_from_left_lane = lane == 1`, `pickup_from_right_lane = lane == 2`, `drop_target = rec.stores[lane]`. Every part: `destructible = false`. Wires: for `defines.wire_connector_id.circuit_red` and `circuit_green`: `store.get_wire_connector(id, true).connect_to(rec.entity.get_wire_connector(id, true), false, defines.wire_origin.script)`. Resets `rec.paused = { false, false }`, `rec.skip = { "", "" }`. |
+| `arms.destroy(rec, keep_stores)` | destroys arms; stores too unless `keep_stores`; clears the rec fields it destroyed. Never moves items. |
+| `arms.pause(rec, lane, paused)` | when `rec.paused[lane] ~= paused`: every arm of lane `disabled_by_script = paused`; remembers. No engine call when unchanged. |
+| `arms.skip(rec, lane, kinds)` | `kinds` = array from `ledger.hoard`. Builds signature string; unchanged -> no engine call. Else every arm of lane: `use_filters = (#kinds > 0)`, `inserter_filter_mode = "blacklist"`, slots 1..`N.ARM_FILTERS`: `set_filter(i, kinds[i] and { name =, quality = , comparator = "=" } or nil)`. |
+| `arms.ensure(rec) -> rebuilt` | any store or arm missing / invalid, or arm count differs from `arms.count` for tier -> `arms.create(rec)`, true; else false |
+
+Engine facts (FND-0040, FND-0042, both versions): all writes above accepted; lane lock exact; works behind belt, underground exit, splitter, loader, any box direction; blacklist filter makes lane wait at skipped kind; `disabled_by_script` stops arms within 30 ticks; box connector reads sum of box + both stores.
+
+### prototypes/hidden.lua (lane 040)
+
+`hidden.make() -> { arm prototype, store prototype }`, data stage, needs `data.raw.inserter["bulk-inserter"]` and `data.raw.container["steel-chest"]`.
+
+### tick visit (lane 044), lifecycle (lane 045), window (lane 043)
+
+- `tick.on_tick`: per due box: `circuit.evaluate`; lane paused when circuit off, `rec.decon`, or lane has `rec.extra` items (`arms.pause`); per lane: extra items of that lane first (out of box container), then `ledger.plan` on `rec.invs[lane].get_contents()` -> pieces pushed in order with `belt_io.push(rec, lane, piece, bss)` while it returns > 0 and `rec.out_credit[lane] >= 1` (credit rule unchanged), each pushed piece removed from its inventory; `arms.skip(rec, lane, ledger.hoard(...))`; LED from `ledger.led` with used slots = `#inv - inv.count_empty_stacks()`. Counters: `visits`, `pushes`, `items_out` as today, `items_in` += pushed item count, `pulls` / `reads` stay 0.
+- `registry`: `arms.create(rec)` after every rec is made or rebound (build, rotate swap, upgrade, clone); mined box: store items into `e.buffer`; died box: store items spilled; old saves (`rec.box` present, `rec.stores` nil): items of box container stay there, `rec.extra` built from old core box records (lane known) + old pass-through hold, `rec.ledger = ledger.new()`, `rec.box = nil`.
+- `gui`: existing relative frame gains section "Lanes": two rows of `N.STORE_SLOTS` slot buttons (lane 1, lane 2) showing `rec.invs[lane]` stacks; click moves that stack to player (`player.insert`, rest stays). Box container grid (native) shows extra items.

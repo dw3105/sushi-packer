@@ -41,3 +41,10 @@
 | `037` | `sushi-packer/agent` | v14 rung 1 core: cheaper bookkeeping, same behaviour | 2026-10-01 |
 | `038` | `sushi-packer/agent` | v14 rung 1 belt_io: cheap neighbour check, cached lines | 2026-10-01 |
 | `039` | `sushi-packer/agent` | v14 rung 1 tick: sleeping boxes cost no engine read | 2026-10-01 |
+| `040` | `sushi-packer/agent` | v15 data: hidden arm + lane store prototypes | 2026-10-01 |
+| `041` | `sushi-packer/agent` | v15 ledger: pure rules for what leaves a lane store | 2026-10-01 |
+| `042` | `sushi-packer/agent` | v15 arms: hidden parts of one box | 2026-10-01 |
+| `043` | `sushi-packer/agent` | v15 gui: lanes section, take by click | 2026-10-01 |
+| `044` | `sushi-packer/agent` | v15 tick: visit loop on lane stores | 2026-10-01 |
+| `045` | `sushi-packer/agent` | v15 lifecycle: hidden parts follow box, old saves | 2026-10-01 |
+| `046` | `sushi-packer/agent` | v15 text: locale en + de, changelog, README, portal | 2026-10-01 |

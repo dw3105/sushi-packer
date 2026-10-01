@@ -19,5 +19,7 @@ return {
   circuit = { compare = 3, evaluate = 1 },
   tick = { on_tick = 1, on_research = 1, timeout_ticks = 1, on_decon = 2, counters_on = 0, counters = 0 },
   filter = { match = 4 },
+  ledger = { new = 0, plan = 4, hoard = 2, led = 3 },
+  arms = { count = 1, create = 1, destroy = 2, pause = 3, skip = 3, ensure = 1 },
   sim = { scene = 1 },
 }

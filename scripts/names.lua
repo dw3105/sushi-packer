@@ -7,6 +7,13 @@ N.DIRS = { "north", "east", "south", "west" }
 N.LED_STATES = { "green", "yellow", "red" }
 N.SLOTS = 48
 N.MAX_BELT_STACK = 4
+-- v15 arms box (V14-9..11, V15-1): hidden parts on box tile. One prototype each for all tiers.
+N.ARM = "sushi-packer-arm"                 -- hidden inserter, locked to one belt lane at runtime
+N.STORE = "sushi-packer-lane-store"        -- hidden chest, one per lane
+N.STORE_SLOTS = 12                         -- slots per lane store (author 2026-10-01)
+N.ARM_FILTERS = 5                          -- skip-kind filter slots per arm (engine max)
+-- arms per lane by belt speed (tiles per tick), first row whose `max` >= speed (FND-0042)
+N.ARMS = { { max = 0.03125, n = 2 }, { max = 0.125, n = 4 }, { max = math.huge, n = 8 } }
 
 -- Per tier: matching vanilla belt, its tech, belt-items per lane per tick (O-4, E-4).
 -- Recipe (U-2, author 2026-09-26): base (steel-chest or previous tier box) + 1 splitter + 2 inserter + circuits.
