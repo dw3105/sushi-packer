@@ -290,7 +290,18 @@ function M.scan(state, lane, contents, opts)
     if not already then add(contents[oldest_i], sizes[oldest_i], keys[oldest_i]) end
   end
   for i = out_n + 1, #SCAN_OUT do SCAN_OUT[i] = nil end
-  local want = flush_all or ready[lane] >= 2 or tick >= (sweep[lane] or 0)
+  -- hand look is costly: only on flush_all, at sweep, or when lane looks jammed (full stacks seen at two looks in a
+  -- row AND store piles up: 16 belt stacks or more). A busy healthy lane holds few items (FND-0046).
+  local piled = false
+  if ready[lane] >= 2 then
+    local total = 0
+    for i = 1, n do total = total + counts[i] end
+    piled = total >= 16 * bss
+  end
+  local piles = state.piled
+  if not piles then piles = { false, false }; state.piled = piles end
+  piles[lane] = piled
+  local want = flush_all or piled or tick >= (sweep[lane] or 0)
   return SCAN_OUT, want
 end
 
@@ -315,7 +326,7 @@ function M.hands(state, lane, held, opts)
   local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
   local n = #held
   local do_sweep = tick >= (sweep[lane] or 0)
-  local jam = (ready[lane] or 0) >= 2 and n >= opts.n_out
+  local jam = state.piled ~= nil and state.piled[lane] == true  -- store piles up: arms holding leftovers are lost capacity
 
   -- per hand: belt stack size of its kind (0 = full hand, not our business), key
   for i = 1, n do

@@ -56,9 +56,17 @@ describe("ledger look", function()
     eq(pieces(ledger.scan(ledger.new(),1,{c("tool",1)},opts())),{})
   end)
   it("scan ready streak and want_hands", function()
+    -- INT (bench 2026-10-01): a busy healthy lane always shows a full stack at a look; hands are read (costly) only
+    -- when store also piles up: 16 belt stacks or more (jam suspicion), at sweep, or on flush_all.
     local s=ledger.new(); s.sweep={10000,10000}; local x={c("iron",4)}
     local _,w=ledger.scan(s,1,x,opts({tick=1})); eq(s.ready[1],1); eq(w,false)
-    _,w=ledger.scan(s,1,x,opts({tick=2})); eq(s.ready[1],2); eq(w,true)
+    _,w=ledger.scan(s,1,x,opts({tick=2})); eq(s.ready[1],2); eq(w,false, "healthy flow: no hand look")
+    local pile={c("iron",40),c("copper",23)}
+    _,w=ledger.scan(s,1,pile,opts({tick=2})); eq(w,false, "63 items < 16 x 4")
+    eq(s.piled[1],false)
+    pile[2].count=24; _,w=ledger.scan(s,1,pile,opts({tick=2})); eq(w,true, "64 items: store piles up"); eq(s.piled[1],true)
+    local t=ledger.new(); t.sweep={10000,10000}
+    _,w=ledger.scan(t,1,pile,opts({tick=1})); eq(w,false, "first look with a pile: streak 1")
     _,w=ledger.scan(s,1,{},opts({tick=3})); eq(s.ready[1],0); eq(w,false)
     _,w=ledger.scan(s,1,{},opts({tick=4,flush_all=true})); eq(w,true)
     _,w=ledger.scan(s,1,{},opts({tick=10000})); eq(w,true)
@@ -102,12 +110,17 @@ describe("ledger look", function()
     eq(merges(merge),{{name="iron",quality="normal",total=25,arms={1,2}}})
   end)
   it("hands jam flushes partial hands that can not merge", function()
-    local s=ledger.new(); s.ready={2,0}; s.sweep={1000,1000}
+    -- INT (game test 2026-10-01): jam = store piles up (scan sets state.piled). Arms holding leftovers are lost
+    -- capacity even when some arm is still free, so every partial hand that can not merge is flushed.
+    local s=ledger.new(); s.piled={true,false}; s.sweep={1000,1000}
     local held={h(1,"a",4),h(2,"b",4),h(3,"iron",2),h(4,"c",4),h(5,"d",4),h(6,"iron",2),h(7,"gear",1),h(8,"e",4)}
     local flush, merge = ledger.hands(s,1,held,opts({tick=0}))
     eq(copy(flush),{7}); eq(merges(merge),{{name="iron",quality="normal",total=4,arms={3,6}}})
-    table.remove(held)  -- one arm free: no jam
-    flush = ledger.hands(s,1,held,opts({tick=1})); eq(copy(flush),{})
+    table.remove(held)  -- one arm free: still a jam while store is piled
+    held[3]=h(3,"wood",2)
+    flush = ledger.hands(s,1,held,opts({tick=1})); eq(copy(flush),{3,6,7})
+    s.piled={false,false}
+    flush = ledger.hands(s,1,held,opts({tick=2})); eq(copy(flush),{}, "store not piled: leftovers keep waiting")
   end)
   it("hands sweep flushes hand stuck longer than timeout", function()
     local s=ledger.new(); local x={h(2,"iron",3)}
@@ -136,7 +149,7 @@ describe("ledger look", function()
     eq(copy(flush),{3}); eq(merges(merge),{{name="iron",quality="normal",total=5,arms={2,4}}})
   end)
   it("hands results are ascending and reused", function()
-    local s=ledger.new(); s.ready={2,0}
+    local s=ledger.new(); s.piled={true,false}
     local held={h(1,"z",1),h(2,"y",1),h(3,"x",1),h(4,"w",1),h(5,"v",1),h(6,"u",1),h(7,"t",1),h(8,"s",1)}
     local a, m = ledger.hands(s,1,held,opts({tick=0}))
     eq(copy(a),{1,2,3,4,5,6,7,8}); local b, m2 = ledger.hands(s,1,{},opts({tick=1})); ok(a==b); ok(m==m2); eq(copy(b),{})

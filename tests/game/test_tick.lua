@@ -397,6 +397,42 @@ describe("tick", function()
     end)
   end)
 
+  it("rare leftovers do not jam a busy lane", function()
+    -- V16-3 (probe FND-0046: without script every out arm ends up holding a rare leftover and lane stops dead).
+    -- Turbo box, full belt of mixed stacks 1..4 of 5 kinds; 8 rare kinds (1..3 items each) pass once early.
+    -- Jam rule must keep lane near belt rate; rare leftovers leave as partial stacks or wait in hands.
+    local KINDS = { "iron-plate", "copper-plate", "iron-gear-wheel", "electronic-circuit", "steel-plate" }
+    local RARE = { "copper-cable", "advanced-circuit", "sulfur", "battery", "explosives", "iron-ore", "copper-ore", "concrete" }
+    local _, rec, feed, front = build(surface, force, { tier = "turbo", belt = "turbo-transport-belt", front = 6 })
+    local sink = front[#front]
+    local k, fed, out, partial, t = 0, 0, 0, 0, 0
+    run_until(function()
+      t = t + 1
+      local line = feed.get_transport_line(1)
+      local tries = 0
+      while tries < 4 and line.can_insert_at_back() do
+        tries = tries + 1; k = k + 1
+        local c = (k * 7) % 4 + 1
+        local name = KINDS[(k * 5) % 5 + 1]
+        if t < 300 and k % 9 == 0 then name = RARE[(k / 9) % 8 + 1]; c = (k / 9) % 3 + 1 end
+        line.insert_at_back({ name = name, count = c }, c)
+        if t > 600 then fed = fed + c end
+      end
+      local s = sink.get_transport_line(1)
+      if #s > 0 then
+        if t > 600 then
+          for _, d in ipairs(s.get_detailed_contents()) do out = out + d.stack.count; if d.stack.count < 4 then partial = partial + 1 end end
+        end
+        s.clear()
+      end
+    end, function() return t >= 1800 end, 2000, function()
+      local msg = string.format("fed=%d out=%d partial=%d store=%d hands=%d", fed, out, partial, rec.invs[1].get_item_count(), hands(rec, 1))
+      assert.is_true(fed > 1000, msg)
+      assert.is_true(out >= 0.95 * fed, msg)
+      assert.is_true(rec.invs[1].count_empty_stacks() > 0, "store not full: " .. msg)
+    end)
+  end)
+
   it("output about tier speed on a faster belt", function()
     -- V16-2 / V16-9: exact tier cap is gone; out arms of a tier move about 1.6 x its lane rate (8 arms, one swing
     -- per N.out_swing ticks). Backlog while no front belt; then turbo front belt appears.

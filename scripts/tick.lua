@@ -366,11 +366,9 @@ function M.on_tick(e)
         local force_bss = fi and storage.belt_stack[fi]
         script_mode = force_bss == nil or force_bss > 1  -- unknown yet: script path, it finds out
       end
-      local interval = M._interval(rec.tier)
-      local due
-      if script_mode then
-        due = not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0)
-      elseif rec.extra ~= nil then
+      local interval, due
+      if script_mode or rec.extra ~= nil then
+        interval = M._interval(rec.tier)
         due = not rec.decon and tick >= (rec.next_poll or 0) and (rec.last_poll ~= nil or (tick + rec.unit_number) % interval == 0)
       else
         due = (tick + rec.unit_number) % LOOK == 0
@@ -404,7 +402,7 @@ function M.on_tick(e)
             else
               engine_look(rec, tick, bss, flush_now)
               rec.last_poll = tick
-              rec.next_poll = tick + interval
+              rec.next_poll = tick + (interval or 0)  -- interval only set while extra items drain
               rec.empty_since = nil
             end
             update_led(rec)
