@@ -157,3 +157,61 @@ describe("gui", function()
     eq(f.circuit_section.circuit_condition_row.circuit_comparator.style, "circuit_condition_comparator_dropdown")
   end)
 end)
+
+describe("gui lanes", function()
+  local slots = 12
+  local function inventory()
+    local inv = { [2] = { valid_for_read = true, name = "iron-plate", count = 7, quality = { name = "rare" } } }
+    for i = 1, slots do if not inv[i] then inv[i] = { valid_for_read = false } end end
+    return inv
+  end
+  local function lane_fixture()
+    local p, rec = fixture()
+    rec.invs = { inventory(), inventory() }
+    local calls = {}
+    p.insert = function(spec) calls[#calls + 1] = spec; return spec.count end
+    gui._refresh(p, rec)
+    return p, rec, calls
+  end
+  it("section has two rows of twelve slots", function()
+    local p = fixture(); local f = p.gui.relative.sushi_packer_frame
+    ok(f.lanes_section ~= nil)
+    for lane = 1, 2 do
+      local row = f.lanes_section["lane_" .. lane]; ok(row ~= nil)
+      eq(#row.children, slots)
+      for slot = 1, slots do
+        local b = row.children[slot]; eq(b.type, "sprite-button")
+        eq(b.tags, { sushi_packer = 7, field = "lane_slot", row = lane, slot = slot })
+      end
+    end
+  end)
+  it("slot shows item count quality", function()
+    local p = lane_fixture(); local row = p.gui.relative.sushi_packer_frame.lanes_section.lane_1
+    eq(row.children[2].sprite, "item/iron-plate"); eq(row.children[2].number, 7); eq(row.children[2].quality, "rare")
+    eq(row.children[1].sprite, nil); eq(row.children[1].number, nil)
+  end)
+  it("click moves stack to player", function()
+    local p, rec, calls = lane_fixture(); local button = p.gui.relative.sushi_packer_frame.lanes_section.lane_1.children[2]
+    p.insert = function(spec) calls[#calls + 1] = spec; return 3 end
+    click(p, button); eq(calls, { { name = "iron-plate", count = 7, quality = "rare" } })
+    eq(rec.invs[1][2].count, 4); eq(button.number, 4)
+    p.insert = function(spec) calls[#calls + 1] = spec; return spec.count end
+    click(p, button); eq(rec.invs[1][2].valid_for_read, false); eq(button.sprite, nil); eq(button.number, nil)
+  end)
+  it("click on empty slot does nothing", function()
+    local p, _, calls = lane_fixture(); local button = p.gui.relative.sushi_packer_frame.lanes_section.lane_1.children[1]
+    click(p, button); eq(#calls, 0)
+  end)
+  it("rec without stores shows empty rows", function()
+    local p, rec = fixture(); rec.invs = nil
+    gui._refresh(p, rec)
+    local row = p.gui.relative.sushi_packer_frame.lanes_section.lane_1
+    eq(row.children[1].sprite, nil); click(p, row.children[1])
+  end)
+  it("refresh updates open window", function()
+    local p, rec = fixture(); local f = p.gui.relative.sushi_packer_frame
+    local old = f.lanes_section.lane_1.children[2]
+    rec.invs = { inventory(), inventory() }; gui._refresh(p, rec)
+    eq(p.gui.relative.sushi_packer_frame, f); eq(old.sprite, "item/iron-plate"); eq(old.number, 7)
+  end)
+end)
