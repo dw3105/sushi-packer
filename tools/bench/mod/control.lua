@@ -8,6 +8,7 @@ script.on_init(function()
       tier = settings.startup["sushi-packer-bench-tier"].value,
       flow = settings.startup["sushi-packer-bench-flow"].value,
       seed = settings.startup["sushi-packer-bench-seed"].value,
+      box = settings.startup["sushi-packer-bench-box"].value,
     }
   )
   remote.call("sushi-packer", "counters_on")

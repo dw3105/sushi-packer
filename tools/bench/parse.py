@@ -4,9 +4,10 @@ import os
 import re
 import sys
 
-if len(sys.argv) != 9:
+if len(sys.argv) not in (9, 10):
     raise SystemExit('usage: parse.py <benchmark.log> <factorio-current.log> <fv> <boxes> <ticks> <tier> <modset|none> <flow>')
-path, counters_path, fv, boxes, ticks, tier, modset, flow = sys.argv[1:]
+path, counters_path, fv, boxes, ticks, tier, modset, flow = sys.argv[1:9]
+box = sys.argv[9] if len(sys.argv) == 10 else 'yes'
 lines = open(path, errors='replace').read().splitlines()
 header = next((i for i, line in enumerate(lines) if 'scriptUpdate' in line and 'wholeUpdate' in line), None)
 if header is None: raise SystemExit('benchmark parse failed: CSV header missing')
@@ -55,4 +56,4 @@ load1 = os.environ.get('BENCH_LOAD1')
 if load1 is None:
     try: load1 = open('/proc/loadavg').read().split()[0]
     except (OSError, IndexError): load1 = 'na'
-print(f'bench FV={fv} boxes={boxes} ticks={ticks} script_ms_avg={sa:.3f} whole_ms_avg={wa:.3f} tier={tier} modset={modset} flow={flow} ms_per_box={sa / int(boxes):.5f} items_in={items_in} us_per_item={us_per_item} load1={float(load1):.2f}')
+print(f'bench FV={fv} boxes={boxes} ticks={ticks} script_ms_avg={sa:.3f} whole_ms_avg={wa:.3f} tier={tier} modset={modset} flow={flow} ms_per_box={sa / int(boxes):.5f} items_in={items_in} us_per_item={us_per_item} load1={float(load1):.2f} box={box}')

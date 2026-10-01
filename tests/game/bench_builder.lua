@@ -91,7 +91,11 @@ function M.build(surface, force, n, origin, opts)
       for slot, name in ipairs(ITEMS) do sink_filters[slot] = { index = slot, name = name, count = 0, mode = "at-most" } end
       sink.infinity_container_filters = sink_filters
     end
-    local placer = surface.create_entity({ name = N.placer(tier), position = { x + 5.5, y + 0.5 }, direction = defines.direction.west, force = force, raise_built = true })
+    if opts.box == false then  -- V14-5 control row: same scene, plain belt where packer would sit
+      surface.create_entity({ name = belt, position = { x + 5.5, y + 0.5 }, direction = defines.direction.west, force = force })
+    else
+      surface.create_entity({ name = N.placer(tier), position = { x + 5.5, y + 0.5 }, direction = defines.direction.west, force = force, raise_built = true })
+    end
     positions[#positions + 1] = { x = x + 5.5, y = y + 0.5 }
   end
   return positions

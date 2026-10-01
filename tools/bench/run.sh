@@ -9,6 +9,7 @@ MODSET=none
 FLOW=single
 SEED=1
 DRY_RUN=0
+BOX=yes
 usage_error() { echo "run.sh: $1" >&2; exit 2; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -27,6 +28,7 @@ while [ $# -gt 0 ]; do
       esac
       shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --belt-only) BOX=no; shift ;;
     *) usage_error "unknown argument: $1" ;;
   esac
 done
@@ -49,7 +51,7 @@ PY
   then exit 2; fi
 fi
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "bench-dry FV=$FV boxes=$BOXES ticks=$TICKS tier=$TIER modset=$MODSET flow=$FLOW seed=$SEED"
+  echo "bench-dry FV=$FV boxes=$BOXES ticks=$TICKS tier=$TIER modset=$MODSET flow=$FLOW seed=$SEED box=$BOX"
   exit 0
 fi
 OUT=$ROOT/build/bench-$FV
@@ -76,10 +78,11 @@ LOG=$OUT/benchmark.log
 rm -f "$SAVE" "$LOG"
 "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$OUT/init.zip" >"$OUT/init.log" 2>&1
 rm -f "$OUT/init.zip"
-for pair in "boxes $BOXES" "tier $TIER" "flow $FLOW" "seed $SEED"; do
+if [ "$BOX" = yes ]; then BOXV=true; else BOXV=false; fi
+for pair in "boxes $BOXES" "tier $TIER" "flow $FLOW" "seed $SEED" "box $BOXV"; do
   set -- $pair
   (cd "$FT" && npx fmtk settings set startup "sushi-packer-bench-$1" "$2" --modsPath "$OUT/mods")
 done
 "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --create "$SAVE" >"$OUT/create.log" 2>&1
 "$FACTORIO/bin/x64/factorio" --config "$OUT/config.ini" --mod-directory "$OUT/mods" --benchmark "$SAVE" --benchmark-ticks "$TICKS" --benchmark-runs 1 --benchmark-verbose all >"$LOG" 2>&1
-python3 "$ROOT/tools/bench/parse.py" "$LOG" "$OUT/write/factorio-current.log" "$FV" "$BOXES" "$TICKS" "$TIER" "$MODSET" "$FLOW"
+python3 "$ROOT/tools/bench/parse.py" "$LOG" "$OUT/write/factorio-current.log" "$FV" "$BOXES" "$TICKS" "$TIER" "$MODSET" "$FLOW" "$BOX"

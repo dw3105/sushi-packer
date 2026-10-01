@@ -65,6 +65,15 @@ describe("bench builder", function()
     for _, e in ipairs(c) do if e.name == "ultimate-belt" then belts=belts+1 end; if e.name == "original-ultimate-splitter" then splitters=splitters+1 end end
     ok(belts > 0); eq(splitters, 3)
   end)
+  it("box false places belt instead of packer", function()
+    local s, f, c = setup(); local pos = load_builder().build(s, f, 1, {0,0}, {tier="red", flow="stacks", box=false})
+    local at
+    for _, e in ipairs(c) do
+      ok(e.name ~= N.placer("red"), "no packer placed")
+      if e.position[1] == 15.5 and e.position[2] == 10.5 then at = e end
+    end
+    eq(at.name, "fast-transport-belt"); eq(at.direction, 12); eq(pos[1], { x = 15.5, y = 10.5 })
+  end)
   it("unknown tier errors", function() local s,f=setup(); local yes,e=pcall(function() load_builder().build(s,f,1,{0,0},{tier="bogus"}) end); eq(yes,false); ok(tostring(e):find("bogus")) end)
   it("unknown flow errors", function() local s,f=setup(); local yes,e=pcall(function() load_builder().build(s,f,1,{0,0},{flow="bogus"}) end); eq(yes,false); ok(tostring(e):find("bogus")) end)
   it("stacks layout", function()
@@ -91,9 +100,9 @@ describe("bench builder", function()
     local built, calls, handlers, logs={}, {}, {}, {}
     package.loaded["__sushi-packer__.tests.game.bench_builder"]={build=function(...) built={...} end}
     script={on_init=function(fn) handlers.init=fn end,on_nth_tick=function(n,fn) handlers.period=n; handlers.tick=fn end}
-    settings={startup={ ["sushi-packer-bench-boxes"]={value=2},["sushi-packer-bench-tier"]={value="blue"},["sushi-packer-bench-flow"]={value="stacks"},["sushi-packer-bench-seed"]={value=5} }}
+    settings={startup={ ["sushi-packer-bench-boxes"]={value=2},["sushi-packer-bench-tier"]={value="blue"},["sushi-packer-bench-flow"]={value="stacks"},["sushi-packer-bench-seed"]={value=5},["sushi-packer-bench-box"]={value=true} }}
     game={surfaces={{}},forces={player={}}}; remote={call=function(_,name) calls[#calls+1]=name; if name=="counters" then return {visits=1,reads=2,pulls=3,pushes=4,items_in=5,items_out=6} end end}; log=function(s) logs[#logs+1]=s end
-    dofile("tools/bench/mod/control.lua"); handlers.init(); eq(built[5],{tier="blue",flow="stacks",seed=5}); eq(calls,{"counters_on"}); eq(handlers.period,600); game.tick=1200; handlers.tick(); eq(logs[1],"sushi-packer-bench counters tick=1200 visits=1 reads=2 pulls=3 pushes=4 items_in=5 items_out=6")
+    dofile("tools/bench/mod/control.lua"); handlers.init(); eq(built[5],{tier="blue",flow="stacks",seed=5,box=true}); eq(calls,{"counters_on"}); eq(handlers.period,600); game.tick=1200; handlers.tick(); eq(logs[1],"sushi-packer-bench counters tick=1200 visits=1 reads=2 pulls=3 pushes=4 items_in=5 items_out=6")
     remote.call=function(_,name) calls[#calls+1]=name; return nil end; handlers.tick(); eq(#logs,1)
   end)
 end)
