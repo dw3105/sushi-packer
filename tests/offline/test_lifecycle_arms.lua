@@ -5,7 +5,7 @@ local function setup()
   local N = require("scripts.names")
   local ledger = { new = function() return { fresh = true } end }
   package.loaded["scripts.ledger"] = ledger
-  local arms = { creates = {}, destroys = {}, ensures = {} }
+  local arms = { creates = {}, destroys = {}, ensures = {}, drains = {}, order = {}, hand_items = {} }
   local function fake_inv(contents)
     local i = { contents = contents or {}, valid = true }
     function i.get_contents() return i.contents end
@@ -14,6 +14,9 @@ local function setup()
   end
   arms.create = function(rec) arms.creates[#arms.creates + 1] = { rec = rec, entity = rec.entity, dir = rec.dir }; if not rec.stores then rec.stores = { {}, {} }; rec.invs = { fake_inv(), fake_inv() } end end
   arms.destroy = function(rec, keep) arms.destroys[#arms.destroys + 1] = { rec = rec, keep = keep } end
+  arms.drain_hands = function(rec) arms.drains[#arms.drains + 1] = rec; arms.order[#arms.order + 1] = "drain"; return arms.hand_items end
+  local old_destroy = arms.destroy
+  arms.destroy = function(rec, keep) arms.order[#arms.order + 1] = "destroy"; old_destroy(rec, keep) end
   arms.ensure = function(rec) arms.ensures[#arms.ensures + 1] = rec end
   package.loaded["scripts.arms"] = arms
   local led = { create = function() end, destroy = function() end, ensure = function() end, set = function() end }
@@ -49,6 +52,27 @@ describe("lifecycle arms", function()
   end)
   it("died box spills store items", function()
     local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ inv({{name="iron",count=2,quality="rare"}}), inv() }; r.on_died({entity=e}); eq(#e.surface.spilled,1); eq(e.surface.spilled[1].stack.quality,"rare"); eq(#a.destroys,1)
+  end)
+  it("mined box returns items held by arms", function()
+    local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={inv({{name="store",count=1,quality="normal"}}),inv()}; a.hand_items={{name="iron-plate",quality="normal",count=3,lane=1},{name="copper-plate",quality="rare",count=2,lane=2}}; local got={}
+    r.on_removed({entity=e,buffer={insert=function(s) got[#got+1]=s end}})
+    eq(got,{{name="store",count=1,quality="normal"},{name="iron-plate",count=3,quality="normal"},{name="copper-plate",count=2,quality="rare"}}); eq(a.order,{"drain","destroy"})
+  end)
+  it("mined box without buffer spills hand items", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); a.hand_items={{name="iron-plate",quality="normal",count=3,lane=1}}
+    r.on_removed({entity=e}); eq(#e.surface.spilled,1); eq(e.surface.spilled[1].stack,{name="iron-plate",count=3,quality="normal"}); eq(a.order,{"drain","destroy"})
+  end)
+  it("died box spills items held by arms", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); r.new_rec(e); a.hand_items={{name="iron-plate",quality="normal",count=3,lane=1}}
+    r.on_died({entity=e}); eq(#e.surface.spilled,1); eq(e.surface.spilled[1].stack.count,3); eq(a.order,{"drain","destroy"})
+  end)
+  it("upgrade stash does not drain hands", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); e.to_be_upgraded=function() return true end; r.new_rec(e)
+    r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); eq(#a.drains,0)
+  end)
+  it("config change ensures parts of v15 rec", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); local rec={entity=e,unit_number=1,stores={"s1","s2"},invs={}}
+    storage.boxes[1]=rec; r.on_configuration_changed({}); eq(#a.ensures,1); eq(a.ensures[1],rec); eq(#a.creates,0)
   end)
   it("upgrade carries stores", function()
     local r, _, a, _, entity, inv = setup(); local e=entity(1); e.to_be_upgraded=function() return true end; local rec=r.new_rec(e); rec.invs={inv({{name="iron",count=2}}),inv()}; r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); local n=entity(2,"fast-sushi-packer-south"); n.position=e.position; r.on_built({entity=n}); eq(r.get(n),rec); eq(#a.creates,1); eq(#a.destroys,0)
