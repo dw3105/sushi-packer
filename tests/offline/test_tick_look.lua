@@ -24,14 +24,14 @@ local function fixture()
   local rec={entity={valid=true,unit_number=30,force={index=1},get_inventory=function() return box end},unit_number=30,tier="yellow",settings={filters={},circuit={},timeout_mode="global",timeout_s=0},stores={{valid=true},{valid=true}},invs={inv(),inv()},arms={{},{}},out={{},{}},paused={false,false},out_paused={false,false},skip={"",""},ledger=ledger.new(),used={0,0},out_credit={0,0},next_poll=0,last_poll=0,extra=nil,led={state="green",visible=true}}
   storage.boxes[30]=rec
   local orig={front=belt.front_ok,can=belt.can_push,push=belt.push,bss=belt.belt_stack_size,eval=circuit.evaluate,scan=ledger.scan,hands=ledger.hands,plan=ledger.plan,hoard=ledger.hoard,pause=arms.pause,pause_out=arms.pause_out,hand=arms.hand,held=arms.held,clear=arms.clear_held,skip=arms.skip,need=arms.need_slot,behind=belt.behind_kinds,led=ledger.led,set=led.set}
-  local f={rec=rec,box=box,pushes={},scans={},evals=0,pauses={},outs={},hands={},held_calls={},clears={},skips={},need_calls={},ledcalls={},front=true,enabled=true,flush=false,flushes={{},{}},wants={false,false},held_values={{},{}},hand_indices={{},{}},can_pushes=0}
+  local f={rec=rec,box=box,pushes={},scans={},evals=0,plans=0,hoards=0,pauses={},outs={},hands={},held_calls={},clears={},skips={},need_calls={},ledcalls={},front=true,enabled=true,flush=false,flushes={{},{}},wants={false,false},held_values={{},{}},hand_indices={{},{}},can_pushes=0}
   belt.front_ok=function() return f.front end; belt.can_push=function() f.can_pushes=f.can_pushes+1; return true end
   belt.belt_stack_size=function() return 4 end
   belt.push=function(r,l,p,bss) f.pushes[#f.pushes+1]={lane=l,piece={name=p.name,quality=p.quality,count=p.count},bss=bss}; if f.fail_at==#f.pushes then return 0 end; return p.count end
   circuit.evaluate=function() f.evals=f.evals+1; return f.enabled,f.flush end
-  ledger.scan=function(state,lane,contents,opts) f.scans[#f.scans+1]={lane=lane,contents=contents,opts=opts}; return f.flushes[lane],f.wants[lane] end
+  ledger.scan=function(state,lane,contents,opts) local copy={}; for k,v in pairs(opts) do copy[k]=v end; f.scans[#f.scans+1]={lane=lane,contents=contents,opts=opts,snapshot=copy}; return f.flushes[lane],f.wants[lane] end
   ledger.hands=function(state,lane,held,opts) f.hands[#f.hands+1]={lane=lane,held=held,opts=opts}; return f.hand_indices[lane] end
-  ledger.plan=function() error("unexpected plan") end; ledger.hoard=function() error("unexpected hoard") end
+  ledger.plan=function() f.plans=f.plans+1; return {} end; ledger.hoard=function() f.hoards=f.hoards+1; return {} end
   arms.pause=function(r,l,p) f.pauses[#f.pauses+1]={l,p} end
   arms.pause_out=function(r,l,p) f.outs[#f.outs+1]={l,p} end
   arms.hand=function(r,n) f.hand_size=n end
@@ -49,20 +49,20 @@ end
 
 describe("tick look",function()
   it("engine box is looked at once per N.LOOK ticks",function() local f=fixture(); for t=1,29 do f.run(t) end; eq(f.evals,0); eq(f.rec.invs[1].reads,0); f.run(30); eq(f.evals,1); eq(f.rec.invs[1].reads,1); eq(f.rec.invs[2].reads,1); f.restore() end)
-  it("look never plans or hoards",function() local f=fixture(); f.run(30); eq(#f.pushes,0); f.restore() end)
+  it("look never plans or hoards",function() local f=fixture(); f.run(30); eq(f.plans,0); eq(f.hoards,0); eq(#f.pushes,0); f.restore() end)
   it("look sets hand and pauses",function()
     local f=fixture(); f.run(30); eq(f.hand_size,4); eq(f.pauses,{{1,false},{2,false}}); eq(f.outs,{{1,false},{2,false}})
     f.pauses={}; f.outs={}; f.enabled=false; f.run(60); eq(f.pauses,{{1,true},{2,true}}); eq(f.outs,{{1,true},{2,true}}); eq(f.rec.invs[1].reads,1)
     f.pauses={}; f.outs={}; f.enabled=true; f.rec.decon=true; f.run(90); eq(f.outs,{{1,true},{2,true}}); f.rec.decon=false
     f.pauses={}; f.outs={}; f.front=false; f.run(120); eq(f.pauses,{{1,false},{2,false}}); eq(f.outs,{{1,true},{2,true}}); f.restore()
   end)
-  it("scan gets contents and options",function() local f=fixture(); f.run(30); local x=f.scans[1]; eq(x.lane,1); eq(x.opts.tick,30); eq(x.opts.bss,4); eq(x.opts.timeout_ticks,420); eq(x.opts.slots,N.STORE_SLOTS); eq(x.opts.n_out,0); ok(type(x.opts.stack_size)=="function"); eq(f.scans[2].lane,2); f.restore() end)
-  it("flush pieces are pushed and removed",function() local f=fixture(); f.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; f.run(30); eq(#f.pushes,2); eq(#f.rec.invs[1].removed,2); f.restore() end)
-  it("hands are read only when wanted",function() local f=fixture(); f.run(30); eq(#f.held_calls,0); f.wants[1]=true; f.held_values[1]={{arm=2,name="iron",quality="rare",count=2},{arm=5,name="gear",quality="normal",count=1}}; f.hand_indices[1]={2,5}; f.run(60); eq(f.held_calls,{1}); eq(#f.hands,1); eq(f.pushes[1].piece,{name="iron",quality="rare",count=2}); eq(f.clears,{{1,2},{1,5}}); f.restore() end)
-  it("need_slot only asked when store is full",function() local f=fixture(); f.rec.invs[1]=inv({{name="iron",quality="normal",count=4}}); f.rec.invs[1].count_empty_stacks=function() return 0 end; f.run(30); eq(f.need_calls,{1}); eq(f.scans[1].opts.need_slot,true); f.restore() end)
+  it("scan gets contents and options",function() local f=fixture(); f.run(30); local x=f.scans[1]; eq(x.lane,1); eq(x.snapshot.tick,30); eq(x.snapshot.bss,4); eq(x.snapshot.timeout_ticks,420); eq(x.snapshot.slots,N.STORE_SLOTS); eq(x.snapshot.n_out,0); ok(type(x.snapshot.stack_size)=="function"); eq(f.scans[2].lane,2); f.restore() end)
+  it("flush pieces are pushed and removed",function() local f=fixture(); f.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; f.run(30); eq(#f.pushes,2); eq(#f.rec.invs[1].removed,2); f.restore(); local g=fixture(); g.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; g.fail_at=1; g.run(30); eq(#g.pushes,1); eq(#g.rec.invs[1].removed,0); g.restore() end)
+  it("hands are read only when wanted",function() local f=fixture(); f.run(30); eq(#f.held_calls,0); f.wants[1]=true; f.held_values[1]={{arm=2,name="iron",quality="rare",count=2},{arm=5,name="gear",quality="normal",count=1}}; f.hand_indices[1]={2,5}; f.run(60); eq(f.held_calls,{1}); eq(#f.hands,1); eq(f.pushes[1].piece,{name="iron",quality="rare",count=2}); eq(f.clears,{{1,2},{1,5}}); f.restore(); local g=fixture(); g.wants[1]=true; g.held_values[1]={{arm=2,name="iron",quality="rare",count=2}}; g.hand_indices[1]={2}; g.fail_at=1; g.run(30); eq(#g.clears,0); g.restore() end)
+  it("need_slot only asked when store is full",function() local f=fixture(); local contents={}; for i=1,12 do contents[i]={name="iron",quality="q"..i,count=4} end; f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 0 end; f.run(30); eq(f.need_calls,{1}); eq(f.scans[1].snapshot.need_slot,true); f.restore() end)
   it("extra items leave first",function() local f=fixture(); f.rec.extra={{name="iron",quality="normal",count=5,lane=1}}; f.rec.next_poll=0; f.run(1); eq(f.outs[1],{1,true}); eq(#f.scans,1); eq(f.scans[1].lane,2); f.restore() end)
   it("led and used slots",function() local f=fixture(); f.rec.invs[1]=inv({{name="iron",quality="normal",count=5}}); f.run(30); eq(f.rec.used[1],1); eq(f.ledcalls,{{"yellow",true}}); f.restore() end)
-  it("mode switch",function() local f=fixture(); f.run(30); f.rec.settings.filters={{name="iron"}}; f.rec.next_poll=30; f.run(31); eq(f.outs[#f.outs],{2,true}); f.rec.settings.filters={}; f.run(60); eq(f.skips,{{1,{}},{2,{}}}); f.restore() end)
+  it("mode switch",function() local f=fixture(); f.run(30); f.rec.settings.filters={{name="iron"}}; f.rec.next_poll=30; f.run(31); eq(f.outs[#f.outs],{2,true}); f.rec.settings.filters={}; f.skips={}; f.run(60); eq(f.skips,{{1,{}},{2,{}}}); eq(f.outs[#f.outs],{2,false}); f.restore() end)
   it("look reuses option table",function() local f=fixture(); f.run(30); local o=f.scans[1].opts; f.run(60); eq(f.scans[3].opts,o); f.restore() end)
   it("counters count looks",function() local f=fixture(); tick.counters_on(); f.run(30); eq(storage.sp_counters.visits,1); f.restore() end)
 end)
