@@ -68,6 +68,7 @@ local function reconcile(rec, tick, inv, bss)
 end
 
 function M.on_tick(e)
+  local counters = storage and storage.sp_counters
   local opened = {}
   for _, player in pairs(game.connected_players) do
     if player.opened_gui_type == defines.gui_type.entity then  -- opened may be item stack (blueprint), gui, equipment
@@ -91,6 +92,7 @@ function M.on_tick(e)
       local first_visit = (rec.next_poll == nil or rec.next_poll == 0) and rec.last_poll == nil
       if not rec.decon and e.tick >= (rec.next_poll or 0)
         and (not first_visit or (e.tick + rec.unit_number) % interval == 0) then
+        if counters then counters.visits = counters.visits + 1 end
         local enabled, flush_now = circuit.evaluate(rec)
         rec.enabled = enabled
         if enabled then
@@ -169,9 +171,17 @@ function M.on_tick(e)
   end
 end
 
--- v14 bench seam (docs/CONTRACT.md): work counters in storage.sp_counters, nil = off. Stubs until lane 036.
-function M.counters_on() end
-function M.counters() return nil end
+-- v14 bench seam (docs/CONTRACT.md): work counters in storage.sp_counters, nil = off.
+local function zero_counters()
+  return { visits = 0, reads = 0, pulls = 0, pushes = 0, items_in = 0, items_out = 0 }
+end
+function M.counters_on() storage.sp_counters = zero_counters() end
+function M.counters()
+  local counters = storage and storage.sp_counters
+  if not counters then return nil end
+  return { visits = counters.visits, reads = counters.reads, pulls = counters.pulls,
+    pushes = counters.pushes, items_in = counters.items_in, items_out = counters.items_out }
+end
 
 -- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off.
 function M.on_decon(e, marked)

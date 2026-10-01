@@ -150,6 +150,7 @@ function M._speed(rec)
 end
 
 function M.pull(rec, budget, sink)
+  local counters = storage and storage.sp_counters
   local taken = { 0, 0 }
   local belt, map = cached(rec, "behind", -1)
   if not belt then return taken, nil end
@@ -173,7 +174,10 @@ function M.pull(rec, budget, sink)
       if #line == 0 then break end
       if line.can_insert_at(0) then
         if not fast then break end
-        if not detailed then detailed, di = line.get_detailed_contents(), 1 end
+        if not detailed then
+          if counters then counters.reads = counters.reads + 1 end
+          detailed, di = line.get_detailed_contents(), 1
+        end
         local d = detailed[di]
         if not d or d.position > speed then break end
       end
@@ -185,6 +189,7 @@ function M.pull(rec, budget, sink)
       tries = tries + 1
       if accepted <= 0 then break end
       line.remove_item({ name = name, count = accepted, quality = quality })
+      if counters then counters.pulls = counters.pulls + 1; counters.items_in = counters.items_in + accepted end
       if detailed and accepted >= count then di = di + 1 end
       taken[lane] = taken[lane] + 1
       rec.pull_first = 3 - lane
@@ -197,6 +202,7 @@ function M.pull(rec, budget, sink)
     if taken[lane] > 0 or #line == 0 then eta[lane] = nil
     elseif not line.can_insert_at(0) then eta[lane] = 0
     else
+      if counters then counters.reads = counters.reads + 1 end
       local detailed = line.get_detailed_contents()
       -- fast belt: wake when item enters take window (position <= speed), not at belt end (FND-0024)
       local position = detailed[1].position
@@ -208,11 +214,13 @@ function M.pull(rec, budget, sink)
 end
 
 function M.push(rec, lane, item, belt_stack_size)
+  local counters = storage and storage.sp_counters
   local belt, map = cached(rec, "front", 1)
   if not belt then return 0 end
   local line = belt.get_transport_line(map[lane])
   if not line.can_insert_at_back() then return 0 end
   if line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then
+    if counters then counters.pushes = counters.pushes + 1; counters.items_out = counters.items_out + item.count end
     return item.count
   end
   return 0
