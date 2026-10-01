@@ -475,3 +475,23 @@ R-3 `make bench-all` (new code, one run per row, 200 boxes, script ms): FV 2.0 y
 Bench flaw found: `tools/bench/run.sh` made save with random map seed. On `g433` (Space Exploration terrain) `items_in` differed between runs of same code: new 92300 x4, 86348, 54924; base 92372 x5, 78742. With `--map-gen-seed 1`: new 86012 in 3 of 3 runs, base 86444: counts repeat, both codes alike on same map -> difference came from map, not from box code. Which rig part the terrain blocks: not looked at. Fix: seed pinned in `run.sh` (rows from now on not comparable in `items_in` to rows above on `g433`; vanilla rows showed no such spread).
 
 Verified-by: `~/.cache/sushi-packer/v14/logs/pairs-v15.txt`, `pairs-v15-yellow4.txt`, `pairs-v15-r3-6.txt`, `pairs-v15-aa.txt`, `bench-all-2.0-v15.log`, `bench-all-2.1-v15.log`
+
+## FND-0045 - Where arms-box script time goes (timers per step, scratch build)
+
+Measured 2026-10-01 20:3x UTC, dev-vm, 2.0.77, scratch worktree `~/wt-sushi-packer-prof-v15` (`317e281` + `LuaProfiler` around each step of `visit_lane`; never merged), 200 boxes, flow stacks, 3000 ticks. Timers themselves cost: turbo 5.1 -> 8.3 ms per tick, yellow 1.7 -> 2.8, so shares are rough.
+
+| Step | Turbo ms (share of lane time) | Yellow ms (share) |
+|---|---|---|
+| before checks (pause, credit) | 965 (5 %) | 303 (5 %) |
+| `belt_io.can_push` | 3543 (20 %) | 1222 (22 %) |
+| `inv.get_contents()` | 4505 (26 %) | 1342 (24 %) |
+| rules: slot count, `ledger.plan`, hoard | 4912 (28 %) | 1622 (29 %) |
+| `belt_io.push` | 2649 (15 %) | 744 (13 %) |
+| `inv.remove` | 1075 (6 %) | 322 (6 %) |
+| lane time total | 17649 | 5554 |
+| whole `on_tick` | 24503 | 8306 |
+
+Reading: putting stacks on belt and taking them from store (work that must happen) is about 20 % of lane time. About 75 % is looking and deciding: can lane push, what is in store, which stack leaves. Outer loop per box (circuit, LED, bookkeeping, timer cost) is the rest of `on_tick` (28 % turbo, 33 % yellow).
+Not tried: skipping read + rules on visits where store did not change; one rules pass for several pushes. No claim on gain before a bench of real code (FRC-0043).
+
+Verified-by: `~/wt-sushi-packer-prof-v15/build/bench-2.0/benchmark.log` (yellow run; turbo line from run before it, copied here from tool output), patch `prof_patch.py` (session scratchpad, plus `PS.reset()` fix)
