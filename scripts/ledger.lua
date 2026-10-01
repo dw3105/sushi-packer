@@ -225,7 +225,7 @@ end
 
 -- v16 seam stubs (lane 049 fills): docs/CONTRACT.md "v16 engine output seam".
 local SCAN_OUT, SCAN_POOL = {}, {}
-local SCAN_KEYS, SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS = {}, {}, {}, {}, {}, {}
+local SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS = {}, {}, {}, {}, {}
 local SCAN_PRESENT = {}
 local HANDS_OUT = {}
 local HANDS_NEXT = { {}, {} }
