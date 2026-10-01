@@ -8,3 +8,4 @@ Standing operator instructions, one dated row each (session-lifecycle SS-08). Ne
 | 2026-09-29 | FND-0031 (bench cost of V10-7) is fixed later, when dev-vm is free; not before. | author: "we fix this later when box is free" |
 | 2026-09-29 | Grill sessions ask ONE question per turn (with recommendation), never a numbered batch. | author: "ONE AT A TIME" |
 | 2026-09-30 | Bug fix plans: bug reproduced red by headless Factorio (or author in-game error text) before any fix; every plan includes headless Factorio testing. | author: "before fixing the bug must be reproduced by headless factorio", "plan must include headless factorio testing" |
+| 2026-10-01 | Arms box (v1.15): no more questions to author until everything is coded and tested. Integrator decides open details and records them in `docs/DECISIONS.md`; report comes after green suites. | author: "NO MORE QUESTIONS UNTIL EVERYTHING IS CODED AND TESTED" |
