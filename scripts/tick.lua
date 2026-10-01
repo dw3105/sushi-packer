@@ -1,9 +1,10 @@
 local N = require("scripts.names")
-local core = require("scripts.core")
 local belt_io = require("scripts.belt_io")
 local circuit = require("scripts.circuit")
 local led = require("scripts.led")
 local filter = require("scripts.filter")
+local ledger = require("scripts.ledger")
+local arms = require("scripts.arms")
 local M = {}
 local INTERVAL = { yellow = 8, red = 4, blue = 2, turbo = 2 }
 local stack_sizes = {}
@@ -19,10 +20,7 @@ end
 
 local function stack_size(name)
   local size = stack_sizes[name]
-  if size == nil then
-    size = prototypes.item[name].stack_size
-    stack_sizes[name] = size
-  end
+  if size == nil then size = prototypes.item[name].stack_size; stack_sizes[name] = size end
   return size
 end
 
@@ -36,175 +34,146 @@ function M.on_research(e)
   storage.belt_stack[force.index] = belt_io.belt_stack_size(force)
 end
 
-local function reconcile(rec, tick, inv, bss)
-  inv = inv or rec.entity.get_inventory(defines.inventory.chest)
-  local chest, totals = {}, core.totals(rec.box)
-  for _, x in ipairs(inv.get_contents()) do
-    local k = x.name .. "\0" .. tostring(x.quality)
-    chest[k] = (chest[k] or 0) + x.count
-  end
-  local keys, items = {}, {}
-  for _, x in ipairs(totals) do
-    local k = x.name .. "\0" .. tostring(x.quality)
-    keys[k] = true; items[k] = x
-  end
-  for k in pairs(chest) do keys[k] = true end
-  for k in pairs(keys) do
-    local x = items[k]
-    local name, quality
-    if x then name, quality = x.name, x.quality else
-      local split = string.find(k, "\0", 1, true)
-      name = string.sub(k, 1, split - 1)
-      quality = string.sub(k, split + 1)
-      if quality == "nil" then quality = nil end
-    end
-    local core_count = x and x.count or 0
-    local inv_count = chest[k] or 0
-    if inv_count < core_count then core.remove_external(rec.box, name, quality, core_count - inv_count)
-    elseif inv_count > core_count then
-      core.adopt_external(rec.box, name, quality, inv_count - core_count, math.min(bss, stack_size(name)), tick)
-    end
-  end
+local function update_led(rec)
+  local used1 = #rec.invs[1] - rec.invs[1].count_empty_stacks()
+  local used2 = #rec.invs[2] - rec.invs[2].count_empty_stacks()
+  local state = ledger.led(used1, used2, N.STORE_SLOTS)
+  local visible = rec.enabled ~= false and not rec.decon
+  if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
 end
 
-local visit = {}
-local function inventory()
-  if visit.inv == nil then visit.inv = visit.rec.entity.get_inventory(defines.inventory.chest) end
-  return visit.inv
-end
-local function sink(name, quality, input_lane, count)
-  local ctx, rec = visit, visit.rec
-  local release_size = math.min(ctx.bss, stack_size(name))
-  local filters = rec.settings.filters
-  if filters and filters[1] ~= nil and filter.match(filters, name, quality, levels()) then
-    return core.accept(rec.box, name, quality, input_lane, count, release_size, ctx.tick, true)
+local function remove_extra(rec, box_inv, entry, amount)
+  box_inv.remove({ name = entry.name, quality = entry.quality, count = amount })
+  entry.count = entry.count - amount
+  if entry.count <= 0 then
+    for i, x in ipairs(rec.extra) do if x == entry then table.remove(rec.extra, i); break end end
   end
-  local accepted = core.accept(rec.box, name, quality, input_lane, count, release_size, ctx.tick, false, stack_size(name))
-  if accepted <= 0 then return 0 end
-  local inserted = inventory().insert({name=name, count=accepted, quality=quality})
-  if inserted < accepted then core.remove_external(rec.box, name, quality, accepted - inserted) end
-  return inserted
+  if #rec.extra == 0 then rec.extra = nil end
 end
-local function update_led(rec)
-  local state, visible = core.led_state(rec.box), rec.enabled ~= false and not rec.decon
-  if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
+
+local function drain_extra(rec, lane, bss, credit, counters)
+  if not rec.extra then return credit, false end
+  local has_lane = false
+  for _, entry in ipairs(rec.extra) do if entry.lane == lane and entry.count > 0 then has_lane = true; break end end
+  if not has_lane then return credit, false end
+  local box_inv = rec.entity.get_inventory(defines.inventory.chest)
+  while rec.extra do
+    local entry
+    for _, candidate in ipairs(rec.extra) do
+      if candidate.lane == lane and candidate.count > 0 then entry=candidate; break end
+    end
+    if not entry then return credit, false end
+    local size = math.min(bss, stack_size(entry.name))
+    while entry.count > 0 and credit >= 1 do
+      local piece = { name=entry.name, quality=entry.quality, count=math.min(entry.count,size) }
+      local pushed = belt_io.push(rec,lane,piece,bss)
+      if pushed <= 0 then return credit,true end
+      remove_extra(rec,box_inv,entry,pushed)
+      if counters then counters.items_in=counters.items_in+pushed end
+      credit = credit - 1
+    end
+    if entry.count > 0 then return credit,true end
+  end
+  return credit,false
+end
+
+local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counters)
+  local inv = rec.invs[lane]
+  local was_empty = inv.is_empty()
+  local contents = inv.get_contents()
+  local slots_used = #inv - inv.count_empty_stacks()
+  local filters = rec.settings.filters
+  local skip
+  if filters and filters[1] ~= nil then
+    skip = function(name, quality) return filter.match(filters, name, quality, levels()) end
+  end
+  local opts = { tick=tick, bss=bss, stack_size=stack_size, timeout_ticks=M.timeout_ticks(rec),
+    slots_used=slots_used, slots=N.STORE_SLOTS, skip=skip, flush_all=flush_all }
+  local plan = ledger.plan(rec.ledger, lane, contents, opts)
+  local kinds = ledger.hoard(contents, stack_size)
+  arms.skip(rec, lane, kinds)
+  local extra_lane = false
+  for _, entry in ipairs(rec.extra or {}) do if entry.lane == lane and entry.count > 0 then extra_lane = true; break end end
+  arms.pause(rec, lane, rec.enabled == false or rec.decon == true or extra_lane)
+
+  rec.out_credit[lane] = math.min((rec.out_credit[lane] or 0) + rate * elapsed, math.max(2, 2 * rate))
+  local credit = rec.out_credit[lane]
+  if rec.enabled ~= false and not rec.decon then credit, extra_lane = drain_extra(rec, lane, bss, credit, counters) end
+  if rec.extra == nil or not extra_lane then arms.pause(rec, lane, rec.enabled == false or rec.decon == true or extra_lane) end
+  if rec.enabled ~= false and not rec.decon and not extra_lane then
+    for _, piece in ipairs(plan) do
+      if credit >= 1 then
+        local pushed = belt_io.push(rec, lane, piece, bss)
+        if pushed <= 0 then break end
+        inv.remove({ name=piece.name, quality=piece.quality, count=pushed })
+        if counters then counters.items_in = counters.items_in + pushed end
+        credit = credit - 1
+      else
+        break
+      end
+    end
+  end
+  rec.out_credit[lane] = credit
+  return was_empty and inv.is_empty()
 end
 
 function M.on_tick(e)
   local counters = storage and storage.sp_counters
-  local opened = {}
-  for _, player in pairs(game.connected_players) do
-    if player.opened_gui_type == defines.gui_type.entity then  -- opened may be item stack (blueprint), gui, equipment
-      local entity = player.opened
-      if entity and entity.valid and entity.unit_number then opened[entity.unit_number] = true end
-    end
-  end
   for _, rec in pairs(storage.boxes) do
-    local do_reconcile = not rec.decon and (opened[rec.unit_number] or (e.tick + rec.unit_number) % 60 == 0)
-    local interval = INTERVAL[rec.tier] or 1
-    local first_visit = (rec.next_poll == nil or rec.next_poll == 0) and rec.last_poll == nil
-    local due = not rec.decon and e.tick >= (rec.next_poll or 0)
-      and (not first_visit or (e.tick + rec.unit_number) % interval == 0)
-    local first_probe = first_visit and not rec.first_probe_done and not (do_reconcile or due)
-    if first_probe then rec.first_probe_done = true end
-    if do_reconcile or due then
+    local interval = INTERVAL[rec.tier] or 2
+    local staggered = rec.last_poll ~= nil or (e.tick + rec.unit_number) % interval == 0
+    local due = not rec.decon and e.tick >= (rec.next_poll or 0) and staggered
+    if due and rec.stores then
       if not rec.entity.valid then
         storage.boxes[rec.unit_number] = nil
       else
+        if counters then counters.visits = counters.visits + 1 end
+        local enabled, flush_now = circuit.evaluate(rec)
+        rec.enabled = enabled
         local force = rec.entity.force
         local bss = storage.belt_stack[force.index]
         if bss == nil then bss = belt_io.belt_stack_size(force); storage.belt_stack[force.index] = bss end
-        local inv
-        if do_reconcile then
-          inv = rec.entity.get_inventory(defines.inventory.chest)
-          reconcile(rec, e.tick, inv, bss)
+        local elapsed = e.tick - (rec.last_poll or (e.tick - interval))
+        local empty1, empty2 = true, true
+        for lane = 1, 2 do
+          local lane_empty = visit_lane(rec, lane, e.tick, bss, belt_io.lane_rate(rec.tier), elapsed, flush_now, counters)
+          if lane == 1 then empty1 = lane_empty else empty2 = lane_empty end
         end
-        if due then
-          if counters then counters.visits = counters.visits + 1 end
-          local enabled, flush_now = circuit.evaluate(rec)
-          rec.enabled = enabled
-          if enabled then
-            if flush_now then core.flush_partials(rec.box, e.tick) end
-            core.on_tick(rec.box, e.tick, M.timeout_ticks(rec))
-            visit.rec, visit.inv, visit.bss, visit.tick = rec, inv, bss, e.tick
-            local rate = belt_io.lane_rate(rec.tier)
-            local credit_cap = math.max(2, 2 * rate)
-            local elapsed = e.tick - (rec.last_poll or (e.tick - interval))
-            local taken_any = false
-            local budget = {0, 0}
-            for lane = 1, 2 do
-              rec.in_credit[lane] = math.min(rec.in_credit[lane] + rate * elapsed, credit_cap)
-              budget[lane] = math.floor(rec.in_credit[lane])
-            end
-            local got, eta = belt_io.pull(rec, budget, sink)
-            got = got or {0, 0}
-            for lane = 1, 2 do
-              local n = got[lane] or 0
-              rec.in_credit[lane] = rec.in_credit[lane] - n
-              if n > 0 then taken_any = true end
-            end
-            for lane = 1, 2 do
-              rec.out_credit[lane] = math.min(rec.out_credit[lane] + rate * elapsed, credit_cap)
-              while rec.out_credit[lane] >= 1 do
-                local item = core.peek_out(rec.box, lane)
-                if not item then break end
-                local piece = {name=item.name, quality=item.quality, count=math.min(item.count, bss)}
-                local pushed = belt_io.push(rec, lane, piece, bss)
-                if pushed == 0 then break end
-                if not item.passthrough then inventory().remove({name=item.name, count=pushed, quality=item.quality}) end
-                core.take_out(rec.box, lane, pushed)
-                rec.out_credit[lane] = rec.out_credit[lane] - 1
-                taken_any = true
-              end
-            end
-            local arrive  -- soonest front item arrival (eta 0 = resting item, never wakes early)
-            if eta then
-              for lane = 1, 2 do
-                local value = eta[lane]
-                if value and value > 0 and (arrive == nil or value < arrive) then arrive = value end
-              end
-            end
-            local gap = interval
-            if core.is_idle(rec.box) and not taken_any then
-              local speed = belt_io.speed and belt_io.speed(rec)
-              gap = math.min(30, speed and math.floor(1 / speed) - 1 or 30)
-            end
-            if arrive and arrive < gap then gap = arrive end
-            rec.next_poll = e.tick + math.max(1, gap)
-          end
-          rec.last_poll = e.tick
-          if not enabled then rec.next_poll = e.tick + interval end
-        end
-        if due or do_reconcile or rec.led_dirty then update_led(rec); rec.led_dirty = nil end
+        rec.last_poll = e.tick
+        local idle = empty1 and empty2 and rec.extra == nil
+        rec.next_poll = e.tick + (idle and 15 or math.max(2, interval))
+        update_led(rec)
+        rec.led_dirty = nil
       end
-    elseif first_probe then
-      if not rec.entity.valid then storage.boxes[rec.unit_number] = nil
-      elseif rec.led_dirty or not rec.led then update_led(rec); rec.led_dirty = nil end
     elseif rec.led_dirty then
-      update_led(rec); rec.led_dirty = nil
-    elseif e.tick >= (rec.next_poll or 0) and not rec.led then
-      update_led(rec)
+      if rec.stores then update_led(rec) end
+      rec.led_dirty = nil
     end
   end
 end
 
--- v14 bench seam (docs/CONTRACT.md): work counters in storage.sp_counters, nil = off.
 local function zero_counters()
-  return { visits = 0, reads = 0, pulls = 0, pushes = 0, items_in = 0, items_out = 0 }
+  return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0 }
 end
 function M.counters_on() storage.sp_counters = zero_counters() end
 function M.counters()
-  local counters = storage and storage.sp_counters
-  if not counters then return nil end
-  return { visits = counters.visits, reads = counters.reads, pulls = counters.pulls,
-    pushes = counters.pushes, items_in = counters.items_in, items_out = counters.items_out }
+  local c = storage and storage.sp_counters
+  if not c then return nil end
+  return { visits=c.visits, reads=c.reads, pulls=c.pulls, pushes=c.pushes, items_in=c.items_in, items_out=c.items_out }
 end
-
--- E-8 v6: marked for deconstruction -> rec.decon, box stops, LED off.
 function M.on_decon(e, marked)
   local entity = e and e.entity
   local rec = entity and entity.unit_number and storage.boxes[entity.unit_number]
-  if rec then rec.decon = marked; rec.next_poll = 0; rec.led_dirty = true end
+  if rec then
+    rec.decon=marked; rec.next_poll=0; rec.led_dirty=true
+    if rec.stores then
+      for lane=1,2 do
+        local has_extra=false
+        for _, entry in ipairs(rec.extra or {}) do if entry.lane==lane and entry.count>0 then has_extra=true; break end end
+        arms.pause(rec,lane,marked==true or rec.enabled==false or has_extra)
+      end
+    end
+  end
 end
 
 return M
