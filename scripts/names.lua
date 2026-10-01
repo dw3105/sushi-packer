@@ -15,7 +15,7 @@ N.ARM_FILTERS = 5                          -- skip-kind filter slots per arm (en
 N.ARM_HAND = 4                             -- items one arm may hold (prototype stack_size_bonus = hand - 1). Was 12: arms kept items
                                            -- in hand until 12 of one kind while lane store ran empty (trace 2026-10-01, blue dip)
 -- arms per lane by belt speed (tiles per tick), first row whose `max` >= speed (FND-0042)
-N.ARMS = { { max = 0.03125, n = 2 }, { max = 0.125, n = 4 }, { max = math.huge, n = 8 } }
+N.ARMS = { { max = 0.03125, n = 2 }, { max = 0.125, n = 4 }, { max = 0.3, n = 8 }, { max = math.huge, n = 12 } }  -- hand 4: 270/s needs 12 (8 gave 1271 of 1350)
 
 -- Per tier: matching vanilla belt, its tech, belt-items per lane per tick (O-4, E-4).
 -- Recipe (U-2, author 2026-09-26): base (steel-chest or previous tier box) + 1 splitter + 2 inserter + circuits.
