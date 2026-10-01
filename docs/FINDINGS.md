@@ -286,3 +286,76 @@ Measured 2026-10-01 on dev-vm, 2.0.77 + 2.1.20 identical, `tests/game/test_probe
 Verdict (V14-4): flow `stacks` = that merge feed. Stack sizes 1..4 in even shares, fixed cycle, not dice; seed varies item and loader order per box.
 
 Verified-by: `make test-one FV=2.0 T='tests/game/test_probe_v14.lua::probe v14 > loader feed shapes'`, `... > prefilled chest feed'` (2.0), `... > splitter merge feed'` (temporary index entry; same on `FV=2.1` for first and third)
+
+## FND-0037 - v14 S0b: packer cost by tier, packers minus plain belts (player rig red, cost follows belt items taken)
+
+Measured 2026-10-01 11:10-12:35 UTC on dev-vm, 2.0.77 + 2.1.20, code `7c241a2` (`int/v14`), `tools/bench/run.sh`, 3600 ticks, flow `stacks` (FND-0036) unless said, belt stack 4. Every row = pair back to back: packers, then same scene with plain tier belt at box tile (`--belt-only`, V14-5); order flips per round. Host busy all session (load1 logged per run, 7..31; other sessions), 2 host reboots after global OOM at 10:17 and 10:32 (bench Factorio 316 MB RSS when killed; cause not found) - earlier partial logs kept, not used. Round 3 not run (load 20-38). No A/A noise run yet (SP-20): numbers below are NOT fit for a bar.
+
+| FV | Row (200 boxes) | Round | Packers script ms | Belts script ms | Delta script ms | Delta whole ms | Delta per box ms | Items in / 3000 ticks | Load1 packers / belts |
+|---|---|---|---|---|---|---|---|---|---|
+| 2.0 | yellow | 1 | 11.815 | 0.013 | 11.80 | 15.97 | 0.059 | 351087 | 14.3 / 14.6 |
+| 2.0 | yellow | 2 | 5.865 | 0.013 | 5.85 | 7.02 | 0.029 | 351087 | 8.8 / 9.3 |
+| 2.0 | red | 1 | 13.169 | 0.016 | 13.15 | 14.21 | 0.066 | 726086 | 11.8 / 11.5 |
+| 2.0 | red | 2 | 10.507 | 0.014 | 10.49 | 11.69 | 0.052 | 726086 | 7.4 / 8.2 |
+| 2.0 | blue | 1 | 30.192 | 0.019 | 30.17 | 32.47 | 0.151 | 1101047 | 14.6 / 13.7 |
+| 2.0 | blue | 2 | 25.037 | 0.018 | 25.02 | 25.95 | 0.125 | 1101047 | 7.9 / 7.4 |
+| 2.0 | turbo | 1 | 36.966 | 0.019 | 36.95 | 40.21 | 0.185 | 1476092 | 14.6 / 13.1 |
+| 2.0 | turbo | 2 | 24.230 | 0.015 | 24.21 | 26.08 | 0.121 | 1476092 | 7.1 / 7.0 |
+| 2.0 | `ub-ultimate` (set `ubsa`) | 1 | 88.807 | 0.024 | 88.78 | 91.09 | 0.444 | 6675803 | 14.3 / 12.7 |
+| 2.0 | `ub-ultimate` (set `ubsa`) | 2 | 78.149 | 0.023 | 78.13 | 80.10 | 0.391 | 6675803 | 6.8 / 9.0 |
+| 2.0 | yellow, flow `single` (old R-1 scene) | 1 | 4.912 | 0.013 | 4.90 | 4.92 | 0.024 | 144800 | 12.5 / 12.3 |
+| 2.0 | yellow, flow `single` (old R-1 scene) | 2 | 5.035 | 0.010 | 5.03 | 6.05 | 0.025 | 144800 | 8.3 / 7.0 |
+| 2.1 | yellow | 1 | 7.498 | 0.016 | 7.48 | 8.00 | 0.037 | 351087 | 11.3 / 10.8 |
+| 2.1 | yellow | 2 | 5.616 | 0.012 | 5.60 | 6.30 | 0.028 | 351087 | 6.9 / 7.6 |
+| 2.1 | red | 1 | 13.294 | 0.015 | 13.28 | 15.14 | 0.066 | 726086 | 10.5 / 9.5 |
+| 2.1 | red | 2 | 16.179 | 0.012 | 16.17 | 19.82 | 0.081 | 726086 | 11.9 / 8.7 |
+| 2.1 | blue | 1 | 27.350 | 0.017 | 27.33 | 28.36 | 0.137 | 1101047 | 7.9 / 10.7 |
+| 2.1 | blue | 2 | 43.351 | 0.016 | 43.34 | 48.68 | 0.217 | 1101047 | 16.2 / 17.1 |
+| 2.1 | turbo | 1 | 28.075 | 0.020 | 28.05 | 29.06 | 0.140 | 1476092 | 8.8 / 12.4 |
+| 2.1 | turbo | 2 | 38.919 | 0.022 | 38.90 | 41.02 | 0.194 | 1476092 | 31.3 / 20.6 |
+| 2.1 | `kr-superior` (set `k2so`) | 1 | 45.162 | 0.033 | 45.13 | 47.81 | 0.226 | 2226082 | 6.9 / 6.9 |
+| 2.1 | yellow, flow `single` | 1 | 5.087 | 0.010 | 5.08 | 5.88 | 0.025 | 144800 | 9.4 / 9.7 |
+
+Player rig (FND-0035; set `g433`, 5 `ab-extreme` boxes, multiplier 2.0, FV 2.0): pair before reboot (load 15-17) packers 1.246 / belts 0.131 -> delta 1.115 ms = 0.223 ms per box; round 1 (load 12-13) 1.310 / 0.148 -> 1.162 = 0.232; round 2 (load 7-9) 0.947 / 0.132 -> 0.815 = 0.163. RED vs V14-1 bar 0.02 ms per box in 3 of 3 pairs (x8..x11). Player's own figure: 0.08 ms per box on their PC.
+
+Readings (arithmetic on rows above, not a mechanism):
+- Belt-only scenes cost 0.010..0.033 ms script: delta = packer script cost. Whole-update delta is 0..5 ms above script delta: engine side of box is small.
+- Yellow `stacks` moves 2.42x items of yellow `single` (351087 vs 144800) for 1.1..1.2x script (round 2, FV 2.0: 5.85 vs 5.03 ms). Both carry same count of belt items (belt spots). Cost follows belt items taken, not items and not box count.
+- Per belt item taken (items / 2.5 for `stacks`), lowest-load pair per row: yellow 120-125 us, red 108, blue 170, turbo 123, `ub-ultimate` 88, yellow `single` 101-104. Same band from 15/s to 270/s belts.
+- 200 `ub-ultimate` boxes at full flow: 78-89 ms script per tick (tick budget 16.7 ms).
+- Old R-1 scene on this busy host: 4.9-5.1 ms.
+
+Verified-by: `~/.cache/sushi-packer/v14/bench-s0.sh ~/wt-sushi-packer-int-v14 s0 3 both` (stopped after round 2; log `~/.cache/sushi-packer/v14/logs/bench-s0.txt`; partial logs `bench-s0-partial-load15-reboot.txt`, `bench-s0-partial-oom-1032.txt`)
+
+## FND-0038 - v14 S0b profile: no single hot spot; per belt item ~12 engine calls + core bookkeeping
+
+Measured 2026-10-01 12:40-12:46 UTC on dev-vm 2.0.77, scratch worktree `~/wt-sushi-packer-prof-v14` (= `8444ab7` + `LuaProfiler` sections in `scripts/tick.lua` / `scripts/belt_io.lua`, never merged), 200 boxes, flow `stacks`, cumulative over ticks 0..1800. Host load1 37-40: absolute times inflated (turbo 86 ms per tick vs 24-37 in FND-0037), shares only. Profiler start/stop pair cost 2.8 us here (100000 empty pairs = 276 ms); about 4.4 M pairs in turbo run = ~8 % spread over sections.
+
+| Section | Turbo ms | Share | Calls | Yellow ms | Share | Calls |
+|---|---|---|---|---|---|---|
+| whole `tick.on_tick` | 154640 | 100 % | 1801 | 35898 | 100 % | 1801 |
+| `belt_io.pull` total | 100027 | 64.7 % | 176662 | 20111 | 56.0 % | 41745 |
+| - sink: `core.accept` | 23523 | 15.2 % | 350400 | 5505 | 15.3 % | 80400 |
+| - `get_detailed_contents` (take window) | 18021 | 11.7 % | 350924 | 0 (not fast) | - | - |
+| - neighbour cache check, behind (`cached` -> `matches`) | 8527 | 5.5 % | 176662 | 1838 | 5.1 % | 41745 |
+| - sink: `inventory.insert` | 8548 | 5.5 % | 350400 | 2036 | 5.7 % | 80400 |
+| - `line[1]` + 3 field reads | 6076 | 3.9 % | 350400 | 1482 | 4.1 % | 80400 |
+| - `line.remove_item` | 5705 | 3.7 % | 350400 | 2156 | 6.0 % | 80400 |
+| - `#line` + `can_insert_at(0)` | 4680 | 3.0 % | 703724 | 1212 | 3.4 % | 163890 |
+| - `get_transport_line` | 3786 | 2.4 % | 353324 | 925 | 2.6 % | 83490 |
+| - eta block | 2515 | 1.6 % | 176662 | 1260 | 3.5 % | 41745 |
+| - sink rest (stack size, filter check, closure) | 5109 | 3.3 % | - | 1022 | 2.8 % | - |
+| - pull rest (loop, profiler) | 13540 | 8.8 % | - | 4175 | 11.6 % | - |
+| `belt_io.push` total | 19197 | 12.4 % | 218518 | 4313 | 12.0 % | 49896 |
+| - `can_insert_at_back` + `insert_at_back` | 5005 | 3.2 % | 218518 | 1083 | 3.0 % | 49896 |
+| - push rest = front cache check + `get_transport_line` (not split) | 14192 | 9.2 % | - | 3230 | 9.0 % | - |
+| `core.peek_out` + `core.take_out` + `core.on_tick` | 12197 | 7.9 % | - | 2832 | 7.9 % | - |
+| `inventory.remove` (push side) | 2749 | 1.8 % | 218518 | 606 | 1.7 % | 49896 |
+| circuit + reconcile + LED | 2174 | 1.4 % | - | 1035 | 2.9 % | - |
+| loop rest (per box per tick: valid, force, LED state, closures) | 18300 | 11.8 % | 360200 box-ticks | 7000 | 19.5 % | 360200 box-ticks |
+
+Counters same runs (ticks 0..1800): turbo visits 176662, reads 351448, pulls 350400, pushes 218518, items in 876092; yellow visits 41745, reads 690, pulls 80400, pushes 49896, items in 201021. Turbo: 2.0 belt items per visit, one `get_detailed_contents` per belt item taken.
+
+Verdict: cost is spread. Largest single pieces: `core.accept` (pure Lua) 15 %, `get_detailed_contents` 12 % (fast tiers only), neighbour cache checks behind + front ~15 % together, inventory mirror insert + remove ~7 %, per-box-per-tick loop 12-20 %. No one fix removes most of it. Rung 1 (script only) candidates = those five; their sum is about 60 % of cost on turbo, so a x10 cut (to 0.02 ms per box on fast tiers) is not in reach of rung 1 by this profile.
+
+Verified-by: `cd ~/wt-sushi-packer-prof-v14 && gateslot --label sushi-packer/heavy -- tools/bench/run.sh 2.0 --tier turbo --flow stacks --ticks 1900` (and `--tier yellow`); dumps `~/.cache/sushi-packer/v14/logs/prof-turbo.txt`, `prof-yellow.txt` (lines `tick=1800`)
