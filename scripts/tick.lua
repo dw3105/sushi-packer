@@ -102,6 +102,12 @@ end
 -- estimate says full.
 local SLOW = 30
 local LOOK = N.LOOK
+local stack_flag  -- nil = not read yet
+local function can_stack()
+  if stack_flag == nil then stack_flag = not script or not script.feature_flags or script.feature_flags.space_travel == true end
+  return stack_flag
+end
+function M._reset_flags() stack_flag = nil end  -- tests only
 local EMPTY = {}
 local opts = {}  -- reused per call: ledger.plan reads it, never keeps it
 local held_piece = {} -- reused for output hands
@@ -352,6 +358,12 @@ function M.on_tick(e)
     if rec.stores then
       if not rec.decon and (tick + rec.unit_number) % 60 == 0 then adopt_outside(rec, tick) end
       local script_mode = rec.settings.filters and rec.settings.filters[1] ~= nil
+      if not script_mode and not can_stack() then
+        -- engine out arms can not stack without space travel feature flag: box that must stack stays on script path
+        local fi = rec.force_index
+        local force_bss = fi and storage.belt_stack[fi]
+        script_mode = force_bss == nil or force_bss > 1  -- unknown yet: script path, it finds out
+      end
       local interval = M._interval(rec.tier)
       local due
       if script_mode then
