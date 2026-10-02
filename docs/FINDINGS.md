@@ -549,3 +549,26 @@ Bar (author 2026-10-01): script at least x10 below v1.14 on every belt row: met 
 Whole-tick numbers on a shared host move with load (see r1 / r2 spread on FV 2.1 rows).
 
 Verified-by: `~/.cache/sushi-packer/v16/logs/` (`full-2.0-r10.log`, `full-2.1-r10.log`, `modsets-2.0-r9.log`, `modsets-2.1-r9.log`, `pairs-v16.txt`, older rounds `pairs-v16-*.txt`), `~/.cache/sushi-packer/v16/oldsave/<FV>/load14.log`, `load15.log`, script `~/.cache/sushi-packer/v16/pairs-v16.sh`
+
+## FND-0048 - v17 S0: belt body. Two shapes probed; flowing body turns into plain belt after front jam, shut body does not
+
+Measured 2026-10-02 07:20-08:20 UTC, dev-vm, 2.0.77 + 2.1.20 (same results unless said), scratch branch `probe/v17` (`~/wt-sushi-packer-probe-v17`, never merged), file `tests/game/test_probe_v17.lua`, test-env prototypes `sp-test-body-*`. Docs read first (2.0.72 + 2.1.20): only `transport-belt` has enable/disable + read contents; no field refuses side-loading; `speed` must be > 0.
+
+| Probe | Result |
+|---|---|
+| Catch, crawling body (speed 1/256..32/256), in arms on own tile (`pickup_target` = body, lane flags), 1800 ticks, belt stack 4, mixed stacks 1..4 (2.0 only) | 0 items past body, 0 in wrong store on yellow, red, blue, turbo, 270/s. Intake vs plain belt: yellow, red, turbo 100 %; blue 88.8 % (one belt spot per 3 ticks instead of 2.67); 270/s 44.4 % (crawl admits one belt spot per tick per lane). |
+| Catch, body at tier's own speed (plain tier belt), same arms (2.0 only) | intake 100.0 % and 0 leaks on all five speeds, pick position -0.4 / 0 / +0.4, chasing or still arm. 270/s needs body speed 144/256 or own speed (64/256: 44 %, 96/256: 74 %). |
+| Stop channels for belt | circuit condition false on a wired network: `disabled = true`, status `disabled_by_control_behavior`, 0 items enter, 0 pass, items on body stay. Circuit condition without wire: no effect. `connect_to_logistic_network = true` + `logistic_condition` never true: disabled both without any logistic network and inside one -> script-owned stop that leaves player's circuit condition free. `active = false`: no effect on 2.0, `LuaEntity::active is read only` on 2.1. `disabled_by_script = true`: no effect. Arms still pick from a disabled belt. Circuit true + logistic never: disabled (`disabled` can not tell which one). |
+| Shape X "flowing body" (open body, own-tile arms, 8 out arms), stores full, front belt jammed 900 ticks then freed, turbo | never recovers: stores stay full (1380 / 980 items, 0 free slots) for 2100 ticks, 774 belt spots per lane pass unpacked (feed stream compressed, out arms find no gap). |
+| Shape Y "shut body" (body shut by logistic condition, in arms take from tile behind as v1.16, out arms same), same jam | recovers: 0 unpacked spots, stores drained to 0 / 0..4, 920..1020 full stacks out per lane. |
+| Shape Y intake, 1200 ticks | blue, turbo, 270/s: 100.0 % both lanes, 0 leaks. |
+| Side belt at flank of shut body | fills its own 3 tiles (12 items) and stops: nothing enters. |
+| Outside inserters at shut body with two lane stores on tile | giver `drop_target` = belt body; items land on body lane and one own-tile "mop" arm per lane puts them into that lane's store (60 plastic: all taken). Taker `pickup_target` = belt body: takes only items lying on body (8 sulfur), stores untouched (50 / 50). |
+| Wire | stores hidden-wired to belt connector: network shows store items (`copper-plate=30,iron-plate=55`); belt read contents (hold) adds items on body (`sulfur=3`). `body.get_signal` reads player's signals. |
+| Other | `body.rotate()` works (game rotates belt); belt fed only from side reports `belt_shape = right` (curve graphic under hood); `rendering.draw_sprite{target = body}` valid; `player.opened = belt` gives gui type `none` in headless test (click path not provable headless). |
+
+Scratch speed, shape Y upper bound (v1.16 box with chest kept + shut tier belt on same tile + 2 mop arms per lane), 200 boxes, flow stacks, 2 alternating pairs vs v1.16 (`~/wt-sushi-packer-bench-v15`), 08:00-08:06 UTC, load1 0.9..3.5. Script ms v1.16 / scratch: FV 2.0 yellow 0.296, 0.315 / 0.315, 0.296; turbo 0.257, 0.275 / 0.309, 0.292; `ub-ultimate` 0.373, 0.362 / 0.468, 0.466; FV 2.1 turbo 0.280, 0.259 / 0.291, 0.320. Whole tick ms: yellow 1.970, 2.246 / 2.097, 1.810; turbo 2.917, 3.208 / 3.226, 2.957; `ub-ultimate` 5.621, 5.279 / 6.014, 6.149; FV 2.1 turbo 3.401, 2.817 / 2.883, 3.362. Without mop arms `ub-ultimate`: script 0.479, 0.470 vs 0.385, 0.367; whole 6.347, 5.987 vs 5.875, 5.385. So yellow, turbo rows inside noise; `ub-ultimate` script +0.10 ms with belt alone, cause not found (open).
+
+Meaning: plain running belt as body needs a script stop whenever a lane store fills, and a belt can only be stopped whole (both lanes) -> breaks L-3. Shut body keeps v1.16 item path (proven), refuses side-loading by itself, lets outside inserters act as with belt.
+
+Verified-by: `~/wt-sushi-packer-probe-v17` (`make test-one FV=2.0|2.1 T='tests/game/test_probe_v17.lua::probe v17 > <name>'`, names: catch bss4, catch fast body, stop channels, shut body, blocked front then free, wire and window); logs `~/.cache/sushi-packer/v17/logs/` (`b1-catch-2.0.log`, `b1-fast-2.0.log`, `b3-stop-*.log`, `y-shut-*.log`, `x-blocked-*.log`, `b4-wire-*.log`, `pairs-v17-scratch.txt`, `pairs-v17-nomop.txt`)
