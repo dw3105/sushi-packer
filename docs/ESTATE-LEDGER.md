@@ -26,4 +26,6 @@ Cross-repo citation of findings raised in this repo (session-lifecycle CL-07). O
 | close 2026-10-02 | 2026-10-02 | dev-vm | Open at close: v1.21 not seen in real game (first deferral); `make skill-lint` red, REQUIREMENTS v14 text, dead code `core.lua` / `belt_io.pull` (second deferral each, costs in `docs/STEPS.md`) | OPEN |
 | FND-0054 | 2026-10-02 | dev-vm | Cause of FND-0049 speed gap hunted: not calls, data, wires, mop hands; same Lua runs slower with belt body | cause not found, gap accepted (V17-11); closed as "no means in headless game" |
 | close 2026-10-02 (2) | 2026-10-02 | dev-vm | Open list worked on author's word: skill-lint, dead code, REQUIREMENTS v21 text done | still OPEN with author: real-game look at v1.21, hood in blueprint preview (third deferral; cost: author, 2 min in game) |
+| FND-0052 hood look, v1.21 window | 2026-10-02 | operator game | Hood in blueprint preview / ghost and v1.21 packer window seen in real game | closed (author: "it works") |
+| FND-0049 cause | 2026-10-02 | dev-vm | Speed gap since v1.17 = hood entity on packer tile (6 of 6 alternated pairs without hood lower) | cause found; fix waits on author (look of placed packer) |
 
