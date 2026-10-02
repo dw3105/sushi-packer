@@ -267,3 +267,7 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 
 **2026-10-02.** v1.21 "done" message was sent with: promised cost check missing, proof round on a commit before release commit, a cost never shown to author. Each was found by close-out interrogation, not by me; three extra full rounds and two extra questions to author. Root cause: definition of done in plan did not list gate promises, and docs were committed after proof round. **Rule:** before first "done": (1) list every promise made at gates and tick each with output; (2) write docs first, run proof round on release commit, commit nothing after; (3) every cost number author has not seen = question before box. Proposed, not applied (author decides): add these three lines to `sushi-packer-code` release checklist.
 
+## FRC-0064 - Grep by module name missed callers using another local name
+
+**2026-10-02.** Removing `belt_io.pull`: grep for `belt_io.pull` found offline callers; game test file imports module as `io` and calls `io.pull`; six red tests found only by full round (same miss as FRC-0060, hours later). **Rule:** when removing or renaming a function, grep for `\.<name>(` over `scripts`, `tests/offline` and `tests/game`, not for `<module>.<name>`.
+
