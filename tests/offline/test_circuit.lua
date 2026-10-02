@@ -51,7 +51,7 @@ describe("circuit v17", function()
     if cb then
       setmetatable(cb,{__newindex=function(t,k,v) writes[k]=v; rawset(t,k,v) end})
     end
-    local entity={get_control_behavior=function() return cb end}
+    local entity={get_control_behavior=function() return cb end,get_or_create_control_behavior=function() return cb end}
     local rec={entity=entity,settings={circuit=settings}}
     return rec,cb,writes
   end

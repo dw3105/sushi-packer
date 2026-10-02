@@ -118,10 +118,12 @@ function M.on_built(e)
   rec = rec or M.new_rec(entity)
   rec.entity, rec.unit_number = entity, entity.unit_number
   rec.tier, rec.dir = N.BODIES[entity.name], N.dir_name(entity.direction)
+  -- Body that arrives with control behaviour (blueprint, upgrade, clone) carries player's circuit settings: read them.
+  -- Fresh body has none: write defaults. Asked before arms.create, which gives every body one (shut condition).
+  local carried = entity.get_control_behavior and entity.get_control_behavior() ~= nil
   if created or recovered then arms.create(rec) end
   if e.tags and e.tags.sushi_packer then copy.import(rec, e.tags.sushi_packer) end
-  local cb = entity.get_control_behavior and entity.get_control_behavior()
-  if cb then circuit.sync(rec) else circuit.apply(rec) end
+  if carried then circuit.sync(rec) else circuit.apply(rec) end
   arms.wire(rec, rec.settings.circuit.read ~= false)
   if created or recovered then led.create(rec) else led.ensure(rec) end
 end
@@ -162,57 +164,10 @@ end
 
 function M.on_rotated(e)
   local entity=e and e.entity; local rec=M.get(entity); if not rec then return end
-  local old=rec.led; rec.dir=N.dir_name(entity.direction); arms.create(rec); led.destroy(rec); led.create(rec)
+  local old=rec.led; rec.dir=N.dir_name(entity.direction)
+  rec.belt, rec.front_was = nil, nil  -- neighbours changed sides
+  arms.create(rec); led.destroy(rec); led.create(rec)
   if old then led.set(rec,old.state,old.visible) end
-end
-
-function M.swap(rec, new_dir)
-  if not rec or not valid(rec.entity) then return rec end
-  local old, old_unit, old_led = rec.entity, rec.unit_number, rec.led
-  local contents = inventory_items(old)
-  local wires = {}
-  for _, id in ipairs({ defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green }) do
-    local connector = old.get_wire_connector(id, false)
-    if connector then
-      for _, c in ipairs(connector.connections) do
-        wires[#wires + 1] = { id = id, target = c.target.owner,
-          target_id = c.target.wire_connector_id, origin = c.origin }
-      end
-    end
-  end
-  local position, force, quality, surface, tier = old.position, old.force, old.quality, old.surface, rec.tier
-  local stores, invs = rec.stores, rec.invs
-  led.destroy(rec)
-  old.destroy()
-  local entity = surface.create_entity({ name = N.variant(tier, new_dir), position = position,
-    force = force, quality = quality, create_build_effect_smoke = false })
-  if not valid(entity) then boxes()[old_unit] = nil; storage.sched = nil; return nil end
-  local inv = entity.get_inventory(defines.inventory.chest)
-  if inv then for _, item in ipairs(contents_as_array(contents)) do inv.insert(item) end end
-  rec.entity, rec.unit_number, rec.dir = entity, entity.unit_number, new_dir
-  rec.stores, rec.invs = stores, invs
-  boxes()[old_unit] = nil; storage.sched = nil
-  boxes()[entity.unit_number] = rec; storage.sched = nil
-  for _, w in ipairs(wires) do
-    if valid(w.target) then
-      local connector = entity.get_wire_connector(w.id, true)
-      if connector then connector.connect_to(w.target.get_wire_connector(w.target_id, true), false, w.origin) end
-    end
-  end
-  led.create(rec)
-  arms.create(rec)
-  if old_led then led.set(rec, old_led.state, old_led.visible) end
-  return rec
-end
-
-function M.on_rotate_input(e, reverse)
-  local player = game.get_player(e.player_index)
-  local rec = player and M.get(player.selected)
-  if not rec then return end
-  local index = 1
-  for i, dir in ipairs(N.DIRS) do if dir == rec.dir then index = i; break end end
-  index = (index - 1 + (reverse and -1 or 1)) % #N.DIRS + 1
-  M.swap(rec, N.DIRS[index])
 end
 
 -- U-3 upgrade (FND-0006). The engine moves inventory; this preserves script state.
@@ -323,11 +278,27 @@ function M.migrate(rec)
     arms.destroy(rec); led.destroy(rec); old.destroy(); boxes()[unit]=nil; storage.sched=nil; return nil
   end
   rec.entity,rec.unit_number=body,body.unit_number; boxes()[unit]=nil; boxes()[body.unit_number]=rec; storage.sched=nil
-  for _,it in ipairs(contents) do insert_or_spill(rec,1,it) end
+  -- rec.extra (v1.14 saves, items put in from outside) names items that lie in the chest, with their lane: those go
+  -- to that lane, only the rest of the chest goes to lane 1. Never both (items would double).
+  local left = {}
+  for _,it in ipairs(contents) do local k=it.name.."\0"..tostring(it.quality or "normal"); left[k]=(left[k] or 0)+it.count end
+  for _,it in ipairs(rec.extra or {}) do
+    local k=it.name.."\0"..tostring(it.quality or "normal")
+    local n=math.min(it.count or 0,left[k] or 0)
+    if n>0 then left[k]=left[k]-n; insert_or_spill(rec,it.lane or 1,{name=it.name,quality=it.quality,count=n}) end
+  end
+  rec.extra=nil
+  for _,it in ipairs(contents) do
+    local k=it.name.."\0"..tostring(it.quality or "normal")
+    local n=math.min(it.count,left[k] or 0)
+    if n>0 then left[k]=left[k]-n; insert_or_spill(rec,1,{name=it.name,quality=it.quality,count=n}) end
+  end
   for _,it in ipairs(held) do insert_or_spill(rec,it.lane or 1,it) end
-  for _,it in ipairs(rec.extra or {}) do insert_or_spill(rec,it.lane or 1,it) end; rec.extra=nil
   for _,w in ipairs(wires) do if valid(w.target) then local c=body.get_wire_connector(w.id,true); c.connect_to(w.target.get_wire_connector(w.target_id,true),false,w.origin) end end
-  old.destroy(); rec.settings=rec.settings or copy.default_settings(); rec.settings.circuit.read=true; circuit.apply(rec); arms.create(rec); led.create(rec); if old_led then led.set(rec,old_led.state,old_led.visible) end; storage.sched=nil
+  old.destroy(); rec.settings=rec.settings or copy.default_settings(); rec.settings.circuit.read=true
+  rec.belt, rec.front_was = nil, nil
+  arms.create(rec); circuit.apply(rec)  -- apply after create: body gets its control behaviour there (shut)
+  led.create(rec); if old_led then led.set(rec,old_led.state,old_led.visible) end; storage.sched=nil
   return rec
 end
 

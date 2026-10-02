@@ -46,8 +46,10 @@ describe("lifecycle arms", function()
     ok(rec.ledger); eq(rec.box,nil); eq(#a.creates,1); eq(a.creates[1].rec,rec)
   end)
   it("rotate keeps stores and rebuilds arms", function()
-    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); rec.stores={"s1","s2"}; rec.invs={"i1","i2"}; r.swap(rec,"south")
+    local r, _, a, _, entity = setup(); local e=entity(1); local rec=r.new_rec(e); rec.stores={"s1","s2"}; rec.invs={"i1","i2"}; rec.belt={}; rec.front_was="ahead"
+    e.direction=defines.direction.south; r.on_rotated({entity=e})  -- v17: game rotates belt body, parts follow
     eq(#a.creates,1); eq(a.creates[1].dir,"south"); eq(a.creates[1].entity,rec.entity); eq(rec.invs[1],"i1"); eq(#a.destroys,0)
+    eq(rec.belt,nil); eq(rec.front_was,nil)
   end)
   it("mined box returns store items", function()
     local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec=r.new_rec(e); rec.invs={ inv({{name="iron",count=2,quality="rare"}}), inv({{name="copper",count=3,quality="normal"}}) }; local got={}

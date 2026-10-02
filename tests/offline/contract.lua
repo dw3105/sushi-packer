@@ -8,7 +8,7 @@ return {
   belt_io = { behind = 2, front = 2, pull = 3, push = 4, belt_stack_size = 1, lane_rate = 1, behind_kinds = 2, set_tick = 1, can_push = 2, front_ok = 1, front_kind = 1 },
   led = { create = 1, set = 3, destroy = 1, ensure = 1 },
   registry = {
-    on_built = 1, on_removed = 1, on_died = 1, on_rotate_input = 2, swap = 2, get = 1,
+    on_built = 1, on_removed = 1, on_died = 1, get = 1,
     new_rec = 1, on_configuration_changed = 1, stash = 1, take_stash = 1, on_rotated = 1, migrate = 1,
   },
   copy = {

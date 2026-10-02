@@ -45,6 +45,18 @@ describe("belt_io front v17", function()
       {valid=true,type="splitter",direction=0,position={x=0.5,y=-1}},
     }) do eq(io.front_kind(make_rec("west",belt)),nil) end
   end)
+  it("kind follows a front belt that goes away or turns", function()
+    -- INT (review of lane 054): old answer was kept when nothing was found any more
+    local belt={valid=true,type="transport-belt",direction=0}
+    local rec=make_rec("west",belt)
+    io.set_tick(100); eq(io.front_kind(rec),"across")
+    belt.valid=false
+    io.set_tick(101); eq(io.front_kind(rec),nil,"across belt removed")
+    local rec2=make_rec("north",{valid=true,type="transport-belt",direction=0})
+    io.set_tick(200); eq(io.front_kind(rec2),"ahead")
+    rec2.belt.front.direction=4
+    io.set_tick(300); eq(io.front_kind(rec2),"across","front belt turned by player")
+  end)
   it("front_ok follows kind", function()
     eq(io.front_ok(make_rec("north",{valid=true,type="transport-belt",direction=0})),true)
     eq(io.front_ok(make_rec("west",{valid=true,type="transport-belt",direction=0})),true)

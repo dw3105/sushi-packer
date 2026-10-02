@@ -367,11 +367,7 @@ function M.on_tick(e)
   tick_timeout = nil
   if tick % 30 == 0 then  -- open box windows show live lane stores
     for _, player in pairs(game.connected_players) do
-      if player.opened_gui_type == defines.gui_type.entity then
-        local entity = player.opened
-        local rec = entity and entity.valid and entity.unit_number and storage.boxes[entity.unit_number]
-        if rec then gui._refresh(player, rec) end
-      end
+      if player.opened_gui_type == defines.gui_type.custom then gui._refresh_open(player) end  -- v17: own window
     end
   end
   local boxes = storage.boxes

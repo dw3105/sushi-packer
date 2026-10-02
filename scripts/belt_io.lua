@@ -19,9 +19,6 @@ end
 
 -- Right-hand unit vector per direction (splitter halves: left = negative side).
 local right = { north = { 1, 0 }, east = { 0, 1 }, south = { -1, 0 }, west = { 0, -1 } }
-local clockwise = { north = "east", east = "south", south = "west", west = "north" }
-local counterclockwise = { north = "west", west = "south", south = "east", east = "north" }
-local ACROSS_TYPES = { "transport-belt", "underground-belt", "splitter", "loader", "loader-1x1", "linked-belt" }
 
 -- FND-0015 (author blueprint 2026-09-27, probe `probe > splitter transport line numbering`): splitter facing box
 -- direction touching box tile with one half. Behind: box takes that half's output lines (left 5/6, right 7/8).
@@ -292,42 +289,53 @@ function M.behind_kinds(rec, lane)
   return line and line.get_contents() or nil
 end
 
+-- v17 (V17-5): belt running across in front. Both packer lanes go to its near lane: line 2 when it runs to the
+-- right of packer travel ((its direction - packer direction) % 16 == 4), else line 1. Kept beside the "front"
+-- cache (that one holds only neighbours running our way). Looked for at most once per 60 ticks.
+local function across(rec)
+  local b = rec.belt
+  local tick = now or game.tick or 0
+  local belt = b.across
+  if belt then
+    if belt.valid and tick < (b.across_at or -60) + 60 then return b.across_line end
+  elseif tick < (b.across_scan or -60) + 60 then
+    return nil
+  end
+  b.across, b.across_line, b.across_scan = nil, nil, tick
+  local offset, e = offsets[rec.dir], rec.entity
+  if not offset then return nil end
+  local found = e.surface.find_entities_filtered({ position = { x = e.position.x + offset[1], y = e.position.y + offset[2] }, type = "transport-belt" })
+  local mine = direction_value(rec.dir)
+  for _, candidate in ipairs(found) do
+    if candidate.valid and candidate.type == "transport-belt" then
+      local turn = (candidate.direction - mine) % 16
+      if turn == 4 or turn == 12 then
+        b.across, b.across_at = candidate, tick
+        b.across_line = candidate.get_transport_line(turn == 4 and 2 or 1)
+        return b.across_line
+      end
+    end
+  end
+  return nil
+end
+
 -- v15 perf: may lane take one more belt item now? One engine call (plus side check once per tick).
 function M.can_push(rec, lane)
-  if M.front_kind(rec) == "across" then
-    local belt=rec.belt.front
-    local target=((belt.direction-direction_value(rec.dir))%16)==4 and 2 or 1
-    local line=transport_line(rec,"front",target)
+  local belt = cached(rec, "front", 1)
+  if not belt then
+    local line = across(rec)
     return line ~= nil and line.can_insert_at(0.5)
   end
-  local belt = cached(rec, "front", 1)
-  if not belt then return false end
   local line = transport_line(rec, "front", lane)
   return line ~= nil and line.can_insert_at_back()
 end
 
--- v17 adds perpendicular transport belts. Classification is cached with the front side.
+-- v17: what is in front? "ahead" = belt-like entity running our way (push rules), "across" = belt turned 90 degrees,
+-- nil = nothing packer may feed (also belt facing packer).
 function M.front_kind(rec)
-  local b=rec.belt
-  if not b then b={behind=nil,front=nil,scan={}}; rec.belt=b end
-  local tick=now or game.tick or 0
-  if b.front_kind_at and tick < b.front_kind_at+60 then return b.front_kind end
-  local belt=cached(rec,"front",1)
-  if belt then b.front_kind="ahead"
-  else
-    local offset=offsets[rec.dir]; local e=rec.entity
-    local found=offset and e.surface.find_entities_filtered({position={x=e.position.x+offset[1],y=e.position.y+offset[2]},type=ACROSS_TYPES}) or {}
-    local cw=clockwise[rec.dir]
-    local ccw=counterclockwise[rec.dir]
-    for _,candidate in ipairs(found) do
-      if candidate.valid and candidate.type=="transport-belt" and (candidate.direction==direction_value(cw) or candidate.direction==direction_value(ccw)) then
-        b.front=candidate; b.lines=b.lines or {}; b.lines.front={candidate.get_transport_line(1),candidate.get_transport_line(2)}
-        b.kind=b.kind or {}; b.kind.front=candidate.type; b.front_kind="across"; break
-      end
-    end
-  end
-  b.front_kind_at=tick
-  return b.front_kind
+  if cached(rec, "front", 1) then return "ahead" end
+  if across(rec) then return "across" end
+  return nil
 end
 
 function M.front_ok(rec)
@@ -336,26 +344,19 @@ end
 
 function M.push(rec, lane, item, belt_stack_size)
   local counters = storage and storage.sp_counters
-  if M.front_kind(rec)=="across" then
-    local belt=rec.belt.front
-    local target=((belt.direction-direction_value(rec.dir))%16)==4 and 2 or 1
-    local line=transport_line(rec,"front",target)
-    if not line or not line.can_insert_at(0.5) then return 0 end
-    if line.insert_at(0.5,{name=item.name,count=item.count,quality=item.quality},belt_stack_size) then
-      if counters then counters.pushes=counters.pushes+1; counters.items_out=counters.items_out+item.count end
-      return item.count
-    end
-    return 0
-  end
   local belt, map = cached(rec, "front", 1)
-  if not belt then return 0 end
-  local line = transport_line(rec, "front", lane, map)
-  if not line.can_insert_at_back() then return 0 end
-  if line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then
-    if counters then counters.pushes = counters.pushes + 1; counters.items_out = counters.items_out + item.count end
-    return item.count
+  local line
+  if belt then
+    line = transport_line(rec, "front", lane, map)
+    if not line.can_insert_at_back() then return 0 end
+    if not line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
+  else
+    line = across(rec)
+    if not line or not line.can_insert_at(0.5) then return 0 end
+    if not line.insert_at(0.5, { name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
   end
-  return 0
+  if counters then counters.pushes = counters.pushes + 1; counters.items_out = counters.items_out + item.count end
+  return item.count
 end
 
 -- v9 (M-6): belt items per lane per tick for tier = live belt prototype speed x 4. Cached per tier: prototype-

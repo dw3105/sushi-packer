@@ -41,25 +41,30 @@ function M.evaluate(rec)
   return enabled, flush_now
 end
 
+-- v17 (V17-4): player's on/off condition and "read contents" live in belt body's own control behaviour (blueprints,
+-- copy-paste, upgrade carry them); rec.settings.circuit mirrors them for the tick loop. Packer's shut condition
+-- (logistic network fields) is never touched here.
 function M.sync(rec)
-  local cb=rec.entity.get_control_behavior()
+  local cb = rec.entity.get_control_behavior()
   if not cb then return end
-  local c=rec.settings.circuit
-  c.enable=cb.circuit_enable_disable
-  if cb.circuit_condition ~= nil then c.cond=cb.circuit_condition end
-  c.read=cb.read_contents
+  local c = rec.settings.circuit
+  c.enable = cb.circuit_enable_disable == true
+  local cond = cb.circuit_condition
+  if cond and cond.first_signal then
+    c.cond = { first_signal = cond.first_signal, comparator = cond.comparator, constant = cond.constant or 0 }
+  end
+  c.read = cb.read_contents == true
 end
 
 function M.apply(rec)
-  local cb=rec.entity.get_control_behavior()
-  if not cb then return end
-  local c=rec.settings.circuit
-  cb.circuit_enable_disable=c.enable == true
-  if c.cond ~= nil then cb.circuit_condition=c.cond end
-  cb.read_contents=c.read ~= false
-  if cb.read_contents then
-    cb.read_contents_mode=defines.control_behavior.transport_belt.content_read_mode.hold
-  end
+  local cb = rec.entity.get_or_create_control_behavior()
+  local c = rec.settings.circuit
+  cb.circuit_enable_disable = c.enable == true
+  local cond = c.cond
+  if cond then cb.circuit_condition = { first_signal = cond.first_signal, comparator = cond.comparator, constant = cond.constant } end
+  local read = c.read ~= false
+  cb.read_contents = read
+  if read then cb.read_contents_mode = defines.control_behavior.transport_belt.content_read_mode.hold end
 end
 
 return M

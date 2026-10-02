@@ -189,7 +189,8 @@ end
 local function build(player, rec)
   local old = frame_for(player)
   if old then old.destroy() end
-  local frame = player.gui.screen.add({ type = "frame", name = FRAME, direction = "vertical", auto_center = true })
+  local frame = player.gui.screen.add({ type = "frame", name = FRAME, direction = "vertical", auto_center = true,
+    tags = { sushi_packer = rec.unit_number } })
   local titlebar = frame.add({ type = "flow", name = "titlebar", direction = "horizontal" })
   titlebar.drag_target = frame
   titlebar.add({ type = "label", caption = { "gui.title" }, style = "frame_title" })
@@ -203,6 +204,15 @@ local function build(player, rec)
   add(circuit, { type = "checkbox", name = "circuit_read", caption = { "gui.read-contents" }, state = settings.circuit.read ~= false }, unit, "circuit.read")
   player.opened = frame
   return frame
+end
+
+-- Open window shows live lane stores (tick calls this every 30 ticks per connected player). Packer gone: window closes.
+function M._refresh_open(player)
+  local frame = frame_for(player)
+  if not frame then return end
+  local unit = frame.tags and frame.tags.sushi_packer
+  local rec = unit and storage.boxes and storage.boxes[unit]
+  if rec then M._refresh(player, rec) else frame.destroy() end
 end
 
 function M.open(player, rec)
@@ -219,6 +229,7 @@ end
 function M.on_open_input(e)
   local player = game.players[e.player_index]
   if not player or player.opened ~= nil or player.opened_gui_type ~= defines.gui_type.none then return end
+  if player.is_cursor_empty and not player.is_cursor_empty() then return end  -- building with item in hand: no window
   local entity = player.selected
   if not entity or not entity.valid or not player.can_reach_entity(entity) then return end
   local rec = storage.boxes and storage.boxes[entity.unit_number]
