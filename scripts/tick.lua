@@ -169,8 +169,8 @@ local function engine_look(rec, tick, bss, flush_all)
   local front = rec.front_was
   if not front or tick - (rec.front_at or -120) >= 120 then  -- missing front: asked at every look
     front = belt_io.front_kind(rec); rec.front_was, rec.front_at = front, tick
-    if front then arms.aim_out(rec, front) end
   end
+  if front then arms.aim_out(rec, front) end  -- no engine call when aim unchanged (parts re-made by rotation aim ahead)
   local stopped = rec.enabled == false or rec.decon == true or not front
   arms.hand(rec, bss)
   rec.used = rec.used or { 0, 0 }
