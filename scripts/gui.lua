@@ -144,6 +144,10 @@ local function lane_stack(inv, slot)
   if stack and stack.valid_for_read then return stack end
 end
 
+local function set_if_changed(element, field, value)
+  if element[field] ~= value then element[field] = value end
+end
+
 local function refresh_lane_buttons(frame, rec)
   if not frame or not frame.valid or not frame.lanes_section then return end
   for lane = 1, 2 do
@@ -154,13 +158,20 @@ local function refresh_lane_buttons(frame, rec)
         local stack = lane_stack(rec.invs and rec.invs[lane], slot)
         if button then
           if stack then
-            button.sprite = "item/" .. stack.name
-            button.number = stack.count
-            button.tooltip = stack.quality and stack.quality.name or stack.name
+            local name = stack.name
+            local quality = stack.quality and stack.quality.name or nil
+            set_if_changed(button, "sprite", "item/" .. name)
+            set_if_changed(button, "number", stack.count)
+            set_if_changed(button, "quality", quality)
+            local tooltip = button.elem_tooltip
+            if not tooltip or tooltip.type ~= "item-with-quality" or tooltip.name ~= name or tooltip.quality ~= quality then
+              button.elem_tooltip = { type = "item-with-quality", name = name, quality = quality }
+            end
           else
-            button.sprite = nil
-            button.number = nil
-            button.tooltip = nil
+            set_if_changed(button, "sprite", nil)
+            set_if_changed(button, "number", nil)
+            set_if_changed(button, "quality", nil)
+            set_if_changed(button, "elem_tooltip", nil)
           end
         end
       end

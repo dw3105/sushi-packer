@@ -195,7 +195,9 @@ describe("gui lanes", function()
   end)
   it("slot shows item count quality", function()
     local p = lane_fixture(); local row = p.gui.relative.sushi_packer_frame.lanes_section.lane_1
-    eq(row.children[2].sprite, "item/iron-plate"); eq(row.children[2].number, 7); eq(row.children[2].tooltip, "rare")
+    eq(row.children[2].sprite, "item/iron-plate"); eq(row.children[2].number, 7)
+    eq(row.children[2].quality, "rare")
+    eq(row.children[2].elem_tooltip, { type = "item-with-quality", name = "iron-plate", quality = "rare" })
     eq(row.children[1].sprite, nil); eq(row.children[1].number, nil)
   end)
   it("click leaves stack in lane", function()
@@ -222,6 +224,49 @@ describe("gui lanes", function()
     local old = f.lanes_section.lane_1.children[2]
     rec.invs = { inventory(), inventory() }; gui._refresh(p, rec)
     ok(p.gui.relative.sushi_packer_frame == f); eq(old.sprite, "item/iron-plate"); eq(old.number, 7)
+  end)
+end)
+
+describe("gui v20", function()
+  local function lane_button(stack)
+    local p, rec = fixture()
+    local inv = { [1] = stack or { valid_for_read = false } }
+    rec.invs = { inv, {} }
+    gui._refresh(p, rec)
+    return p.gui.screen.sushi_packer_frame.lanes_section.lane_1.lane_slot_1, rec, inv
+  end
+
+  it("lane slot shows quality of its stack", function()
+    local b = lane_button({ valid_for_read = true, name = "copper-cable", count = 114, quality = { name = "rare" } })
+    eq(b.sprite, "item/copper-cable"); eq(b.number, 114); eq(b.quality, "rare")
+    eq(b.elem_tooltip, { type = "item-with-quality", name = "copper-cable", quality = "rare" })
+  end)
+  it("normal quality is written too", function()
+    local b = lane_button({ valid_for_read = true, name = "copper-cable", count = 1, quality = { name = "normal" } })
+    eq(b.quality, "normal")
+  end)
+  it("empty slot clears quality and tooltip", function()
+    local b, _, inv = lane_button({ valid_for_read = true, name = "copper-cable", count = 1, quality = { name = "rare" } })
+    b.quality = "rare"
+    b.elem_tooltip = { type = "item-with-quality", name = "copper-cable", quality = "rare" }
+    inv[1].valid_for_read = false
+    gui._refresh(game.players[1], storage.boxes[7])
+    eq(b.sprite, nil); eq(b.number, nil); eq(b.quality, nil); eq(b.elem_tooltip, nil)
+  end)
+  it("refresh updates quality in place", function()
+    local b, _, inv = lane_button({ valid_for_read = true, name = "copper-cable", count = 1, quality = { name = "rare" } })
+    local row = game.players[1].gui.screen.sushi_packer_frame.lanes_section.lane_1
+    local before, n = b, #row.children
+    inv[1].quality = { name = "epic" }
+    gui._refresh(game.players[1], storage.boxes[7])
+    eq(b, before); eq(#row.children, n); eq(b.quality, "epic")
+  end)
+  it("stack without quality field", function()
+    local b, _, inv = lane_button({ valid_for_read = true, name = "copper-cable", count = 1, quality = { name = "rare" } })
+    b.quality = "rare"
+    inv[1].quality = nil
+    gui._refresh(game.players[1], storage.boxes[7])
+    eq(b.quality, nil)
   end)
 end)
 
