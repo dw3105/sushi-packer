@@ -333,13 +333,14 @@ function M.scan(state, lane, contents, opts)
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled
-  -- v20 steering (V20-1): a jammed lane gets out arms that may take only kinds with a full belt stack in store, so no
-  -- arm picks up a leftover again. state.steer[lane] = looks in a row without any leftover kind in store, nil = off.
+  -- v20 steering (V20-1): a lane whose out arms were all found holding leftovers (hands look at a jam, M.hands) gets
+  -- out arms that may take only kinds with a full belt stack in store, so no arm picks up a leftover again.
+  -- state.steer[lane] = quiet looks in a row, nil = off.
   -- Stays on while store holds leftovers and as many kinds as there are out arms, goes off after STEER_OFF quiet looks.
   local steer = state.steer
   if not steer then steer = {}; state.steer = steer end
   local sn = 0
-  if piled or steer[lane] ~= nil then
+  if steer[lane] ~= nil then
     local partial = false
     for i = 1, n do
       if counts[i] >= sizes[i] then
@@ -353,7 +354,7 @@ function M.scan(state, lane, contents, opts)
       end
     end
     -- needed while leftover kinds could take every out arm: n_out kinds or more in store. Fewer kinds: count quiet looks.
-    if piled or (partial and n >= (opts.n_out or 8)) then steer[lane] = 0 else steer[lane] = steer[lane] + 1 end
+    if partial and n >= (opts.n_out or 8) then steer[lane] = 0 else steer[lane] = steer[lane] + 1 end
     if steer[lane] > STEER_OFF then steer[lane] = nil end
   end
   for i = sn + 1, #STEER_OUT do STEER_OUT[i] = nil end
@@ -387,6 +388,7 @@ function M.hands(state, lane, held, opts)
   local n = #held
   local do_sweep = tick >= (sweep[lane] or 0)  -- (scan may call later than this on a busy lane)
   local jam = state.piled ~= nil and state.piled[lane] == true  -- store piles up: arms holding leftovers are lost capacity
+  local hostage_kinds = 0
 
   -- per hand: belt stack size of its kind (0 = full hand, not our business), key
   for i = 1, n do
@@ -396,10 +398,22 @@ function M.hands(state, lane, held, opts)
     if item_size < size then size = item_size end
     if h.count < size then HAND_SIZE[i] = size; HAND_KEY[i] = look_key(h.name, h.quality) else HAND_SIZE[i] = 0; HAND_KEY[i] = false end
     HAND_MERGED[i] = false
+    if jam and HAND_KEY[i] then  -- distinct leftover kinds in hands
+      local seen = false
+      for j = 1, i - 1 do if HAND_KEY[j] == HAND_KEY[i] then seen = true; break end end
+      if not seen then hostage_kinds = hostage_kinds + 1 end
+    end
     -- may this hand be merged now? At every sweep, in a jam, on flush_all.
     HAND_OK[i] = HAND_KEY[i] and (flush_all or jam or do_sweep) or false
   end
   for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i], HAND_OK[i] = nil, nil, nil, nil end
+  -- v20: jam with (nearly) every out arm holding a leftover of another kind: more kinds than arms can carry this way.
+  -- From next look on the lane is steered (scan). Few kinds (busy lane, arms simply full): never.
+  if jam and hostage_kinds >= (opts.n_out or 8) - 2 then
+    local steer = state.steer
+    if not steer then steer = {}; state.steer = steer end
+    if steer[lane] == nil then steer[lane] = 0 end
+  end
 
   -- merges: first kind (arm order) whose partial hands reach one stack; shortest prefix of its hands
   local merge_n, more = 0, false

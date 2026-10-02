@@ -213,9 +213,18 @@ describe("ledger steer v20", function()
     return o
   end
   local function names(list) local o={} for i,k in ipairs(list) do o[i]=k.name.."/"..k.quality end return o end
-  local function jam(state) -- store piles up: full stacks at two looks, 16 belt stacks or more
+  local function hands_of(kinds) local r={} for i,k in ipairs(kinds) do r[i]={arm=i,name=k,quality="normal",count=1} end return r end
+  local function jam(state, hand_kinds) -- store piles up (full stacks at two looks, 16 belt stacks or more) and arms hold leftovers
     L.scan(state,1,{c("iron",80)},opts{tick=0}); L.scan(state,1,{c("iron",80)},opts{tick=30})
+    L.hands(state,1,hands_of(hand_kinds or {"a","b","c","d","e","f","g","h"}),opts{tick=30})
   end
+  it("jam with few leftover kinds in hands does not steer", function()
+    local state=L.new(); jam(state,{"a","a","a","b","b","b","c","c"}); eq(L.steer(state,1),nil)
+    L.scan(state,1,{c("iron",80),c("gear",1)},opts{tick=60}); eq(L.steer(state,1),nil)
+  end)
+  it("jam with six leftover kinds in hands steers from next look", function()
+    local state=L.new(); jam(state,{"a","b","c","d","e","f","f","f"}); ok(L.steer(state,1)~=nil)
+  end)
   it("lane is not steered until it jams", function()
     local state=L.new(); L.scan(state,1,{c("iron",8),c("gear",1)},opts{}); eq(L.steer(state,1),nil)
   end)
