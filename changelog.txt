@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.19
+Date: 2026-10-02
+  Bugfixes:
+    - Loading a save made before 0.1.17 could fail with "invalid key to 'next'" (depended on how many boxes the save held).
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.19
+Date: 2026-10-02
+  Bugfixes:
+    - Loading a save made before 0.1.17 could fail with "invalid key to 'next'" (depended on how many boxes the save held).
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.18
 Date: 2026-10-02
   Bugfixes:

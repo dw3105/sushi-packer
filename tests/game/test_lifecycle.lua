@@ -469,6 +469,42 @@ describe("lifecycle", function()
     end)
   end)
 
+  -- author's save 2026-10-02, 0.1.18: "Error while running event sushi-packer::on_configuration_changed invalid key to 'next'
+  -- ... registry.lua:254": box table was re-keyed while being walked. Crash depends on packer count (headless: 15, 16, 31..33,
+  -- 63..65, 127, 128, 200 crash; 1..9, 17, 120, 129 do not).
+  -- Whether it crashes also depends on the unit numbers in the table, so many counts are tried in one go.
+  it("save with any number of chest packers loads: every one becomes belt body", function()
+    local sizes = { 127, 128, 200 }
+    for n = 1, 66 do sizes[#sizes + 1] = n end
+    for _, n in ipairs(sizes) do
+      clear(surface); storage.boxes = {}
+      for i = 1, n do
+        local x, y = (i % 20) * 2 - 19.5, math.floor(i / 20) * 2 - 9.5
+        local e = surface.create_entity({ name = N.variant("yellow", "east"), position = { x, y }, force = force })
+        e.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 2 })
+        local settings = copy.default_settings(); settings.circuit.read = nil
+        storage.boxes[e.unit_number] = { entity = e, unit_number = e.unit_number, tier = "yellow", dir = "east", ledger = ledger.new(), settings = settings,
+          enabled = true, circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
+      end
+      local ok, err = pcall(registry.on_configuration_changed, {})
+      assert.is_true(ok, n .. " packers: " .. tostring(err))
+      assert.are_equal(n, #surface.find_entities_filtered({ name = N.body("yellow") }), n .. " packers: every chest became a body")
+      assert.are_equal(0, #surface.find_entities_filtered({ name = N.variant("yellow", "east") }), n .. " packers: no chest left")
+      local recs, plates = 0, 0
+      for unit, rec in pairs(storage.boxes) do
+        recs = recs + 1
+        assert.is_true(rec.entity.valid and rec.entity.unit_number == unit and N.BODIES[rec.entity.name] ~= nil, "rec keyed by its body")
+        plates = plates + rec.invs[1].get_item_count("iron-plate") + rec.invs[2].get_item_count("iron-plate")
+        for lane = 1, 2 do
+          for _, sp in ipairs(rec.spare and rec.spare[lane] or {}) do plates = plates + sp.get_inventory(defines.inventory.chest).get_item_count("iron-plate") end
+        end
+      end
+      assert.are_equal(n, recs, n .. " packers: one rec each")
+      assert.are_equal(2 * n, plates, n .. " packers: no plate lost")
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), n .. " packers: nothing on ground")
+    end
+  end)
+
   it("ghost of old blueprint builds belt body", function()
     -- built legacy chest is swapped inside the build event
     surface.create_entity({ name = N.variant("red", "south"), position = { 0.5, 0.5 }, force = force, raise_built = true })

@@ -251,7 +251,11 @@ end
 
 function M.on_configuration_changed(data)
   local remove = {}
-  for _, rec in pairs(boxes()) do
+  -- walk a list made first: migrate re-keys the box table (new body = new unit number), and a table must not get new
+  -- keys while pairs walks it ("invalid key to 'next'", author's save 2026-10-02 on 0.1.18)
+  local recs = {}
+  for _, rec in pairs(boxes()) do recs[#recs + 1] = rec end
+  for _, rec in ipairs(recs) do
     if not valid(rec.entity) then arms.destroy(rec); remove[#remove + 1] = rec.unit_number else
       if rec.box and not rec.stores then
         migrate_old_box(rec)
