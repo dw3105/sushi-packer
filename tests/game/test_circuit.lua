@@ -8,7 +8,7 @@ local function clear(surface)
 end
 
 local function box_at(surface, force, x)
-  return surface.create_entity({ name = N.variant("yellow", "north"), position = { x, 0.5 }, force = force })
+  return surface.create_entity({ name = N.body("yellow"), position = { x, 0.5 }, direction = defines.direction.north, force = force })
 end
 
 local function wire(a, b, color)
@@ -45,8 +45,12 @@ describe("circuit", function()
   end)
 
   it("box outputs contents with quality", function()
-    local box = box_at(surface, force, 0.5)
-    box.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 3, quality = "uncommon" })
+    -- v17 (V17-1, V17-4): wire on belt body shows all items inside packer (lane stores wired to body), read on by default
+    surface.create_entity({ name = N.placer("yellow"), position = { 0.5, 0.5 }, direction = defines.direction.north, force = force, raise_built = true })
+    local box = surface.find_entities_filtered({ position = { 0.5, 0.5 }, name = N.body("yellow") })[1]
+    local r = storage.boxes[box.unit_number]
+    r.invs[1].insert({ name = "iron-plate", count = 2, quality = "uncommon" })
+    r.invs[2].insert({ name = "iron-plate", count = 1, quality = "uncommon" })
     local cc = surface.create_entity({ name = "constant-combinator", position = { 2.5, 0.5 }, force = force })
     wire(box, cc, "red")
     after_ticks(2, function()

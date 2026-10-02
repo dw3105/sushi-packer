@@ -10,10 +10,10 @@ local function clear(surface)
   end
 end
 
--- v15 arms box: box tile also holds 2 lane stores (containers). Box = the container whose name is a box variant.
+-- v17: packer = belt body (transport-belt kind) on the tile; lane stores, arms, hood sit on the same tile.
 local function find_box(surface, position)
-  for _, e in ipairs(surface.find_entities_filtered({ position = position, type = "container" })) do
-    if N.VARIANTS[e.name] then return e end
+  for _, e in ipairs(surface.find_entities_filtered({ position = position, type = "transport-belt" })) do
+    if N.BODIES[e.name] then return e end
   end
 end
 
@@ -21,7 +21,7 @@ end
 -- out-arm hand, not in the lane store (V16-3).
 local function hands(rec, lane, name)
   local n = 0
-  for _, group in ipairs({ rec.arms[lane], rec.out[lane] }) do
+  for _, group in ipairs({ rec.arms[lane], rec.out[lane], rec.mop[lane] }) do
     for _, arm in ipairs(group) do
       local h = arm.held_stack
       if h.valid_for_read and (name == nil or h.name == name) then n = n + h.count end
@@ -35,7 +35,7 @@ local function lane_count(rec, lane, name) return rec.invs[lane].get_item_count(
 -- v16: items a box holds = both lane stores + arm hands + box container (extra / outside items).
 local function stored(rec, name)
   return lane_count(rec, 1, name) + lane_count(rec, 2, name)
-    + rec.entity.get_inventory(defines.inventory.chest).get_item_count(name)
+    + rec.entity.get_transport_line(1).get_item_count(name) + rec.entity.get_transport_line(2).get_item_count(name)
 end
 
 local function used_slots(rec, lane)
@@ -62,7 +62,7 @@ local function build(surface, force, opts)
   surface.create_entity({ name = N.placer(opts.tier or "yellow"), position = { x + 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
   local box = find_box(surface, { x + 0.5, 0.5 })
   assert.is_not_nil(box, "placer became box")
-  assert.are_equal(N.variant(opts.tier or "yellow", "north"), box.name)
+  assert.are_equal(N.body(opts.tier or "yellow"), box.name)
   local feed = surface.find_entities_filtered({ position = { x + 0.5, 0.5 + behind }, type = "transport-belt" })[1]
   return box, storage.boxes[box.unit_number], feed, front
 end
@@ -283,7 +283,7 @@ describe("tick", function()
       assert.are_equal(1, behind_count(), "13th kind waits on belt (F-3)")
       assert.are_equal(0, rec.invs[1].get_item_count(extra_name) + rec.invs[2].get_item_count(extra_name))
       assert.are_equal(2 * SLOTS, rec.invs[1].get_item_count() + rec.invs[2].get_item_count(), "nothing lost")
-      assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count(), "box container stays empty")
+      assert.are_equal(0, box.get_transport_line(1).get_item_count() + box.get_transport_line(2).get_item_count(), "belt body stays empty")
       assert.are_equal("red", rec.led.state)
       local front = front_belts(surface, force, 0, 20, "transport-belt")
       -- v16: front belt appears -> out arms wake at next look and take leftovers into their hands (8 per lane):
@@ -297,7 +297,7 @@ describe("tick", function()
           for _, s in ipairs(left) do assert.are_equal(1, s.count, "only single leftovers could leave") end
           local kept = lane_count(rec, 1) + lane_count(rec, 2)
           assert.are_equal(2 * SLOTS + 1, kept + total(left) + total(right) + behind_count(), "nothing lost, nothing made")
-          assert.are_equal(0, box.get_inventory(defines.inventory.chest).get_item_count(), "box container stays empty")
+          assert.are_equal(0, box.get_transport_line(1).get_item_count() + box.get_transport_line(2).get_item_count(), "belt body stays empty")
         end)
       end)
     end)

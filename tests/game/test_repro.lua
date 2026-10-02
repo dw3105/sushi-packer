@@ -40,7 +40,7 @@ describe("repro", function()
     local sink = surface.create_entity({ name = "infinity-chest", position = { 32.5, -14.5 }, force = force })
     sink.remove_unfiltered_items = true
     surface.create_entity({ name = N.placer("turbo"), position = { 32.5, -0.5 }, direction = D.north, force = force, raise_built = true })
-    local box = surface.find_entities_filtered({ position = { 32.5, -0.5 }, name = N.variant("turbo", "north") })[1]
+    local box = surface.find_entities_filtered({ position = { 32.5, -0.5 }, name = N.body("turbo") })[1]
     assert.is_not_nil(box, "box built")
     for _, x in ipairs({ 2, 16, 30 }) do
       surface.create_entity({ name = "substation", position = { x, -9 }, force = force })
@@ -91,7 +91,7 @@ describe("repro", function()
         table.sort(kinds)
         local line = string.format("REPRO t=%d outL=+%d outR=+%d slotsL=%d slotsR=%d itemsL=%d itemsR=%d box=%d led=%s behindL=%d behindR=%d poll=%s stored=%s",
           t, out[1] - last[1], out[2] - last[2], used(rec, 1), used(rec, 2), rec.invs[1].get_item_count(), rec.invs[2].get_item_count(),
-          box.get_inventory(defines.inventory.chest).get_item_count(), tostring(rec.led and rec.led.state), behind_lanes[1], behind_lanes[2],
+          box.get_transport_line(1).get_item_count() + box.get_transport_line(2).get_item_count(), tostring(rec.led and rec.led.state), behind_lanes[1], behind_lanes[2],
           tostring(rec.next_poll), table.concat(kinds, ","))
         line = line .. string.format(" | push calls %d/%d ok %d/%d items %d/%d",
           pushes.calls[1], pushes.calls[2], pushes.ok[1], pushes.ok[2], pushes.items[1], pushes.items[2])
@@ -134,7 +134,7 @@ describe("repro", function()
     local ghosts = stack.build_blueprint({ surface = surface, force = force, position = { 1, 1 }, build_mode = defines.build_mode.forced })
     inv.destroy()
     for _, g in ipairs(ghosts) do if g.valid then g.revive({ raise_revive = true }) end end
-    local box = surface.find_entities_filtered({ name = N.variant("turbo", "north") })[1]
+    local box = surface.find_entities_filtered({ name = N.body("turbo") })[1]
     assert.is_not_nil(box, "box built from blueprint")
     local bx, by = box.position.x, box.position.y
     local splitters = surface.find_entities_filtered({ type = "splitter", area = { { bx - 3, by - 3 }, { bx + 3, by + 3 } } })
@@ -190,7 +190,7 @@ describe("repro", function()
     surface.create_entity({ name = N.placer("turbo"), position = { 1.5, 0.5 }, direction = W, force = force, raise_built = true })
     surface.create_entity({ name = "loader-1x1", position = { 0.5, 0.5 }, direction = W, type = "input", force = force })
     local sink = surface.create_entity({ name = "infinity-chest", position = { -0.5, 0.5 }, force = force })
-    local box = surface.find_entities_filtered({ name = N.variant("turbo", "west") })[1]
+    local box = surface.find_entities_filtered({ name = N.body("turbo") })[1]
     assert.is_not_nil(box, "west box built")
     -- v16: out arms (engine) feed the loader in front; script pushes nothing in normal flow. Proof = sink chest
     -- got every kind, and both lane stores keep draining (not full).
@@ -216,7 +216,7 @@ describe("repro", function()
     local feed = belt(0)
     for x = 1, 3 do belt(x) end
     surface.create_entity({ name = N.placer("red"), position = { 4.5, 0.5 }, direction = D.east, force = force, raise_built = true })
-    local box = surface.find_entities_filtered({ name = N.variant("red", "east") })[1]
+    local box = surface.find_entities_filtered({ name = N.body("red") })[1]
     assert.is_not_nil(box, "east box built")
     local last
     for x = 5, 10 do last = belt(x) end

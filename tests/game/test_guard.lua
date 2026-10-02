@@ -14,7 +14,7 @@ describe("guard", function()
     for _, s in ipairs(N.LED_STATES) do
       for _, dir in ipairs(N.DIRS) do assert.is_true(helpers.is_valid_sprite_path(N.led(s, dir))) end
     end
-    assert.is_not_nil(prototypes.custom_input[N.INPUT_ROTATE])
+    assert.is_not_nil(prototypes.custom_input[N.INPUT_OPEN])
     assert.is_not_nil(prototypes.mod_setting[N.SETTING_TIMEOUT])
   end)
 

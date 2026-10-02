@@ -21,20 +21,20 @@ describe("gui", function()
   local surface, player, box, rec
   local function open()
     gui.on_opened({ player_index = player.index, entity = box, gui_type = defines.gui_type.entity })
-    return player.gui.relative.sushi_packer_frame
+    return player.gui.screen.sushi_packer_frame
   end
   local function fire(el, ev) gui.on_event({ player_index = player.index, element = el, name = ev }) end
   before_each(function()
     surface, player = game.surfaces[1], game.players[1]
     clear(surface)
     player.opened = nil
-    box = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = game.forces.player })
+    box = surface.create_entity({ name = N.body("yellow"), position = { 0.5, 0.5 }, direction = defines.direction.north, force = game.forces.player })
     storage.boxes = {}
     rec = registry.new_rec(box)
   end)
   after_each(function()
     player.opened = nil
-    local f = player.gui.relative.sushi_packer_frame
+    local f = player.gui.screen.sushi_packer_frame
     if f then f.destroy() end
   end)
 
@@ -55,7 +55,7 @@ describe("gui", function()
   it("closing removes frame", function()
     open()
     gui.on_closed({ player_index = player.index })
-    assert.is_nil(player.gui.relative.sushi_packer_frame)
+    assert.is_nil(player.gui.screen.sushi_packer_frame)
   end)
 
   it("item picked in slot saved as filter", function()

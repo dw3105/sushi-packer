@@ -15,7 +15,7 @@ describe("sim", function()
     clear(surface)
     storage.boxes = {}
     sim.scene("factoriopedia")
-    local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+    local box = surface.find_entities_filtered({ name = N.body("yellow") })[1]
     assert.is_not_nil(box, "box built east")
     assert.is_not_nil(storage.boxes[box.unit_number], "box registered")
     after_ticks(1500, function()
@@ -58,7 +58,7 @@ describe("sim", function()
     surface.set_tiles(t)
     after_ticks(120, function()  -- fresh game: belt stack cached before scene raises bonus
       remote.call(N.SIM_INTERFACE, "scene", "factoriopedia")
-      local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+      local box = surface.find_entities_filtered({ name = N.body("yellow") })[1]
       assert.is_not_nil(box, "box built east")
       local start, out = game.tick, 0
       on_tick(function()
@@ -87,7 +87,7 @@ describe("sim", function()
     storage.boxes = {}
     sim.scene("tips")
     local behind = surface.find_entity("transport-belt", { -0.5, 0.5 })
-    local box = surface.find_entities_filtered({ name = N.variant("yellow", "east") })[1]
+    local box = surface.find_entities_filtered({ name = N.body("yellow") })[1]
     assert.is_not_nil(box, "box built east")
     local rec = storage.boxes[box.unit_number]
     local run, max, seen, start = { 0, 0 }, 0, { 0, 0 }, game.tick

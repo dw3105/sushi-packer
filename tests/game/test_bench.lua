@@ -10,7 +10,7 @@ end
 -- v15 arms box: arms empty the belt tile behind the box at once, so "lane fed" is read where items go:
 -- per lane, over `ticks`: items seen in that lane's store, and on that lane of the belt tile in front of the box.
 local function watch_lanes(surface, p, tier, belt, ticks, check)
-  local box = surface.find_entity(N.variant(tier, "west"), p)
+  local box = surface.find_entity(N.body(tier), p)
   assert.is_not_nil(box, "box built")
   local rec = storage.boxes[box.unit_number]
   assert.is_not_nil(rec, "box registered")
@@ -40,7 +40,7 @@ describe("bench", function()
     local positions = builder.build(surface, force, 3, { 0, 0 })
     assert.are_equal(3, #positions)
     for _, p in ipairs(positions) do
-      local box = surface.find_entity(N.variant("yellow", "west"), p) or surface.find_entity(N.placer("yellow"), p)
+      local box = surface.find_entity(N.body("yellow"), p) or surface.find_entity(N.placer("yellow"), p)
       assert.is_not_nil(box)
     end
   end)
@@ -59,7 +59,7 @@ describe("bench", function()
     force.belt_stack_size_bonus = 3
     local positions = builder.build(surface, force, 1, { 0, 0 }, { tier = "red", flow = "stacks", seed = 3, loader = "sp-test-loader" })
     local p = positions[1]
-    assert.is_not_nil(surface.find_entity(N.variant("red", "west"), p))
+    assert.is_not_nil(surface.find_entity(N.body("red"), p))
     local input = surface.find_entities_filtered({ position = { p.x + 2, p.y }, name = "fast-transport-belt" })
     assert.are_equal(1, #input)
     local seen, t = { {}, {} }, 0
