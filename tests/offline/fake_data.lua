@@ -106,7 +106,8 @@ end
 
 local function add_belt(raw, name, speed, hidden)
   raw["transport-belt"][name] = { type = "transport-belt", name = name, speed = speed, hidden = hidden or nil,
-    belt_animation_set = { animation_set = { filename = "__base__/graphics/entity/transport-belt/transport-belt.png" } },
+    belt_animation_set = { animation_set = { filename = "__base__/graphics/entity/transport-belt/transport-belt.png", frame_count = 16, direction_count = 20 } },
+    connector_frame_sprites = { north = { filename = "__base__/graphics/entity/transport-belt/connector.png" } },
     collision_box = { { -0.4, -0.4 }, { 0.4, 0.4 } },
     circuit_connector = { fake = "belt-connector-" .. name },
     related_underground_belt = name:gsub("transport%-belt", function() return "underground-belt" end) }
