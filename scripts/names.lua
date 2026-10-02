@@ -75,17 +75,19 @@ N.MOP_ARMS = 2                                             -- in arms per lane o
 -- waits about 20 ticks over the belt for more of that kind; a hand of 1 never waits (but is slow on full stacks).
 N.ARM_HANDS = { 1, 4, 4, 4 }
 -- Out hands per lane: N.OUT_ARMS, more on belts faster than OUT_FAST.speed tiles per tick (8 pass 2.12 of 2.25
--- stacks per tick on a 270/s belt). Swing time (N.out_swing) stays computed from N.OUT_ARMS.
-N.OUT_FAST = { speed = 0.3, n = 12 }
+-- stacks per tick on a 270/s belt; 12 pass all but store piles to 200 items and 0.4..0.8 % of stacks leave small;
+-- 16: store 8 items, no small stack). Swing time (N.out_swing) stays computed from N.OUT_ARMS.
+N.OUT_FAST = { speed = 0.3, n = 16 }
 function N.out_count(speed)
   if speed > N.OUT_FAST.speed then return N.OUT_FAST.n end
   return N.OUT_ARMS
 end
 -- Engine way: packer with a steered lane that has fewer than HOT_FREE free store slots is looked at every HOT_LOOK
--- ticks (leftovers leave only at looks). Script way: lane store full and a new kind waiting -> PRESS oldest leftovers
+-- ticks (leftovers leave only at looks). HOT_FREE is twice the 3 slots a steered lane keeps free: with 3 a lane
+-- dropped out of extra looks whenever one slot more was free at a look, store filled in the 30 ticks after. Script way: lane store full and a new kind waiting -> PRESS oldest leftovers
 -- leave first, also while full stacks wait (F-1 amended by author 2026-10-02).
 N.HOT_LOOK = 5
-N.HOT_FREE = 3
+N.HOT_FREE = 6
 N.PRESS = 1
 -- Shut: belt connected to logistic network with a condition that is never true is disabled with and without a
 -- network (probe FND-0048); player's circuit condition stays free. Item of yellow tier exists in every game.

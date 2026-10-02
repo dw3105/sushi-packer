@@ -149,6 +149,7 @@ function M.verdict(surface, rigs, bar)
         g.fed[1], g.fed[2], f.fed[1], f.fed[2], g.out[1], g.out[2], g.small[1], g.small[2],
         rec.invs[1].get_item_count(), rec.invs[2].get_item_count(), rec.invs[1].count_empty_stacks(), rec.invs[2].count_empty_stacks())
       lines[#lines + 1] = line
+      log("intake " .. line)  -- numbers of green runs stay readable in factorio-current.log
       for lane = 1, 2 do
         local under_way = 0
         for _, b in ipairs(g.front) do under_way = under_way + b.get_transport_line(lane).get_item_count() end
