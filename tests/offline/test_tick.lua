@@ -16,8 +16,8 @@ local function inventory(contents)
     for i=#inv.contents,1,-1 do local y=inv.contents[i]; if y.name==x.name and y.quality==x.quality then local n=math.min(left,y.count); y.count=y.count-n; left=left-n; if y.count==0 then table.remove(inv.contents,i) end end end
     return x.count-left
   end
-  function inv.count_empty_stacks() return 12-#inv.contents end
-  return setmetatable(inv,{__len=function() return 12 end})
+  function inv.count_empty_stacks() return 24-#inv.contents end
+  return setmetatable(inv,{__len=function() return 24 end})
 end
 
 local function fixture(tier)
@@ -127,8 +127,8 @@ describe("tick", function()
   it("full lane store asks arms whether a new kind waits", function()
     local f=fixture(); local asked={}
     local old=arms.need_slot; arms.need_slot=function(r,l,contents) asked[#asked+1]=l; return l==1 end
-    local twelve={}; for i=1,12 do twelve[i]={name="iron",quality="q"..i,count=2} end
-    local full=inventory(twelve); full.count_empty_stacks=function() return 0 end
+    local full_items={}; for i=1,24 do full_items[i]={name="iron",quality="q"..i,count=2} end
+    local full=inventory(full_items); full.count_empty_stacks=function() return 0 end
     f.invs[1]=full; f.rec.invs=f.invs
     f.run(1)
     eq(asked,{1}); eq(f.plans[1].opts.need_slot,true); eq(f.plans[2].opts.need_slot,nil)
@@ -153,8 +153,8 @@ describe("tick", function()
     local behind={ {{name="iron",quality="normal",count=3}}, {{name="copper",quality="normal",count=1}} }
     belt_io.behind_kinds=function(r,l) return behind[l] end
     for lane=1,2 do
-      local twelve={{name="iron",quality="normal",count=2}}; for i=2,12 do twelve[i]={name="iron",quality="q"..i,count=2} end
-      local full=inventory(twelve); full.count_empty_stacks=function() return 0 end; f.invs[lane]=full
+      local full_items={{name="iron",quality="normal",count=2}}; for i=2,24 do full_items[i]={name="iron",quality="q"..i,count=2} end
+      local full=inventory(full_items); full.count_empty_stacks=function() return 0 end; f.invs[lane]=full
     end
     f.rec.invs=f.invs; f.run(1)
     eq(f.plans[1].opts.need_slot,false); eq(f.plans[2].opts.need_slot,true)
