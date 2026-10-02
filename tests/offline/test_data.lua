@@ -21,6 +21,92 @@ local function science_names(unit)
   return out
 end
 
+local function hood_path(tier, dir)
+  return "__sushi-packer__/graphics/entity/sushi-packer/" .. tier .. "/sushi-packer-" .. tier .. "-" .. dir .. ".png"
+end
+
+describe("data v20", function()
+  local tier_builder = require("prototypes.tier")
+  local function picture_set()
+    return { animation_set = { filename = "vanilla.png", frame_count = 16, direction_count = 20 } }
+  end
+
+  it("body has no connector frame", function()
+    local raw = load()
+    local source = raw["transport-belt"][N.TIER.yellow.belt]
+    local body = raw["transport-belt"][N.body("yellow")]
+    eq(body.connector_frame_sprites, nil)
+    eq(body.circuit_connector, source.circuit_connector)
+  end)
+
+  it("hood layer rows follow leaving direction", function()
+    local layer = tier_builder._hood_layer("yellow", picture_set())
+    local dirs = { "east", "west", "north", "south", "north", "east", "north", "west", "east", "south", "west", "south", "south", "south", "west", "west", "north", "north", "east", "east" }
+    for row, dir in ipairs(dirs) do eq(layer.filenames[row], hood_path("yellow", dir), "row " .. row) end
+  end)
+
+  it("hood layer follows custom index fields", function()
+    local layer = tier_builder._hood_layer("yellow", { animation_set = { frame_count = 1, direction_count = 20 }, east_index = 3, north_index = 1 })
+    eq(layer.filenames[3], hood_path("yellow", "east")); eq(layer.filenames[1], hood_path("yellow", "north"))
+  end)
+
+  it("hood layer repeat count equals belt frames", function()
+    local set = { animation_set = { frame_count = 32, direction_count = 20 } }
+    eq(tier_builder._hood_layer("yellow", set).repeat_count, 32)
+    local old = { filename = "base.png", frame_count = 16 }
+    set.animation_set = { layers = { old, { filename = "other.png" } }, direction_count = 20 }
+    local layer = tier_builder._hood_layer("yellow", set)
+    eq(layer.repeat_count, 16)
+    local raw = load()
+    local source = raw["transport-belt"][N.TIER.yellow.belt]
+    source.belt_animation_set = { animation_set = { layers = { old, { filename = "other.png" } }, direction_count = 20 } }
+    local body = tier_builder.make("yellow", { index = 1 })
+    local body_proto
+    for _, proto in ipairs(body) do if proto.name == N.body("yellow") then body_proto = proto end end
+    local layers = body_proto.belt_animation_set.animation_set.layers
+    eq(layers[1], old); eq(layers[2], { filename = "other.png" }); eq(layers[3], layer)
+  end)
+
+  it("odd belt picture keeps belt picture", function()
+    local cases = {
+      { animation_set = { direction_count = 12 } },
+      {},
+      { animation_set = { direction_count = 20 }, east_index = 21 },
+      { animation_set = { direction_count = 20 }, east_index = 1, north_index = 1 },
+    }
+    for _, set in ipairs(cases) do eq(tier_builder._hood_layer("yellow", set), nil) end
+    local raw = load()
+    local source = raw["transport-belt"][N.TIER.yellow.belt]
+    source.belt_animation_set = { animation_set = { direction_count = 12 } }
+    local original = table.deepcopy(source.belt_animation_set)
+    local protos = tier_builder.make("yellow", { index = 1 })
+    for _, proto in ipairs(protos) do if proto.name == N.body("yellow") then eq(proto.belt_animation_set, original) end end
+  end)
+
+  it("source belt picture not modified", function()
+    F.reset()
+    local source = F.raw["transport-belt"][N.TIER.yellow.belt]
+    local before = table.deepcopy(source.belt_animation_set)
+    tier_builder.make("yellow", { index = 1 })
+    eq(source.belt_animation_set, before)
+    local body
+    for _, proto in ipairs(tier_builder.make("yellow", { index = 1 })) do if proto.name == N.body("yellow") then body = proto end end
+    ok(body.belt_animation_set ~= source.belt_animation_set)
+    ok(body.belt_animation_set.animation_set.layers ~= nil, "body hood overlay missing")
+    eq(source.belt_animation_set, before)
+  end)
+
+  it("body picture is belt plus hood", function()
+    local raw = load()
+    local source = raw["transport-belt"][N.TIER.yellow.belt].belt_animation_set.animation_set
+    local source_set = raw["transport-belt"][N.TIER.yellow.belt].belt_animation_set
+    local body = raw["transport-belt"][N.body("yellow")]
+    local layers = body.belt_animation_set.animation_set.layers
+    eq(layers[1], source)
+    eq(layers[#layers], tier_builder._hood_layer("yellow", source_set))
+  end)
+end)
+
 describe("data v17", function()
   local function deep_equal(a, b, path)
     eq(a, b, path)
@@ -31,9 +117,10 @@ describe("data v17", function()
     local source = table.deepcopy(raw["transport-belt"][N.TIER.yellow.belt])
     local body = raw["transport-belt"][N.body("yellow")]
     ok(body ~= nil, "yellow body missing")
-    for _, key in ipairs({ "speed", "belt_animation_set", "collision_box", "circuit_connector" }) do
+    for _, key in ipairs({ "speed", "collision_box", "circuit_connector" }) do
       deep_equal(body[key], source[key], key)
     end
+    eq(body.belt_animation_set.animation_set.layers[1], source.belt_animation_set.animation_set)
     eq(raw["transport-belt"][N.TIER.yellow.belt], source, "source belt changed")
   end)
 
