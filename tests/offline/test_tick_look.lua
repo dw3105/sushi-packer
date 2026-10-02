@@ -32,7 +32,7 @@ local function fixture()
   arms.aim_out=function(r,k) f.aims[#f.aims+1]=k end
   belt.front_ok=function() return f.front end; belt.can_push=function() f.can_pushes=f.can_pushes+1; return true end
   belt.belt_stack_size=function() return 4 end
-  belt.push=function(r,l,p,bss) f.pushes[#f.pushes+1]={lane=l,piece={name=p.name,quality=p.quality,count=p.count},bss=bss}; if f.fail_at==#f.pushes then return 0 end; return p.count end
+  belt.push=function(r,l,p,bss,spot) f.pushes[#f.pushes+1]={lane=l,piece={name=p.name,quality=p.quality,count=p.count},bss=bss,spot=spot}; if f.fail_all or f.fail_at==#f.pushes then return 0 end; return p.count end
   circuit.evaluate=function() f.evals=f.evals+1; return f.enabled,f.flush end
   ledger.scan=function(state,lane,contents,opts) local copy={}; for k,v in pairs(opts) do copy[k]=v end; f.scans[#f.scans+1]={lane=lane,contents=contents,opts=opts,snapshot=copy}; return f.flushes[lane],f.wants[lane] end
   ledger.hands=function(state,lane,held,opts) f.hands[#f.hands+1]={lane=lane,held=held,opts=opts}; return f.hand_indices[lane] or {}, f.hand_merges[lane] or {} end
@@ -62,7 +62,39 @@ describe("tick look",function()
     f.pauses={}; f.outs={}; f.front=false; f.rec.front_at=nil; f.run(120); eq(f.pauses,{{1,false},{2,false}}); eq(f.outs,{{1,true},{2,true}}); f.restore()
   end)
   it("scan gets contents and options",function() local f=fixture(); f.run(30); local x=f.scans[1]; eq(x.lane,1); eq(x.snapshot.tick,30); eq(x.snapshot.bss,4); eq(x.snapshot.timeout_ticks,420); eq(x.snapshot.slots,N.STORE_SLOTS); eq(x.snapshot.n_out,0); ok(type(x.snapshot.stack_size)=="function"); eq(f.scans[2].lane,2); f.restore() end)
-  it("flush pieces are pushed and removed",function() local f=fixture(); f.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; f.run(30); eq(#f.pushes,2); eq(#f.rec.invs[1].removed,2); f.restore(); local g=fixture(); g.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; g.fail_at=1; g.run(30); eq(#g.pushes,1); eq(#g.rec.invs[1].removed,0); g.restore() end)
+  it("flush pieces are pushed and removed",function() local f=fixture(); f.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; f.run(30); eq(#f.pushes,2); eq(#f.rec.invs[1].removed,2); f.restore(); local g=fixture(); g.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; g.fail_all=true; g.run(30); eq(#g.pushes,4,"back of line, then three further spots"); eq({g.pushes[1].spot,g.pushes[2].spot,g.pushes[3].spot,g.pushes[4].spot},{nil,1,2,3}); eq(#g.rec.invs[1].removed,0); g.restore() end)
+  it("second flush piece of one look goes to a further belt spot",function()
+    local f=fixture(); f.flushes[1]={{name="iron",quality="normal",count=3},{name="gear",quality="normal",count=1}}; f.fail_at=2
+    f.run(30); eq(#f.pushes,3); eq(f.pushes[2].spot,nil); eq(f.pushes[3].spot,1); eq(f.pushes[3].piece.name,"gear"); eq(#f.rec.invs[1].removed,2); f.restore()
+  end)
+  it("steered lane: arms get allowed kinds, partial hand of other kind goes back to store, no jam flush",function()
+    local f=fixture(); local steered={}
+    local real_steer,real_asteer=ledger.steer,arms.steer
+    local allowed={{name="iron",quality="normal"}}
+    ledger.steer=function(state,lane) return lane==1 and allowed or nil end
+    arms.steer=function(r,l,k) steered[#steered+1]={l,k} end
+    f.wants[1]=true  -- jam: without steering hands would be flushed out
+    f.held_values[1]={{arm=2,name="gear",quality="normal",count=2},{arm=3,name="iron",quality="normal",count=3},{arm=5,name="gear",quality="rare",count=4}}
+    f.run(30)
+    eq(steered,{{1,allowed},{2,nil}})
+    eq(f.rec.invs[1].inserted,{{name="gear",quality="normal",count=2}}); eq(f.clears,{{1,2}})
+    eq(#f.hands,0,"ledger.hands not asked on steered lane"); eq(#f.pushes,0)
+    ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
+  end)
+  it("steered lane keeps hand when store has no room",function()
+    local f=fixture(); local real_steer,real_asteer=ledger.steer,arms.steer
+    ledger.steer=function(state,lane) return lane==1 and {} or nil end; arms.steer=function() end
+    f.rec.invs[1].room=0; f.held_values[1]={{arm=2,name="gear",quality="normal",count=2}}
+    f.run(30); eq(#f.clears,0)
+    ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
+  end)
+  it("flush signal on steered lane still flushes hands",function()
+    local f=fixture(); local real_steer,real_asteer=ledger.steer,arms.steer
+    ledger.steer=function(state,lane) return lane==1 and {} or nil end; arms.steer=function() end
+    f.flush=true; f.wants[1]=true; f.held_values[1]={{arm=2,name="gear",quality="normal",count=2}}; f.hand_indices[1]={2}
+    f.run(30); eq(#f.hands,1); eq(f.pushes[1].piece,{name="gear",quality="normal",count=2})
+    ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
+  end)
   it("hands are read only when wanted",function() local f=fixture(); f.run(30); eq(#f.held_calls,0); f.wants[1]=true; f.held_values[1]={{arm=2,name="iron",quality="rare",count=2},{arm=5,name="gear",quality="normal",count=1}}; f.hand_indices[1]={2,5}; f.run(60); eq(f.held_calls,{1}); eq(#f.hands,1); eq(f.pushes[1].piece,{name="iron",quality="rare",count=2}); eq(f.clears,{{1,2},{1,5}}); f.restore(); local g=fixture(); g.wants[1]=true; g.held_values[1]={{arm=2,name="iron",quality="rare",count=2}}; g.hand_indices[1]={2}; g.fail_at=1; g.run(30); eq(#g.clears,0); g.restore() end)
   it("need_slot only asked when store is full",function() local f=fixture(); local contents={}; for i=1,12 do contents[i]={name="iron",quality="q"..i,count=4} end; f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 0 end; f.run(30); eq(f.need_calls,{1}); eq(f.scans[1].snapshot.need_slot,true); f.restore() end)
   it("led and used slots",function() local f=fixture(); f.rec.invs[1]=inv({{name="iron",quality="normal",count=5}}); f.run(30); eq(f.rec.used[1],1); eq(f.ledcalls,{{"yellow",true}}); f.restore() end)

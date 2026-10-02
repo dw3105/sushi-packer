@@ -344,14 +344,22 @@ function M.front_ok(rec)
   return M.front_kind(rec) ~= nil
 end
 
-function M.push(rec, lane, item, belt_stack_size)
+-- spot (v20, optional): 1..3 = further belt spots of the front tile (0.25 tile apart, counted from line end), for
+-- several pushes in one look; nil = back of line as always.
+function M.push(rec, lane, item, belt_stack_size, spot)
   local counters = storage and storage.sp_counters
   local belt, map = cached(rec, "front", 1)
   local line
   if belt then
     line = transport_line(rec, "front", lane, map)
+    if spot then
+      local position = (spot - 1) * 0.25
+      if not line.can_insert_at(position) then return 0 end
+      if not line.insert_at(position, { name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
+    else
     if not line.can_insert_at_back() then return 0 end
     if not line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
+    end
   else
     line = across(rec)
     if not line or not line.can_insert_at_back() then return 0 end

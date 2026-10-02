@@ -238,11 +238,36 @@ local function engine_look(rec, tick, bss, flush_all)
         local same = rec.ledger.same
         if same and same[lane] >= 1 then opts.can_push = belt_io.can_push(rec, lane) else opts.can_push = nil end
         local flush, want = ledger.scan(rec.ledger, lane, contents, opts)
+        local spot = 0
         for i=1,#flush do
           local piece=flush[i]
           local pushed=belt_io.push(rec,lane,piece,bss)
+          -- v20: several leftovers in one look (steered lane): further belt spots of the front tile
+          while pushed<=0 and spot<3 do spot=spot+1; pushed=belt_io.push(rec,lane,piece,bss,spot) end
           if pushed<=0 then break end
           inv.remove(piece)
+        end
+        -- v20 (V20-1): steered lane. Out arms take only kinds with a full stack; a partial hand of a kind that is
+        -- not allowed any more (count fell below one stack between looks) goes back to the store.
+        local allowed = ledger.steer(rec.ledger, lane)
+        arms.steer(rec, lane, allowed)
+        if allowed and not flush_all then
+          want = false
+          local held = arms.held(rec, lane)
+          rec.hands = rec.hands or { 0, 0 }
+          rec.hands[lane] = 0
+          for i = 1, #held do
+            local h = held[i]
+            local size = stack_size(h.name); if bss < size then size = bss end
+            if h.count < size then
+              local ok = false
+              for k = 1, #allowed do if allowed[k].name == h.name and allowed[k].quality == h.quality then ok = true; break end end
+              if not ok then
+                held_piece.name, held_piece.quality, held_piece.count = h.name, h.quality, h.count
+                if inv.insert(held_piece) == h.count then arms.clear_held(rec, lane, h.arm) end
+              end
+            end
+          end
         end
         if want then
           local held=arms.held(rec,lane)

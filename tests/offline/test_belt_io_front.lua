@@ -97,4 +97,16 @@ describe("belt_io front v17", function()
     local rec=make_rec("north",{valid=true,type="transport-belt",direction=0,get_transport_line=function(i) return lines[i] end})
     eq(io.push(rec,2,{name="iron",count=4},4),4); eq(got,{2})
   end)
+  it("push to a further spot of front tile", function()
+    -- v20: several leftovers in one look
+    local got={}
+    local line={can_insert_at=function(pos) got[#got+1]={"can",pos}; return true end,insert_at=function(pos,stack,bss) got[#got+1]={"put",pos,stack.count,bss}; return true end,
+      can_insert_at_back=function() got[#got+1]={"can_back"}; return true end,insert_at_back=function() got[#got+1]={"put_back"}; return true end}
+    local belt={valid=true,type="transport-belt",direction=0,get_transport_line=function() return line end}
+    local rec=make_rec("north",belt); storage={sp_counters={pushes=0,items_out=0}}
+    eq(io.push(rec,1,{name="iron",count=2},4,2),2)
+    eq(got,{{"can",0.25},{"put",0.25,2,4}}); eq(storage.sp_counters,{pushes=1,items_out=2})
+    got={}; line.can_insert_at=function() return false end
+    eq(io.push(rec,1,{name="iron",count=2},4,3),0)
+  end)
 end)

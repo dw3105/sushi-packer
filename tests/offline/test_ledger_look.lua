@@ -203,3 +203,51 @@ describe("ledger look", function()
     eq(s.held[2][2],nil); eq(s.sweep[2] or 0,0)
   end)
 end)
+
+describe("ledger steer v20", function()
+  local L = ledger
+  local function c(name, count, quality) return { name=name, quality=quality or "normal", count=count } end
+  local function opts(t)
+    local o = { tick=0, bss=4, stack_size=function() return 100 end, timeout_ticks=0, slots=12, slots_used=1, need_slot=false, flush_all=false, n_out=8 }
+    for k,v in pairs(t or {}) do o[k]=v end
+    return o
+  end
+  local function names(list) local o={} for i,k in ipairs(list) do o[i]=k.name.."/"..k.quality end return o end
+  local function jam(state) -- store piles up: full stacks at two looks, 16 belt stacks or more
+    L.scan(state,1,{c("iron",80)},opts{tick=0}); L.scan(state,1,{c("iron",80)},opts{tick=30})
+  end
+  it("lane is not steered until it jams", function()
+    local state=L.new(); L.scan(state,1,{c("iron",8),c("gear",1)},opts{}); eq(L.steer(state,1),nil)
+  end)
+  it("jam switches steering on: kinds with a full stack only", function()
+    local state=L.new(); jam(state)
+    L.scan(state,1,{c("iron",80),c("gear",3),c("cable",4,"rare"),c("cable",2)},opts{tick=60})
+    eq(names(L.steer(state,1)),{"iron/normal","cable/rare"}); eq(L.steer(state,2),nil)
+  end)
+  it("steering stays while leftovers are in store and ends after quiet looks", function()
+    local state=L.new(); jam(state)
+    for i=1,20 do L.scan(state,1,{c("iron",8),c("gear",1)},opts{tick=60+30*i}) end
+    ok(L.steer(state,1)~=nil,"leftover kind present: stays")
+    for i=1,10 do L.scan(state,1,{c("iron",8)},opts{tick=1000+30*i}) end
+    ok(L.steer(state,1)~=nil,"10 quiet looks: still on")
+    L.scan(state,1,{c("iron",8)},opts{tick=2000}); eq(L.steer(state,1),nil)
+  end)
+  it("empty store on steered lane gives empty list", function()
+    local state=L.new(); jam(state); L.scan(state,1,{},opts{tick=60}); eq(#L.steer(state,1),0)
+  end)
+  it("steered lane keeps three slots free: oldest leftovers leave, several per look", function()
+    local state=L.new(); jam(state)
+    local contents={}
+    for i=1,11 do contents[i]=c("k"..string.format("%02d",i),1) end
+    for i=1,11 do L.scan(state,1,{contents[i]},opts{tick=100+i}) end  -- clocks: k01 oldest... (one kind per look, others reset)
+    local state2=L.new(); jam(state2)
+    L.scan(state2,1,contents,opts{tick=200,slots_used=9}); local f=L.scan(state2,1,contents,opts{tick=230,slots_used=11})
+    eq(#f,2,"11 used of 12, 3 must stay free: two leave"); eq(f[1].name,"k01"); eq(f[2].name,"k02")
+    local g=L.scan(state2,1,contents,opts{tick=260,slots_used=9}); eq(#g,0)
+  end)
+  it("lane that is not steered flushes as before", function()
+    local state=L.new(); local contents={}
+    for i=1,11 do contents[i]=c("k"..i,1) end
+    local f=L.scan(state,1,contents,opts{tick=10,slots_used=11}); eq(#f,0)
+  end)
+end)
