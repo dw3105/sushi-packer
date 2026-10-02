@@ -190,3 +190,15 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0044 - Status turns unreadable for author
 
 **2026-10-01.** Author: "YOU ARE FUCKING CONFUSING! EXPLAIN VERY SIMPLY!" after table-heavy progress turns with internal ids. Bucket: communication. Applied same day: memory `explain-plain-story` (problem, why, ways, ask; few numbers).
+
+## FRC-0045 - Cause named before repro, twice in one night
+
+**2026-10-02, v16 INT.** (1) Read old-save totals (`front1=7 hands=81 store=49`) as deadlock; own game test passed: true leftovers. A real deadlock existed, found only by building the right red case. (2) Named "3 + 3 + 2 in hands" for a red full-suite test, wrote an offline test of my theory, fixed, reran 45-minute round: still red. Real state printed by test (`out1.7=3`, belt `{1, 4}`) showed cause in one 10-minute run. Bucket: evidence (RULINGS 2026-09-30 known, not obeyed under time pressure). Proposed rule: a red game test gets its state printed (what is where) before any fix; assertion messages of flow tests carry store / hands / ledger state.
+
+## FRC-0046 - "Is lane idle?" signs that are true on busy lanes
+
+**2026-10-01..02, v16 INT.** Three cheap signs picked without measuring them on a busy belt: "store has a full stack at two looks", "belt tile behind is empty", "any partial hand". Each made script read arm hands at nearly every look (script x3..x4 above target) or flushed healthy lanes. Bucket: design. Proposed rule: a trigger for a costly path gets a counter in bench (how often it fires on full-flow rows) before it is merged.
+
+## FRC-0047 - Long proof rounds started before cheap checks
+
+**2026-10-02.** Four 45..90-minute rounds were stopped or wasted because a fix after them changed code again; quick bench (3 runs, 2 minutes) and the 10 sensitive game tests run alone would have caught each. Bucket: process. Proposed rule: before a full round: offline all, sensitive game tests alone, 3-row bench; full round only when those are clean.

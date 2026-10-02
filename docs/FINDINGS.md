@@ -518,3 +518,33 @@ Gate (plan v16): lane-true yes, stacked yes, no jam with cheap rule yes, scratch
 Also seen: v1.15 loses items held in arm hands when box is mined or rotated (`arms.create` / `arms.destroy` destroy arms with items; registry returns store items only). Not reproduced as test yet; fixed by seam (`arms.create` saves hands, `arms.drain_hands`).
 
 Verified-by: `~/wt-sushi-packer-probe-v16` (`make test-one FV=2.0|2.1 T='tests/game/test_probe_v16.lua::probe v16 > <name>'`, names: out arm lane stack leftover, pipe bss4 no script, pipe bss1 no script, pipe 12 kinds no script, pipe rare no script, pipe rare steer30, pipe 12 kinds steer30, pipe rare jamflush, pipe 12 kinds jamflush, outside inserters, small stores off centre, hand bss*, front variants); bench lines in session log 2026-10-01
+
+## FND-0047 - v1.16 engine-output box: integration results (tests, old saves, speed vs v1.14 and v1.15)
+
+Measured 2026-10-01 21:30 .. 2026-10-02, dev-vm (shared, load1 1.2..18), 2.0.77 + 2.1.20, branch `int/v16`. Design V16-1..13.
+
+Integration path, each red seen before fix: first full suite after lanes 048..051 `Tests: 12 failed, 131 passed`: 7 tests of dropped rules or of script push counts (moved / removed), 5 real: leftovers of one kind split over hands never became a stack (V16-8); box passed far above tier (V16-9; swing time measured: rotation speed 0.5 / k -> 2 (k - 1) ticks per swing; zero pickup vector made swing depend on box direction); LED blind to stopped box and to hands. Later rounds: mod sets `nosa`, `se`, `ab` output single items (V16-10); bench of real code 1.0..1.4 ms per 200 boxes on every belt (timers: hand reads 57 % of look, front check 17 us per look, 0.38 ms per tick walking all boxes) -> schedule, rare hand looks, cached front check (V16-11, V16-13); game test `rare leftovers do not jam a busy lane` red (`fed=1230 out=480 store=1103 hands=19`); game test `arms holding leftovers do not block later stacks on an idle belt` red (`out=0 held=48 store=40 hands=8`); 2 s flush timer fired after about 10 s (next sweep now at timer end); in full suite only: front belt `{1, 4}` with `out1.7=3` (hand size written at first look; now at creation). Wrong causes named by me before repro, both refuted by a test: "deadlock" read from old-save totals (true leftovers: about 3 items per kind per box); "3 + 3 + 2 in hands" for the `{1, 4}` failure.
+
+Final code `632a5c4`: `make test FV=2.0` -> `Tests: 145 passed (145 total)`, `full-2.0-ok`; `make test FV=2.1` -> `Tests: 145 passed (145 total)`, `full-2.1-ok`; `test-modsets-2.0-ok` (13 sets), `test-modsets-2.1-ok` (8 sets); `load-check-2.0-ok`, `load-check-2.1-ok`, sets `them8` (both), `g433` (2.0) ok; zips `sushi-packer_0.1.16.zip` / `sushi-packer_0.2.16.zip` 292 files each.
+
+Old saves (harness `~/.cache/sushi-packer/v16/oldsave/`, checker counts arm hands): save made by 0.1.14 / 0.2.14 and by 0.1.15 / 0.2.15, loaded by 0.1.16 / 0.2.16, front belts built at tick 1000, state at tick 6000: v1.14 save both versions `fed=593 front1=218 front2=279 hands=73 store=23 mismatch[] lane_cross=0`; v1.15 save `fed=731 front1=22 front2=596 hands=78 store=35 mismatch[] lane_cross=0` (2.1: `front2=594 hands=80`). Every kind conserved, nothing on ground, no kind on wrong lane. Left lane of v1.15 save holds about 3 items per kind per box: true leftovers.
+
+Speed, `tools/bench/run.sh` (map seed pinned), flow stacks, 200 boxes, 3600 ticks, script ms per tick; trio base (`99e243b`, v1.14 scripts) / v1.15 (`353c37a`) / new (`06c4ef2`; later commits change timer sweep, merge follow-up, hand size at creation: spot check on `632a5c4` yellow 2.0 0.317, yellow 2.1 0.286, turbo 0.361). A/A band of base +-6.4 % (FND-0044).
+
+| FV | Row | Base r1 / r2 | v1.15 r1 / r2 | New r1 / r2 | Gain vs base | Whole tick v1.15 -> new |
+|---|---|---|---|---|---|---|
+| 2.0 | yellow | 4.870 / 4.521 | 1.593 / 1.325 | 0.344 / 0.280 | x14 / x16 | 3.43 / 2.77 -> 2.38 / 1.82 |
+| 2.0 | red | 9.199 / 7.319 | 2.946 / 2.671 | 0.322 / 0.260 | x29 / x28 | 5.31 / 4.92 -> 3.01 / 2.20 |
+| 2.0 | blue | 21.096 / 17.037 | 7.001 / 5.940 | 0.259 / 0.267 | x81 / x64 | 10.22 / 8.35 -> 2.62 / 2.85 |
+| 2.0 | turbo | 16.462 / 17.705 | 4.618 / 4.654 | 0.259 / 0.272 | x64 / x65 | 7.53 / 7.56 -> 3.03 / 3.04 |
+| 2.0 | `ub-ultimate` (1300 ticks) | 49.777 / 55.916 | 10.777 / 11.120 | 0.391 / 0.444 | x127 / x126 | 15.90 / 16.46 -> 5.91 / 7.60 |
+| 2.0 | player rig `g433`, 5 boxes | 0.954 / 0.857 | 0.312 / 0.338 | 0.125 / 0.131 | x7.6 / x6.5 raw | 1.10 / 1.22 -> 0.86 / 0.90 |
+| 2.1 | yellow | 3.683 / 3.925 | 1.300 / 1.758 | 0.273 / 0.344 | x13 / x11 | 2.69 / 4.16 -> 1.74 / 2.68 |
+| 2.1 | turbo | 15.699 / 17.344 | 4.404 / 5.164 | 0.265 / 0.376 | x59 / x46 | 7.14 / 8.72 -> 2.87 / 5.53 |
+| 2.1 | `kr-superior` | 28.281 / 45.563 | 7.584 / 15.290 | 0.324 / 0.436 | x87 / x104 | 11.19 / 24.58 -> 3.90 / 7.20 |
+
+Player rig: same scene with plain belts (other mods' scripts) 0.134 / 0.142 / 0.151 ms: packer share about 0.8 ms (v1.14) -> not distinguishable from zero (new 0.125 / 0.131 is inside belt-only spread). Raw ratio x6.5..x7.6 is therefore not the packer gain; stated, not hidden. Counter `full` (lane looks with store full): 0 on every vanilla and mod-tier row, 4..5 on `g433` (5 boxes, 2 rounds).
+Bar (author 2026-10-01): script at least x10 below v1.14 on every belt row: met on all 8 belt rows in 2 of 2 rounds (closest: FV 2.1 yellow x11); whole tick not above v1.15: met on all 9 rows in 2 of 2 rounds. Applies to installs with space-travel feature flag; without it box runs v1.15 path (V16-10).
+Whole-tick numbers on a shared host move with load (see r1 / r2 spread on FV 2.1 rows).
+
+Verified-by: `~/.cache/sushi-packer/v16/logs/` (`full-2.0-r10.log`, `full-2.1-r10.log`, `modsets-2.0-r9.log`, `modsets-2.1-r9.log`, `pairs-v16.txt`, older rounds `pairs-v16-*.txt`), `~/.cache/sushi-packer/v16/oldsave/<FV>/load14.log`, `load15.log`, script `~/.cache/sushi-packer/v16/pairs-v16.sh`
