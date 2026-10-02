@@ -372,7 +372,7 @@ describe("tick", function()
       assert.are_equal(4, rec.invs[1].remove({ name = "iron-ore", count = 4 }))
       local front = front_belts(surface, force, 0, 20, "transport-belt")
       run_until(function() end, function() return total(output(front, 1)) >= 4 end, 600, function()
-        after_ticks(240, function()
+        after_ticks(360, function() -- LED learns of items in arm hands at a hand look: every 300 ticks
           game.players[1].opened = nil
           local seq = output(front, 1)
           assert.are.same({ { name = "iron-ore", count = 4 } }, seq, "one full stack of what was left went out")
