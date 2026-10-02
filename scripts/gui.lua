@@ -1,4 +1,6 @@
 local N = require("scripts.names")
+local circuit_api = require("scripts.circuit")
+local arms = require("scripts.arms")
 local M = {}
 
 local FRAME = "sushi_packer_frame"
@@ -22,7 +24,7 @@ local function set_tag(el, key, value)
 end
 
 local function frame_for(player)
-  local f = player.gui.relative[FRAME]
+  local f = player.gui.screen[FRAME]
   if f and f.valid then return f end
 end
 
@@ -187,33 +189,50 @@ end
 local function build(player, rec)
   local old = frame_for(player)
   if old then old.destroy() end
-  local variant_names = {}
-  for _, tier in ipairs(N.active()) do  -- v9: modded tiers only when present (anchor names must exist)
-    for _, dir in ipairs(N.DIRS) do variant_names[#variant_names + 1] = N.variant(tier, dir) end
-  end
-  local frame = player.gui.relative.add({
-    type = "frame", name = FRAME, direction = "vertical", caption = { "gui.title" },
-    anchor = { gui = defines.relative_gui_type.container_gui, position = defines.relative_gui_position.right, names = variant_names },
-  })
+  local frame = player.gui.screen.add({ type = "frame", name = FRAME, direction = "vertical", auto_center = true })
+  local titlebar = frame.add({ type = "flow", name = "titlebar", direction = "horizontal" })
+  titlebar.drag_target = frame
+  titlebar.add({ type = "label", caption = { "gui.title" }, style = "frame_title" })
+  titlebar.add({ type = "empty-widget", style = "draggable_space", ignored_by_interaction = true })
+  add(titlebar, { type = "sprite-button", name = "close", sprite = "utility/close", tooltip = { "gui.close" }, style = "frame_action_button" }, rec.unit_number, "close")
   local settings, unit = rec.settings, rec.unit_number
   build_lanes(frame, unit, rec)
   local filters = section(frame, { "gui.filters" }, "filters_section"); build_filters(filters, frame, unit, settings)
   local timeout = section(frame, { "gui.timeout" }, "timeout_section"); build_timeout(timeout, unit, settings)
   local circuit = section(frame, { "gui.circuit-network" }, "circuit_section"); build_circuit(circuit, unit, settings.circuit)
+  add(circuit, { type = "checkbox", name = "circuit_read", caption = { "gui.read-contents" }, state = settings.circuit.read ~= false }, unit, "circuit.read")
+  player.opened = frame
+  return frame
+end
+
+function M.open(player, rec)
+  if player and rec then return build(player, rec) end
 end
 
 function M.on_opened(e)
   if not e.entity or not e.entity.valid then return end
   local rec = storage.boxes and storage.boxes[e.entity.unit_number]
   if not rec then return end
-  build(game.players[e.player_index], rec)
+  M.open(game.players[e.player_index], rec)
+end
+
+function M.on_open_input(e)
+  local player = game.players[e.player_index]
+  if not player or player.opened ~= nil or player.opened_gui_type ~= defines.gui_type.none then return end
+  local entity = player.selected
+  if not entity or not entity.valid or not player.can_reach_entity(entity) then return end
+  local rec = storage.boxes and storage.boxes[entity.unit_number]
+  if rec then M.open(player, rec) end
 end
 
 function M.on_closed(e)
   local player = game.players[e.player_index]
   if not player then return end
   local frame = frame_for(player)
-  if frame then frame.destroy() end
+  if frame and e.element == frame then
+    frame.destroy()
+    if player.opened == frame then player.opened = nil end
+  end
 end
 
 local function timeout_number(text, maximum)
@@ -227,22 +246,14 @@ function M.on_event(e)
   local el = e.element
   if not el or not el.valid or not el.tags or not el.tags.sushi_packer then return end
   local unit, field = el.tags.sushi_packer, el.tags.field
+  local player = game.players[e.player_index]
+  local frame = player and frame_for(player)
+  if field == "close" and frame then frame.destroy(); if player.opened == frame then player.opened = nil end; return end
   local rec = storage.boxes and storage.boxes[unit]
   if not rec or not rec.settings then return end
   local s, c = rec.settings, rec.settings.circuit
-  if field == "lane_slot" and e.name == defines.events.on_gui_click then
-    local player = game.players[e.player_index]
-    local lane, slot = el.tags.lane, el.tags.slot
-    local stack = lane and slot and lane_stack(rec.invs and rec.invs[lane], slot)
-    if player and stack then
-      local name, count, quality = stack.name, stack.count, stack.quality and stack.quality.name or "normal"
-      local inserted = player.insert({ name = name, count = count, quality = quality }) or 0
-      if inserted > 0 then
-        if inserted >= count then stack.clear()
-        else stack.count = count - inserted end
-        M._refresh(player, rec)
-      end
-    end
+  if field == "lane_slot" then
+    return
   elseif field == "timeout_mode" then
     s.timeout_mode = el.switch_state == "right" and "custom" or "global"
   elseif field == "timeout_s" then
@@ -283,11 +294,12 @@ function M.on_event(e)
     c.flush = el.state
   elseif field == "circuit.flush_signal" then
     c.flush_signal = el.elem_value
+  elseif field == "circuit.read" then
+    c.read = el.state
+    circuit_api.apply(rec)
+    arms.wire(rec, c.read)
   end
+  if field == "circuit.enable" or field == "circuit.cond.first_signal" or field == "circuit.cond.comparator" or field == "circuit.cond.constant" then circuit_api.apply(rec) end
 end
-
--- v17 seam stubs (lane 055)
-function M.open(player, rec) error("stub: gui.open") end
-function M.on_open_input(e) end  -- no-op until lane 055: fires on every click
 
 return M
