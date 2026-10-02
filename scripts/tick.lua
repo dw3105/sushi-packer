@@ -429,7 +429,8 @@ function M.on_tick(e)
   end
   local boxes = storage.boxes
   local sched = storage.sched
-  if not sched or sched.n ~= size(boxes) then sched = build_sched(); storage.sched = sched end
+  -- `hot` missing: schedule saved by v1.20 or older (an update does not rebuild it by itself)
+  if not sched or sched.n ~= size(boxes) or not sched.hot then sched = build_sched(); storage.sched = sched end
   local fast = sched.fast
   for unit in pairs(fast) do
     local rec = boxes[unit]
@@ -442,7 +443,6 @@ function M.on_tick(e)
     if not rec or not rec.stores or rec.hot ~= true or fast[unit] then hot[unit] = nil
     elseif (tick + unit) % N.HOT_LOOK == 0 and (tick + unit) % LOOK ~= 0 then visit(rec, tick, false, nil, counters) end
   end
-  if storage.sched ~= sched then return end
   local list = sched.buckets[tick % (2 * LOOK) + 1]
   for i = 1, #list do
     local unit = list[i]

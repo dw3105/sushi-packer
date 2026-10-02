@@ -1,6 +1,7 @@
 -- End-to-end behaviour on the real engine: placer -> box, belts behind and in front, real tick glue.
 -- Integrator-owned (SP-02 v0.2): headless only at merge and release.
 local N = require("scripts.names")
+local intake = require("tests.game.intake_rig")
 
 local NORTH = defines.direction.north
 
@@ -824,87 +825,21 @@ describe("tick", function()
       assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
     end)
   end)
-  -- v1.20 (author's save 2026-10-02, v1.19: "Why items piling up???", turbo packer on a full mixed belt with several
-  -- qualities): common kinds at full flow plus a steady trickle of rarer kinds (each quality of an item is its own
-  -- kind). Every out arm ended up holding a leftover of a rare kind, common stacks piled up in the stores, belt behind
-  -- backed up. Author's layout: belts and packer running west. Plain belt beside it = what a free belt carries.
-  local function trickle_case(tier, belt, every, filters, intake)
-    intake = intake or 0.95
-    force.belt_stack_size_bonus = 3
-    local W = defines.direction.west
-    local ITEMS = { "copper-plate", "copper-cable", "electronic-circuit", "advanced-circuit", "steel-plate", "iron-gear-wheel", "iron-plate" }
-    local QUALITIES = { "uncommon", "rare", "epic" }
-    local rigs = {}
-    for r, y in ipairs({ 0.5, 6.5 }) do
-      local feed
-      for x = 6, 1, -1 do local b = surface.create_entity({ name = belt, position = { x + 0.5, y }, direction = W, force = force }); feed = feed or b end
-      local front = {}
-      for x = 1, 12 do front[x] = surface.create_entity({ name = belt, position = { 0.5 - x, y }, direction = W, force = force }) end
-      local rec
-      if r == 1 then
-        surface.create_entity({ name = N.placer(tier), position = { 0.5, y }, direction = W, force = force, raise_built = true })
-        rec = storage.boxes[find_box(surface, { 0.5, y }).unit_number]
-        if filters then rec.settings.filters = filters end
-      else
-        surface.create_entity({ name = belt, position = { 0.5, y }, direction = W, force = force })
-      end
-      rigs[r] = { feed = feed, sink = front[#front], front = front, rec = rec, fed = { 0, 0 }, out = { 0, 0 }, small = { 0, 0 }, k = { 0, 0 } }
+  -- v1.21 (FND-0053; author on v1.20: belt in front of packer input jerks). Packer line beside a free belt of the
+  -- same tier, same feed, all running west (author's layout); engine way and script way (skip list) each own line.
+  -- Bar (author 2026-10-02): packer line takes in at least 98 % of what the free belt carries.
+  -- Replaces the v1.20 trickle tests (same hard feed, bars were 85 % engine, 75 % script).
+  local function intake_case(feed)
+    local rows = {}
+    for _, tier in ipairs(N.TIERS) do
+      for _, mode in ipairs({ "free", "engine", "script" }) do rows[#rows + 1] = { tier = tier, mode = mode, feed = feed } end
     end
-    local t = 0
-    run_until(function()
-      t = t + 1
-      for _, g in ipairs(rigs) do
-        for lane = 1, 2 do
-          local line = g.feed.get_transport_line(lane)
-          local tries = 0
-          while tries < 4 and line.can_insert_at_back() do
-            tries = tries + 1; g.k[lane] = g.k[lane] + 1
-            local i = g.k[lane]
-            local c, name, q = (i * 7 + lane) % 4 + 1, ITEMS[(i * 5 + lane) % 3 + 1], "normal"
-            if i % every == 0 then local j = i / every; name, q, c = ITEMS[j % #ITEMS + 1], QUALITIES[j % #QUALITIES + 1], 1 end
-            if line.insert_at_back({ name = name, count = c, quality = q }, c) and t > 300 then g.fed[lane] = g.fed[lane] + c end
-          end
-          local s = g.sink.get_transport_line(lane)
-          if #s > 0 then
-            if t > 300 then for _, d in ipairs(s.get_detailed_contents()) do g.out[lane] = g.out[lane] + d.stack.count; if d.stack.count < 4 then g.small[lane] = g.small[lane] + 1 end end end
-            s.clear()
-          end
-        end
-      end
-    end, function() return t >= 3300 end, 3400, function()
-      local p, ref = rigs[1], rigs[2]
-      local rec = p.rec
-      local st = {}
-      for lane = 1, 2 do
-        for _, a in ipairs(rec.out[lane]) do
-          local key; for name, v in pairs(defines.entity_status) do if v == a.status then key = name end end
-          key = lane .. ":" .. tostring(key) .. (a.held_stack.valid_for_read and (":hold" .. a.held_stack.count) or "")
-          st[key] = (st[key] or 0) + 1
-        end
-      end
-      local parts = {}; for key, v in pairs(st) do parts[#parts + 1] = key .. "=" .. v end; table.sort(parts)
-      local msg = string.format("fed=%d/%d of free belt %d/%d, out=%d/%d, small stacks=%d/%d, free slots=%d/%d, store items=%d/%d, arms[%s]",
-        p.fed[1], p.fed[2], ref.fed[1], ref.fed[2], p.out[1], p.out[2], p.small[1], p.small[2], rec.invs[1].count_empty_stacks(), rec.invs[2].count_empty_stacks(),
-        rec.invs[1].get_item_count(), rec.invs[2].get_item_count(), table.concat(parts, " "))
-      for lane = 1, 2 do
-        local under_way = 0  -- left packer, not at the end of the 12 front tiles yet
-        for _, b in ipairs(p.front) do under_way = under_way + b.get_transport_line(lane).get_item_count() end
-        assert.is_true(p.fed[lane] >= intake * ref.fed[lane], "belt behind packer does not back up, lane " .. lane .. ": " .. msg)
-        assert.is_true(p.out[lane] + under_way >= 0.95 * p.fed[lane], "what comes in goes out, lane " .. lane .. " (under way " .. under_way .. "): " .. msg)
-      end
-      assert.is_true(rec.invs[1].get_item_count() + rec.invs[2].get_item_count() < 400, "stores do not pile up: " .. msg)
-    end)
+    intake.run(surface, force, rows, function(rigs) intake.verdict(surface, rigs, 0.98) end)
   end
-  -- turbo, every 9th belt spot a single item of one of 21 rarer kinds: 4 in arms take in 91..92 % of a free belt (each
-  -- single costs an arm swing; 5 arms pass 95 % but cost turbo bench row +15..25 %, V20-2). Seen 89..92 % (v1.19: belt
-  -- backed up to 52..65 % out of what came in, stores full). Bar 85 % here.
-  it("steady trickle of rarer qualities does not choke a busy turbo lane", function() trickle_case("turbo", "turbo-transport-belt", 9, nil, 0.85) end)
-  it("thin trickle of rarer qualities does not choke a busy turbo lane", function() trickle_case("turbo", "turbo-transport-belt", 30) end)
-  it("steady trickle of rarer qualities does not choke a busy yellow lane", function() trickle_case("yellow", "transport-belt", 9) end)
-  it("steady trickle of rarer qualities does not choke a busy blue lane", function() trickle_case("blue", "express-transport-belt", 9) end)
-  it("steady trickle of rarer qualities does not choke a busy turbo lane with skip list (script path)", function()
-    -- script path is the v1.15 loop (not changed in v1.20): it does not pile up either; intake under this extreme
-    -- trickle is 79..81 % of a free belt on v1.19 and v1.20 alike (lane store full of leftover kinds). Bar 75 %.
-    trickle_case("turbo", "turbo-transport-belt", 9, { { name = "coal" } }, 0.75)
-  end)
+  it("belt behind packer does not jerk: steady trickle of rare kinds", function() intake_case("hard") end)
+  it("belt behind packer does not jerk: more kinds than store slots", function() intake_case("many") end)
+  it("belt behind packer does not jerk: thin trickle of rare kinds", function() intake_case("thin") end)
+  it("belt behind packer does not jerk: single items of seven kinds", function() intake_case("seven") end)
+  it("belt behind packer does not jerk: full stacks", function() intake_case("fours") end)
+  it("belt behind packer does not jerk: mixed stacks of three kinds", function() intake_case("plain") end)
 end)

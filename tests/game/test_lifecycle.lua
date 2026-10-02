@@ -505,6 +505,54 @@ describe("lifecycle", function()
       assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), n .. " packers: nothing on ground")
     end
   end)
+  -- v1.21 (V21-1, V21-2): packers built by v1.17..v1.20 have in hands of size 4 only and 12 store slots. After the
+  -- update every in hand has its pattern size (no part rebuilt, items kept), stores have 24 slots. Many counts in one
+  -- go (lesson of 0.1.18: a table walk may crash only for some packer counts).
+  -- v1.21 (V21-4): tick schedule saved by v1.20 has no `hot` set and an update does not rebuild it by itself.
+  it("first tick after update of a v1.20 save runs: saved schedule has no hot set", function()
+    surface.create_entity({ name = N.placer("yellow"), position = { 0.5, 0.5 }, direction = defines.direction.east, force = force, raise_built = true })
+    after_ticks(2, function()
+      assert.is_not_nil(storage.sched, "schedule built")
+      storage.sched.hot = nil  -- as saved by v1.20
+      registry.on_configuration_changed({})
+      after_ticks(3, function() assert.is_not_nil(storage.sched.hot, "schedule has hot set again") end)
+    end)
+  end)
+  it("packers of v1.20 get new in hand sizes on update, any count", function()
+    for _, n in ipairs({ 1, 2, 15, 16, 33, 64, 128 }) do
+      clear(surface); storage.boxes = {}; storage.sched = nil
+      for i = 1, n do
+        local x, y = (i % 20) * 2 - 19.5, math.floor(i / 20) * 2 - 13.5
+        surface.create_entity({ name = N.placer("yellow"), position = { x, y }, direction = defines.direction.east, force = force, raise_built = true })
+      end
+      local recs = 0
+      for _, rec in pairs(storage.boxes) do
+        recs = recs + 1
+        rec.in_hands = nil
+        for lane = 1, 2 do
+          for _, arm in ipairs(rec.arms[lane]) do arm.inserter_stack_size_override = 0 end
+          rec.invs[lane].insert({ name = "iron-plate", count = 3 })
+        end
+        rec.keep = { rec.arms[1][1], rec.out[1][1], rec.stores[1] }
+      end
+      assert.are_equal(n, recs, n .. " packers built")
+      local ok, err = pcall(registry.on_configuration_changed, {})
+      assert.is_true(ok, n .. " packers: " .. tostring(err))
+      for _, rec in pairs(storage.boxes) do
+        assert.is_true(rec.keep[1].valid and rec.keep[2].valid and rec.keep[3].valid and rec.keep[1] == rec.arms[1][1], n .. " packers: no part rebuilt")
+        rec.keep = nil
+        for lane = 1, 2 do
+          assert.are_equal(N.STORE_SLOTS, #rec.invs[lane], "store slots")
+          assert.are_equal(3, rec.invs[lane].get_item_count("iron-plate"), "items kept")
+          for i, arm in ipairs(rec.arms[lane]) do
+            local want = N.ARM_HANDS[(i - 1) % #N.ARM_HANDS + 1]
+            assert.are_equal(want, arm.inserter_stack_size_override, n .. " packers: in hand " .. i .. " of lane " .. lane)
+          end
+        end
+      end
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), n .. " packers: nothing on ground")
+    end
+  end)
 
   it("ghost of old blueprint builds belt body", function()
     -- built legacy chest is swapped inside the build event

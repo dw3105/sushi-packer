@@ -2,6 +2,7 @@
 -- (expects no extras) and once per mod set via `make test-modsets FV=` (MODSET, tools/modsets.json).
 -- Expected tiers come from installed mods (script.active_mods + Arig startup setting), never from N.EXTRA logic.
 local N = require("scripts.names")
+local intake = require("tests.game.intake_rig")
 local registry = require("scripts.registry")
 
 local NORTH = defines.direction.north
@@ -319,59 +320,44 @@ describe("modtiers", function()
     end
     game.delete_surface(s)
   end)
-  it("many kinds trickling in do not pile up on fastest tier", function()
-    -- v1.20 (FND-0052): 3 common kinds at full flow + every 9th belt spot a single item of one of 21 other kinds
-    -- (distinct items: works in games without the quality mod too). Top tier of the first chain of this mod set.
-    local c = chain()
-    local tier = c[#c]
-    local belt = N.TIER[tier].belt
-    force.belt_stack_size_bonus = 3
-    local W = defines.direction.west
-    local names = {}
-    for name, p in pairs(prototypes.item) do
-      if p.type == "item" and p.stack_size >= 50 and not p.hidden and not p.parameter then names[#names + 1] = name end
-    end
-    table.sort(names)
-    assert.is_true(#names >= 24, "24 plain items in this game")
-    local feed
-    for x = 6, 1, -1 do local b = surface.create_entity({ name = belt, position = { x + 0.5, 0.5 }, direction = W, force = force }); feed = feed or b end
-    local front = {}
-    for x = 1, 12 do front[x] = surface.create_entity({ name = belt, position = { 0.5 - x, 0.5 }, direction = W, force = force }) end
-    surface.create_entity({ name = N.placer(tier), position = { 0.5, 0.5 }, direction = W, force = force, raise_built = true })
+  it("packer of older version on a fast belt gets more out hands on update", function()
+    -- v1.21 (V21-3): belts faster than N.OUT_FAST.speed carry N.OUT_FAST.n out hands per lane; packers built before
+    -- have N.OUT_ARMS. Rebuilt on update, stored items and items in hands kept, nothing on ground.
+    local tier = intake.top_tier()
+    local speed = prototypes.entity[N.TIER[tier].belt].belt_speed
+    surface.create_entity({ name = N.placer(tier), position = { 0.5, 0.5 }, direction = NORTH, force = force, raise_built = true })
     local box = surface.find_entities_filtered({ position = { 0.5, 0.5 }, name = N.body(tier) })[1]
     local rec = registry.get(box)
-    local fed, out, k, t = { 0, 0 }, { 0, 0 }, { 0, 0 }, 0
-    local sink = front[#front]
-    on_tick(function()
-      t = t + 1
-      for lane = 1, 2 do
-        local line = feed.get_transport_line(lane)
-        local tries = 0
-        while tries < 6 and line.can_insert_at_back() do
-          tries = tries + 1; k[lane] = k[lane] + 1
-          local i = k[lane]
-          local count, name = (i * 7 + lane) % 4 + 1, names[(i * 5 + lane) % 3 + 1]
-          if i % 9 == 0 then name, count = names[4 + (i / 9) % 21], 1 end
-          if line.insert_at_back({ name = name, count = count }, count) and t > 300 then fed[lane] = fed[lane] + count end
-        end
-        local s = sink.get_transport_line(lane)
-        if #s > 0 then
-          if t > 300 then out[lane] = out[lane] + s.get_item_count() end
-          s.clear()
-        end
+    assert.are_equal(N.out_count(speed), #rec.out[1], "fresh packer: out hands by belt speed")
+    assert.are_equal(N.out_count(speed), #rec.out[2])
+    if speed <= N.OUT_FAST.speed then return end
+    for lane = 1, 2 do  -- make it look like a packer of v1.20: N.OUT_ARMS out hands
+      while #rec.out[lane] > N.OUT_ARMS do table.remove(rec.out[lane]).destroy() end
+      rec.invs[lane].insert({ name = "iron-plate", count = 7 })
+    end
+    registry.on_configuration_changed({})
+    rec = registry.get(box)
+    for lane = 1, 2 do
+      assert.are_equal(N.OUT_FAST.n, #rec.out[lane], "out hands after update, lane " .. lane)
+      local held = 0
+      for _, group in ipairs({ rec.arms[lane], rec.out[lane], rec.mop[lane] }) do
+        for _, arm in ipairs(group) do if arm.held_stack.valid_for_read then held = held + arm.held_stack.count end end
       end
-      if t < 2400 then return end
-      local stored = rec.invs[1].get_item_count() + rec.invs[2].get_item_count()
-      local msg = string.format("tier=%s fed=%d/%d out=%d/%d stored=%d free slots=%d/%d", tier, fed[1], fed[2], out[1], out[2], stored,
-        rec.invs[1].count_empty_stacks(), rec.invs[2].count_empty_stacks())
-      for lane = 1, 2 do
-        local under_way = 0
-        for _, b in ipairs(front) do under_way = under_way + b.get_transport_line(lane).get_item_count() end
-        assert.is_true(fed[lane] > 0, msg)
-        assert.is_true(out[lane] + under_way >= 0.9 * fed[lane], "what comes in goes out, lane " .. lane .. ": " .. msg)
-      end
-      assert.is_true(stored < 600, "stores do not pile up: " .. msg)
-      done()
-    end)
+      assert.are_equal(7, rec.invs[lane].get_item_count("iron-plate") + held, "items kept, lane " .. lane)
+    end
+    assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
+  end)
+  it("belt behind packer of fastest tier does not jerk", function()
+    -- v1.21 (FND-0053, bar author 2026-10-02: 98 % of a free belt on fastest belt of every mod set, both packer ways).
+    -- Feeds: steady trickle of 21 rare kinds, of 60 rare kinds (more kinds than store slots), single items of seven
+    -- kinds, full stacks. Replaces v1.20 test "many kinds trickling in do not pile up on fastest tier".
+    force.belt_stack_size_bonus = 3
+    storage.belt_stack = {}
+    local tier = intake.top_tier()
+    local rows = {}
+    for _, feed in ipairs({ "hard", "many", "seven", "fours" }) do
+      for _, mode in ipairs({ "free", "engine", "script" }) do rows[#rows + 1] = { tier = tier, mode = mode, feed = feed } end
+    end
+    intake.run(surface, force, rows, function(rigs) intake.verdict(surface, rigs, 0.98) end)
   end)
 end)
