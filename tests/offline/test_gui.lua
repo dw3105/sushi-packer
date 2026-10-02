@@ -2,6 +2,9 @@ local gui
 
 local function fixture(one_quality)
   package.loaded["scripts.gui"] = nil
+  local applied, wired = 0, 0
+  package.loaded["scripts.circuit"] = { apply = function() applied = applied + 1 end }
+  package.loaded["scripts.arms"] = { wire = function() wired = wired + 1 end }
   gui = require("scripts.gui")
   local function node(spec, parent)
     local el = {}
@@ -20,22 +23,23 @@ local function fixture(one_quality)
     return el
   end
   local root = node({})
-  local player = { gui = { relative = root } }
+  local player = { gui = { screen = root, relative = root }, opened_gui_type = 0, can_reach_entity = function() return true end }
   game = { players = { [1] = player } }
   storage = { boxes = { [7] = { unit_number = 7, settings = {
     filters = { { name = "iron-plate", quality = "rare", comparator = "≥" }, false },
     timeout_mode = "global", timeout_s = 30,
-    circuit = { enable = false, cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 5 }, flush = false, flush_signal = nil },
+    circuit = { enable = false, cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 5 }, read = true, flush = false, flush_signal = nil },
   } } } }
   local qualities = {
     normal = { level = 0, hidden = false }, uncommon = { level = 1, hidden = false }, rare = { level = 2, hidden = false }, legendary = { level = 5, hidden = false }, ["quality-unknown"] = { level = 0, hidden = true },
   }
   if one_quality then qualities = { normal = { level = 0, hidden = false }, ["quality-unknown"] = { level = 0, hidden = true } } end
   prototypes = { quality = qualities, item = { ["sushi-packer"] = {}, ["fast-sushi-packer"] = {}, ["express-sushi-packer"] = {}, ["turbo-sushi-packer"] = {} } }  -- v9: N.active() = vanilla 4
-  defines = { relative_gui_type = { container_gui = 1 }, relative_gui_position = { right = 2 },
+  defines = { gui_type = { none = 0 }, relative_gui_type = { container_gui = 1 }, relative_gui_position = { right = 2 },
     events = { on_gui_click = 1, on_gui_elem_changed = 2, on_gui_selection_state_changed = 3, on_gui_checked_state_changed = 4, on_gui_switch_state_changed = 5, on_gui_text_changed = 6 } }
-  gui.on_opened({ entity = { valid = true, unit_number = 7 }, player_index = 1 })
-  return player, storage.boxes[7]
+  local body = { valid = true, unit_number = 7 }; player.selected = body
+  gui.on_opened({ entity = body, player_index = 1 })
+  return player, storage.boxes[7], function() return applied, wired end, body
 end
 
 local function click(player, el, name)
@@ -43,10 +47,10 @@ local function click(player, el, name)
 end
 
 describe("gui", function()
-  it("anchored right of container", function()
+  it("uses screen frame", function()
     local p = fixture()
     local f = p.gui.relative.sushi_packer_frame
-    eq(f.anchor.gui, 1); eq(f.anchor.position, 2); eq(#f.anchor.names, 16)
+    ok(f ~= nil); eq(f.auto_center, true); ok(p.opened == f)
   end)
   it("sections order skip timeout circuit", function()
     local p = fixture(); local f = p.gui.relative.sushi_packer_frame
@@ -194,18 +198,14 @@ describe("gui lanes", function()
     eq(row.children[2].sprite, "item/iron-plate"); eq(row.children[2].number, 7); eq(row.children[2].tooltip, "rare")
     eq(row.children[1].sprite, nil); eq(row.children[1].number, nil)
   end)
-  it("click moves stack to player", function()
+  it("click leaves stack in lane", function()
     local p, rec, calls = lane_fixture(); local button = p.gui.relative.sushi_packer_frame.lanes_section.lane_1.children[2]
-    p.insert = function(spec) calls[#calls + 1] = spec; return 3 end
-    click(p, button); eq(calls, { { name = "iron-plate", count = 7, quality = "rare" } })
-    eq(rec.invs[1][2].count, 4); eq(button.number, 4)
-    p.insert = function(spec) calls[#calls + 1] = spec; return spec.count end
-    click(p, button); eq(rec.invs[1][2].valid_for_read, false); eq(button.sprite, nil); eq(button.number, nil)
+    click(p, button); eq(calls, {}); eq(rec.invs[1][2].count, 7); eq(button.number, 7)
   end)
-  it("full player leaves stack unchanged", function()
+  it("slot click never inserts into player", function()
     local p, rec, calls = lane_fixture(); p.insert = function(spec) calls[#calls + 1] = spec; return 0 end
     local button = p.gui.relative.sushi_packer_frame.lanes_section.lane_1.children[2]
-    click(p, button); eq(rec.invs[1][2].count, 7); eq(button.number, 7); eq(#calls, 1)
+    click(p, button); eq(rec.invs[1][2].count, 7); eq(button.number, 7); eq(#calls, 0)
   end)
   it("click on empty slot does nothing", function()
     local p, _, calls = lane_fixture(); local button = p.gui.relative.sushi_packer_frame.lanes_section.lane_1.children[1]
@@ -221,6 +221,56 @@ describe("gui lanes", function()
     local p, rec = fixture(); local f = p.gui.relative.sushi_packer_frame
     local old = f.lanes_section.lane_1.children[2]
     rec.invs = { inventory(), inventory() }; gui._refresh(p, rec)
-    eq(p.gui.relative.sushi_packer_frame, f); eq(old.sprite, "item/iron-plate"); eq(old.number, 7)
+    ok(p.gui.relative.sushi_packer_frame == f); eq(old.sprite, "item/iron-plate"); eq(old.number, 7)
+  end)
+end)
+
+describe("gui v17", function()
+  it("open builds screen frame and sets opened", function()
+    local p, rec = fixture(); rec.settings.filters = rec.settings.filters or {}
+    local f = p.gui.screen.sushi_packer_frame
+    ok(f and f.lanes_section and f.filters_section and f.timeout_section and f.circuit_section)
+    ok(p.opened == f); eq(f.auto_center, true)
+  end)
+  it("open twice keeps one frame", function()
+    local p, rec = fixture(); local f = p.gui.screen.sushi_packer_frame
+    gui.open(p, rec); eq(f.valid, false); ok(p.gui.screen.sushi_packer_frame ~= f)
+  end)
+  it("game belt window is replaced", function()
+    local p, _, _, body = fixture(); gui.on_opened({ player_index = 1, entity = body }); ok(p.opened ~= nil)
+    storage.boxes[7] = nil; p.opened = nil; gui.on_opened({ player_index = 1, entity = body }); eq(p.opened, nil)
+  end)
+  it("open input opens for selected packer", function()
+    local p, _, _, body = fixture(); p.opened = nil; p.selected = body
+    gui.on_open_input({ player_index = 1 }); ok(p.opened ~= nil)
+    p.opened = nil; p.can_reach_entity = function() return false end; gui.on_open_input({ player_index = 1 }); ok(p.opened == nil)
+    p.can_reach_entity = function() return true end; local other = {}; p.opened = other; gui.on_open_input({ player_index = 1 }); eq(p.opened, other)
+  end)
+  it("closed destroys own frame only", function()
+    local p = fixture(); local f = p.opened; gui.on_closed({ player_index = 1, element = {} }); eq(f.valid, true)
+    gui.on_closed({ player_index = 1, element = f }); eq(f.valid, false)
+  end)
+  it("close button closes", function()
+    local p = fixture(); local f = p.opened; local close = f.titlebar.close
+    ok(close ~= nil); click(p, close); eq(f.valid, false); eq(p.opened, nil)
+  end)
+  it("lane slot click takes nothing", function()
+    local p, rec = fixture(); rec.invs = { { [1] = { valid_for_read = true, name = "iron-plate", count = 4 } }, {} }
+    local button = p.opened.lanes_section.lane_1.lane_slot_1; click(p, button); eq(rec.invs[1][1].count, 4)
+  end)
+  it("read contents tick", function()
+    local p, rec, counts = fixture(); local cb = p.opened.circuit_section.circuit_read
+    ok(cb and cb.state == true); cb.state = false; click(p, cb, defines.events.on_gui_checked_state_changed)
+    eq(rec.settings.circuit.read, false); local a, w = counts(); eq(a, 1); eq(w, 1)
+  end)
+  it("enable and condition changes are applied to belt", function()
+    local p, rec, counts = fixture(); local row = p.opened.circuit_section.circuit_condition_row
+    row.circuit_enable.state = true; click(p, row.circuit_enable)
+    row.circuit_signal.elem_value = { type = "virtual", name = "signal-B" }; click(p, row.circuit_signal)
+    row.circuit_comparator.selected_index = 1; click(p, row.circuit_comparator)
+    row.circuit_constant.text = "12"; click(p, row.circuit_constant)
+    local a = counts(); eq(a, 4); eq(rec.settings.circuit.enable, true)
+    local timeout = p.opened.timeout_section.timeout_row.timeout_s; timeout.text = "40"; click(p, timeout)
+    a = counts(); eq(a, 4)
   end)
 end)
