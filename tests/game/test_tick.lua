@@ -433,6 +433,59 @@ describe("tick", function()
     end)
   end)
 
+  it("more kinds than out arms: stacks in store do not wait forever", function()
+    -- Old-save run 2026-10-02 (v1.15 save, 16 kinds on left lane): every out arm held a leftover of another kind,
+    -- store kept full stacks, belt behind was empty, nothing left the box any more (front1=7 of 137).
+    local names = {}
+    for name, p in pairs(prototypes.item) do
+      if p.type == "item" and p.stack_size >= 50 and not p.hidden and not p.parameter then names[#names + 1] = name end
+    end
+    table.sort(names)
+    local q = {}
+    for round = 1, 9 do for i = 1, 16 do q[#q + 1] = names[i] end end  -- 16 kinds x 9 = 144 items, one by one
+    local _, rec, feed, front = build(surface, force, { tier = "turbo", belt = "turbo-transport-belt", front = 6 })
+    local sink = front[#front]
+    local out, t, feed_step = 0, 0, feeder(feed, { q, {} })
+    run_until(function()
+      t = t + 1
+      feed_step()
+      local s = sink.get_transport_line(1)
+      if #s > 0 then out = out + s.get_item_count(); s.clear() end
+    end, function() return t >= 2400 end, 2500, function()
+      local held = lane_count(rec, 1)
+      local msg = string.format("out=%d held=%d store=%d", out, held, rec.invs[1].get_item_count())
+      assert.are_equal(144, out + held, "nothing lost: " .. msg)
+      assert.are_equal(16, held, "9 of each kind = 2 stacks out + 1 leftover per kind: " .. msg)
+    end)
+  end)
+
+  it("arms holding leftovers do not block later stacks on an idle belt", function()
+    -- 8 kinds, one item each: each out arm ends up holding one leftover. Later 5 other kinds, 8 items each, then
+    -- nothing more: store holds full stacks (40 items, below pile mark), belt behind empty, flush timer off.
+    local names = {}
+    for name, p in pairs(prototypes.item) do
+      if p.type == "item" and p.stack_size >= 50 and not p.hidden and not p.parameter then names[#names + 1] = name end
+    end
+    table.sort(names)
+    local q1, q2 = {}, {}
+    for i = 1, 8 do q1[#q1 + 1] = names[i] end
+    for i = 9, 13 do for _ = 1, 8 do q2[#q2 + 1] = names[i] end end
+    local _, rec, feed, front = build(surface, force, { tier = "turbo", belt = "turbo-transport-belt", front = 6 })
+    local sink = front[#front]
+    local out, t = 0, 0
+    local step1, step2 = feeder(feed, { q1, {} }), feeder(feed, { q2, {} })
+    run_until(function()
+      t = t + 1
+      if t < 400 then step1() else step2() end
+      local s = sink.get_transport_line(1)
+      if #s > 0 then out = out + s.get_item_count(); s.clear() end
+    end, function() return t >= 2400 end, 2500, function()
+      local msg = string.format("out=%d held=%d store=%d hands=%d", out, lane_count(rec, 1), rec.invs[1].get_item_count(), hands(rec, 1))
+      assert.are_equal(48, out + lane_count(rec, 1), "nothing lost: " .. msg)
+      assert.is_true(out >= 40, "five kinds x 8 = 10 full stacks must leave: " .. msg)
+    end)
+  end)
+
   it("output about tier speed on a faster belt", function()
     -- V16-2 / V16-9: exact tier cap is gone; out arms of a tier move about 1.6 x its lane rate (8 arms, one swing
     -- per N.out_swing ticks). Backlog while no front belt; then turbo front belt appears.

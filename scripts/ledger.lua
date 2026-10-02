@@ -298,6 +298,9 @@ function M.scan(state, lane, contents, opts)
     for i = 1, n do total = total + counts[i] end
     piled = total >= 16 * bss
   end
+  -- also a jam: full stacks sit in store at three looks in a row while nothing arrives (caller saw belt behind
+  -- empty): arms are not taking them, so they must all be holding leftovers.
+  if not piled and ready[lane] >= 3 and opts.idle == true then piled = true end
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled

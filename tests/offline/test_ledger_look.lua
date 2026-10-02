@@ -190,6 +190,17 @@ describe("ledger look", function()
     local t=ledger.new(); t.sweep={300,300}
     ledger.hands(t,1,{h(2,"gear",1)},opts({tick=120,idle=true})); eq(t.held[1][2],"gear\0normal"); eq(t.since[1][2],120); eq(t.sweep[1],420)
   end)
+  it("full stacks sitting in store while belt behind is empty: hands are flushed", function()
+    -- game test 2026-10-02 (red: out=0 store=40 hands=8): every out arm held a leftover of another kind, later
+    -- stacks stayed in store for ever: 40 items is below pile mark, nothing arrives any more.
+    local s=ledger.new(); s.sweep={100000,100000}; local x={c("iron",8),c("copper",8)}
+    local _,w=ledger.scan(s,1,x,opts({tick=30,idle=true})); eq(w,false)
+    _,w=ledger.scan(s,1,x,opts({tick=60,idle=true})); eq(w,false, "two looks: arms may be mid swing")
+    _,w=ledger.scan(s,1,x,opts({tick=90,idle=true})); eq(w,true, "three looks in a row with full stacks and no flow")
+    eq(copy(ledger.hands(s,1,{h(1,"gear",1),h(2,"wood",1)},opts({tick=90,idle=true}))),{1,2})
+    local t=ledger.new(); t.sweep={100000,100000}
+    for _,tick in ipairs({30,60,90,120}) do _,w=ledger.scan(t,1,x,opts({tick=tick})); eq(w,false, "belt behind not known empty: flowing lane") end
+  end)
   it("hands lanes are separate", function()
     local s=ledger.new(); ledger.hands(s,1,{h(2,"iron",3)},opts({tick=0}))
     eq(s.held[2][2],nil); eq(s.sweep[2] or 0,0)

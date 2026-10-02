@@ -270,8 +270,12 @@ local function engine_look(rec, tick, bss, flush_all)
         opts.slots, opts.slots_used, opts.flush_all, opts.n_out = N.STORE_SLOTS, used, flush_all, #rec.out[lane]
         opts.skip = nil
         -- idle flag only when a hand sweep could be due (one cached belt check per lane per ~120 ticks)
-        local sweeps = rec.ledger.sweep
-        if sweeps and tick >= (sweeps[lane] or 0) - 180 then opts.idle = belt_io.behind_empty(rec, lane) else opts.idle = nil end
+        local sweeps, readies = rec.ledger.sweep, rec.ledger.ready
+        if (sweeps and tick >= (sweeps[lane] or 0) - 180) or (readies and readies[lane] >= 2) then
+          opts.idle = belt_io.behind_empty(rec, lane)
+        else
+          opts.idle = nil
+        end
         local flush, want = ledger.scan(rec.ledger, lane, contents, opts)
         for i=1,#flush do
           local piece=flush[i]

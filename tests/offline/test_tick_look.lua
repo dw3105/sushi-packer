@@ -95,6 +95,8 @@ describe("tick look",function()
     f.run(30); eq(asks,0); eq(f.scans[1].snapshot.idle,nil)
     f.rec.ledger.sweep={200,1000}
     f.run(60); eq(asks,1, "lane 1: tick 60 >= 200 - 180"); eq(f.scans[3].snapshot.idle,true); eq(f.scans[4].snapshot.idle,nil)
+    f.rec.ledger.sweep={1000,1000}; f.rec.ledger.ready={0,2}; asks=0
+    f.run(90); eq(asks,1, "lane 2 had full stacks at two looks: ask whether anything still arrives"); eq(f.scans[6].snapshot.idle,true)
     belt.behind_empty=real; f.restore()
   end)
   it("look reuses option table",function() local f=fixture(); f.run(30); local o=f.scans[1].opts; f.run(60); eq(f.scans[3].opts,o); f.restore() end)

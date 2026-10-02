@@ -291,6 +291,11 @@ end
 
 -- v16: no item on this lane of belt behind (or no belt behind)? Asked rarely (before a hand sweep).
 function M.behind_empty(rec, lane)
+  -- cheap path: cached line of belt behind still valid (2 engine calls); else full check
+  local b = rec.belt
+  local lines = b and b.lines and b.lines.behind
+  local line = type(lines) == "table" and lines[lane] or nil
+  if line ~= nil and type(line) ~= "number" and line.valid == true then return #line == 0 end
   local belt = cached(rec, "behind", -1)
   if not belt then return true end
   local line = transport_line(rec, "behind", lane)
