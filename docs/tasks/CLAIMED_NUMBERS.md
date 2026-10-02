@@ -57,3 +57,5 @@
 | `054` | `sushi-packer/agent` | v17 io: front across, circuit settings on belt | 2026-10-02 |
 | `055` | `sushi-packer/agent` | v17 gui: own packer window | 2026-10-02 |
 | `056` | `sushi-packer/agent` | v17 lifecycle: body is packer, old chests migrate | 2026-10-02 |
+| `057` | `sushi-packer/agent` | v20 gui: lane slots show quality | 2026-10-02 |
+| `058` | `sushi-packer/agent` | v20 data: hood in body belt picture, no connector frame | 2026-10-02 |
