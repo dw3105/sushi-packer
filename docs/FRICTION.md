@@ -259,3 +259,11 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 
 **2026-10-02.** Gate said extra looks cost would be measured after build; release summary listed it as "not benched". Measured only when close-out check asked for proof per part: flat 5-tick looks doubled script time of pressured turbo packers for no gain; one more code change and full round. **Rule:** every "measured later" said at a gate becomes a line in definition of done; no bench feed for it = build the feed, do not estimate.
 
+## FRC-0062 - Shell box built to print a forum reply
+
+**2026-10-02.** Portal reply for thread `6abb236eee95f227b880c3b2` was handed over as `git fetch` + `sed` box, twice, because close-out hook QC-03 asks for a bannered box whenever `Your move` holds a paste action; author wanted the text in chat. Root cause: hook rule read as outranking what author needs; copy-text is not a command. **Rule:** copy-text goes in chat as one plain block (RULINGS 2026-10-02). Proposed, not applied (author decides): QC-03 / OP-19 exempt copy-text handed over inside a `text` fence.
+
+## FRC-0063 - Close-out reached five times before it was true
+
+**2026-10-02.** v1.21 "done" message was sent with: promised cost check missing, proof round on a commit before release commit, a cost never shown to author. Each was found by close-out interrogation, not by me; three extra full rounds and two extra questions to author. Root cause: definition of done in plan did not list gate promises, and docs were committed after proof round. **Rule:** before first "done": (1) list every promise made at gates and tick each with output; (2) write docs first, run proof round on release commit, commit nothing after; (3) every cost number author has not seen = question before box. Proposed, not applied (author decides): add these three lines to `sushi-packer-code` release checklist.
+
