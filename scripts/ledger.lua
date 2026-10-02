@@ -350,7 +350,7 @@ function M.hands(state, lane, held, opts)
   for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i], HAND_OK[i] = nil, nil, nil, nil end
 
   -- merges: first kind (arm order) whose partial hands reach one stack; shortest prefix of its hands
-  local merge_n = 0
+  local merge_n, more = 0, false
   for i = 1, n do
     local key = HAND_KEY[i]
     if key and HAND_OK[i] and not HAND_MERGED[i] then
@@ -371,7 +371,9 @@ function M.hands(state, lane, held, opts)
         m.name, m.quality, m.total = held[i].name, held[i].quality, total
         MERGE_OUT[merge_n] = m
         -- other hands of this kind wait for a later call: mark them so they are neither merged twice nor flushed now
-        for j = last + 1, n do if HAND_KEY[j] == key then HAND_MERGED[j] = true end end
+        local later = total - HAND_SIZE[i]  -- what goes back to store ...
+        for j = last + 1, n do if HAND_KEY[j] == key then HAND_MERGED[j] = true; later = later + held[j].count end end
+        if later >= HAND_SIZE[i] then more = true end  -- ... plus other hands: another full stack of this kind waits
       end
     end
   end
@@ -405,7 +407,7 @@ function M.hands(state, lane, held, opts)
       if not still then memory[arm], since[arm], counts_mem[arm] = nil, nil, nil end
     end
     -- next sweep: normal pace, or sooner when a remembered hand runs out of time before that (not before next look)
-    local next_sweep = tick + SWEEP
+    local next_sweep = tick + (more and 30 or SWEEP)  -- belt takes one push per look: come back for the next stack
     if timeout > 0 then
       for arm in pairs(memory) do
         local ends = since[arm] + timeout
