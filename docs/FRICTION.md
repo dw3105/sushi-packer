@@ -255,3 +255,7 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 
 **2026-10-02.** Seam changed `N.STORE_SLOTS`; offline reds were listed for lanes, game tests were not grepped; one full round was spent to find `assert.are_equal(12, SLOTS)`. **Rule:** when a seam constant changes, grep `tests/game` for old value and run those files before any long round.
 
+## FRC-0061 - Cost promised "measured after build" was skipped until close-out check
+
+**2026-10-02.** Gate said extra looks cost would be measured after build; release summary listed it as "not benched". Measured only when close-out check asked for proof per part: flat 5-tick looks doubled script time of pressured turbo packers for no gain; one more code change and full round. **Rule:** every "measured later" said at a gate becomes a line in definition of done; no bench feed for it = build the feed, do not estimate.
+
