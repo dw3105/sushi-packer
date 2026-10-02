@@ -134,9 +134,22 @@ describe("arms", function()
     eq({ tier, plain }, { 2 * N.OUT_ARMS, 0 })
   end)
 
+  it("create sets out arm hand to belt stack size at once", function()
+    -- full suite 2026-10-02: arm made with prototype hand, 1 plate in hand, hand size written at first look ->
+    -- arm dropped that single plate as a belt item (front belt {1, 4}, out arm held 3).
+    local rec, surface = setup(); rec.entity.surface = surface
+    rec.entity.force = { belt_stack_size_bonus = 3 }
+    prototypes.utility_constants = { max_belt_stack_size = 20 }
+    arms.create(rec)
+    eq(rec.hand, 4)
+    for lane = 1, 2 do for _, a in ipairs(rec.out[lane]) do eq(a.inserter_stack_size_override, 4) end end
+    rec.entity.force = { belt_stack_size_bonus = 50 }; arms.create(rec); eq(rec.hand, 20, "engine max")
+    prototypes.utility_constants = nil
+  end)
+
   it("create makes out arms per lane", function()
     local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec)
-    eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{false,false}); eq(rec.hand,nil)
+    eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{false,false}); eq(rec.hand,1, "fixture force has no bonus: belt stack 1")
     local n=0; for _,v in ipairs(created) do if v.spec.name==N.OUT then n=n+1; eq(v.entity.destructible,false); eq(v.spec.position,rec.entity.position); eq(v.spec.force,"force") end end
     eq(n,N.OUT_ARMS*2)
   end)
@@ -172,10 +185,13 @@ describe("arms", function()
     arms.pause_out(rec,1,false); eq(writes.disabled_by_script,2*n)
   end)
   it("hand writes only on change", function()
-    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.hand(rec,4)
-    for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,1); eq(a.inserter_stack_size_override,4) end end
-    arms.hand(rec,4); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,1) end end
-    arms.hand(rec,2); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2); eq(a.inserter_stack_size_override,2) end end
+    -- create already wrote hand 1 once (fixture force has no bonus)
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.hand(rec,1)
+    for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,1, "same size as at create: no write") end end
+    arms.hand(rec,4)
+    for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2); eq(a.inserter_stack_size_override,4) end end
+    arms.hand(rec,4); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2) end end
+    arms.hand(rec,2); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,3); eq(a.inserter_stack_size_override,2) end end
     eq(rec.arms[1][1].inserter_stack_size_override,nil)
     rec.out[1][1].valid=false; arms.hand(rec,3)
   end)

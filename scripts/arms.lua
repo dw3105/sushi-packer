@@ -86,6 +86,11 @@ function M.create(rec)
   local pickup = { x = pos.x + dx, y = pos.y + dy }
   rec.arms = { {}, {} }
   rec.out = { {}, {} }
+  -- hand size = force belt stack now (tick writes it again when research changes it)
+  local uc = prototypes.utility_constants
+  local bss = 1 + (force.belt_stack_size_bonus or 0)
+  local max = uc and uc.max_belt_stack_size or N.MAX_BELT_STACK
+  if bss > max then bss = max end
   for lane = 1, 2 do
     for _ = 1, n do
       local arm = surface.create_entity { name = N.ARM, position = pos, force = force }
@@ -108,6 +113,7 @@ function M.create(rec)
     for _ = 1, N.OUT_ARMS do
       local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
+      arm.inserter_stack_size_override = bss  -- before it can take anything: hand = belt stack from first tick
       arm.pickup_position = pick
       arm.pickup_target = rec.stores[lane]
       arm.drop_position = drop
@@ -123,7 +129,7 @@ function M.create(rec)
   rec.paused = { false, false }
   rec.skip = { "", "" }
   rec.out_paused = { false, false }
-  rec.hand = nil
+  rec.hand = bss
 end
 
 function M.destroy(rec, keep_stores)

@@ -281,7 +281,18 @@ describe("modtiers", function()
         end
       end
       table.sort(stacks)
-      assert.are.same({ 4, 4 }, stacks, "stacked output " .. key)
+      -- where the rest is, for a red run (v16: leftovers wait in out-arm hands)
+      local rec; for _, r in pairs(storage.boxes) do rec = r end
+      local where = {}
+      for lane = 1, 2 do
+        where[#where + 1] = "store" .. lane .. "=" .. rec.invs[lane].get_item_count()
+        for i, arm in ipairs(rec.out[lane]) do local h = arm.held_stack; if h.valid_for_read then where[#where + 1] = "out" .. lane .. "." .. i .. "=" .. h.count end end
+        for i, arm in ipairs(rec.arms[lane]) do local h = arm.held_stack; if h.valid_for_read then where[#where + 1] = "in" .. lane .. "." .. i .. "=" .. h.count end end
+      end
+      local st = rec.ledger
+      where[#where + 1] = "hand=" .. tostring(rec.hand) .. " ready=" .. tostring(st.ready and st.ready[1]) .. " same=" .. tostring(st.same and st.same[1])
+        .. " piled=" .. tostring(st.piled and st.piled[1]) .. " sweep=" .. tostring(st.sweep and st.sweep[1]) .. " tick=" .. game.tick .. " unit=" .. rec.unit_number
+      assert.are.same({ 4, 4 }, stacks, "stacked output " .. key .. " | " .. table.concat(where, " "))
     end)
   end)
 
