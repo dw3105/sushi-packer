@@ -25,3 +25,5 @@
 **Belt body** — packer that is itself belt piece: belt behind joins it like belt, it turns like belt, wire options are belt's own. Opposite: **chest body** (packer up to v1.16).
 
 **Side-loading in** — belt pointing at packer's flank pushing items into it. **Sideways front** — belt in front of packer running across; packer pushes onto its near lane like belt does.
+
+**Intake share** — what packer line takes in divided by what free belt beside it carries, same feed, same time. Below 1 = belt behind packer stands and goes ("jerks"). **Leftover** — items of one kind in lane store fewer than one belt stack.
