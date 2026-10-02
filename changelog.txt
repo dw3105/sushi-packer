@@ -1,4 +1,32 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.16
+Date: 2026-10-02
+  Optimisations:
+    - With belt stacking from Space Age (or another mod that enables it), hidden inserters now also put the stacks out. The script only checks each box about twice per second: script time is 15 or more times lower than in 0.1.14.
+  Changes:
+    - Items below one full stack wait in a hidden inserter hand; the box window does not show them, the light does.
+    - A lane no longer limits itself to one stack per item, and stacks leave in no fixed order.
+    - A box passes up to about 1.6 times the speed of its own belt tier.
+    - Inserters next to a box can take items from it again.
+    - Boxes with pass-through filters, and games without the belt stacking feature, keep the 0.1.15 behaviour.
+  Bugfixes:
+    - Items held by the hidden inserters are returned when a box is mined, rotated or destroyed.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.16
+Date: 2026-10-02
+  Optimisations:
+    - With belt stacking from Space Age (or another mod that enables it), hidden inserters now also put the stacks out. The script only checks each box about twice per second: script time is 15 or more times lower than in 0.1.14.
+  Changes:
+    - Items below one full stack wait in a hidden inserter hand; the box window does not show them, the light does.
+    - A lane no longer limits itself to one stack per item, and stacks leave in no fixed order.
+    - A box passes up to about 1.6 times the speed of its own belt tier.
+    - Inserters next to a box can take items from it again.
+    - Boxes with pass-through filters, and games without the belt stacking feature, keep the 0.1.15 behaviour.
+  Bugfixes:
+    - Items held by the hidden inserters are returned when a box is mined, rotated or destroyed.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.15
 Date: 2026-10-01
   Changes:

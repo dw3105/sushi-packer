@@ -2,7 +2,7 @@
 
 **Turn a mixed "sushi" belt into neat stacked belt items — without splitting lanes.**
 
-The box uses much less script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them.
+With belt stacking enabled, hidden inserters move items in and out of the box, so it needs very little script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them.
 
 Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind ride in on both lanes. The box keeps the two lanes apart, gathers each item kind until it fills one belt stack, then sends that stack out on the same lane it came in on. One belt, many item kinds, fully stacked — no splitters, no filter inserters, no sorting spaghetti.
 
@@ -12,7 +12,7 @@ Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind rid
 - **Release at belt stack.** A stack leaves as soon as one item kind fills a belt stack: 1 item before belt stacking research (pass-through), then whatever research sets — 4 in vanilla Space Age, more when a mod raises it. Never more than the item's own stack size.
 - **Flush timeout.** Partial stacks older than the timeout leave anyway (map default, or per box). `0` = never.
 - **Separate lanes.** Each lane has 12 slots. A blocked output lane fills only its own store; the other lane keeps flowing.
-- **One stack per item.** Each lane holds at most one full item stack of each item and quality (e.g. 50 ore, modded stack sizes included). More of that item waits on the belt.
+- **Leftovers wait.** Items below one full belt stack wait inside the box until the stack is complete or the flush timer runs out.
 - **Nothing lost.** If the belt in front is blocked, that lane fills up and its lane on the belt behind backs up — no item is ever dropped.
 - **Keeps up with its belt.** Each tier moves exactly its belt's throughput, and items never stop at the belt end in front of the box.
 
@@ -68,7 +68,7 @@ Each tier has its own technology after its belt technology. Upgrade planner swap
 ## Requirements
 
 - **Space Age** is optional; belt stacking research can also come from Stack Inserters or Infinite Belt Stacking.
-- Factorio 2.0 → mod version **0.1.15**; Factorio 2.1 → mod version **0.2.15**. Same features in both.
+- Factorio 2.0 → mod version **0.1.16**; Factorio 2.1 → mod version **0.2.16**. Same features in both.
 
 ## Source and bug reports
 
