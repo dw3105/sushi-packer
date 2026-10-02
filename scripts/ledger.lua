@@ -47,48 +47,46 @@ local function plan_full(state, lane, contents, opts)
   table.sort(indices, function(a, b) return before(a, b, ticks, names, qualities) end)
 
   local out, skip = {}, {}
-  for _, i in ipairs(indices) do
-    if opts.skip and opts.skip(names[i], qualities[i]) then
-      skip[#skip + 1] = i
+  local pressure = not opts.flush_all and opts.slots_used >= opts.slots and opts.need_slot ~= false
+  local timeout = opts.timeout_ticks
+  local timed_output = false
+  if timeout > 0 then
+    for _, i in ipairs(indices) do
+      if not (opts.skip and opts.skip(names[i], qualities[i])) and counts[i] % sizes[i] > 0 and opts.tick - ticks[i] >= timeout then timed_output = true; break end
     end
   end
-  for _, i in ipairs(skip) do
-    append_pieces(out, names[i], qualities[i], counts[i], sizes[i])
+  local pressure_done = {}
+  if pressure and not timed_output then
+    local chosen = 0
+    for pass = 1, 2 do
+      for _, i in ipairs(indices) do
+        if chosen >= (N.PRESS or 1) then break end
+        if not (opts.skip and opts.skip(names[i], qualities[i])) then
+          local rem, full = counts[i] % sizes[i], math.floor(counts[i] / sizes[i])
+          if rem > 0 and ((pass == 1 and full == 0) or (pass == 2 and full > 0)) then
+            append_pieces(out, names[i], qualities[i], rem, sizes[i]); pressure_done[i] = true; chosen = chosen + 1
+          end
+        end
+      end
+      if chosen > 0 then break end
+    end
   end
-
+  for _, i in ipairs(indices) do
+    if opts.skip and opts.skip(names[i], qualities[i]) then skip[#skip + 1] = i end
+  end
+  for _, i in ipairs(skip) do append_pieces(out, names[i], qualities[i], counts[i], sizes[i]) end
   for _, i in ipairs(indices) do
     if not (opts.skip and opts.skip(names[i], qualities[i])) then
       local n = math.floor(counts[i] / sizes[i])
-      if n > 0 then
-        for _ = 1, n do out[#out + 1] = { name = names[i], quality = qualities[i], count = sizes[i] } end
-      end
+      for _ = 1, n do out[#out + 1] = { name = names[i], quality = qualities[i], count = sizes[i] } end
     end
   end
-
-  local priority_output = #out > 0
   local flush_all = opts.flush_all
-  local timeout = opts.timeout_ticks
-  local timed_output = false
   for _, i in ipairs(indices) do
     if not (opts.skip and opts.skip(names[i], qualities[i])) then
       local rem = counts[i] % sizes[i]
-      if rem > 0 and (flush_all or (timeout > 0 and opts.tick - ticks[i] >= timeout)) then
+      if rem > 0 and not pressure_done[i] and (flush_all or (timeout > 0 and opts.tick - ticks[i] >= timeout)) then
         out[#out + 1] = { name = names[i], quality = qualities[i], count = rem }
-        if timeout > 0 and opts.tick - ticks[i] >= timeout then timed_output = true end
-      end
-    end
-  end
-
-  -- F-1: only when an arriving item needs a slot (caller may say need_slot = false: nothing new waits).
-  if not priority_output and not timed_output and not flush_all and opts.slots_used >= opts.slots and opts.need_slot ~= false then
-    -- Store pressure flushes one oldest leftover, but never competes with a full/skip/timed flush.
-    for _, i in ipairs(indices) do
-      if not (opts.skip and opts.skip(names[i], qualities[i])) then
-        local rem = counts[i] % sizes[i]
-        if rem > 0 then
-          out[#out + 1] = { name = names[i], quality = qualities[i], count = rem }
-          break
-        end
       end
     end
   end
@@ -136,7 +134,7 @@ function M.plan(state, lane, contents, opts)
     sizes[lane] = n
   end
   if n == 0 then return EMPTY end
-  if complex or opts.flush_all or (cn == 0 and opts.slots_used >= opts.slots and opts.need_slot ~= false) then
+  if complex or opts.flush_all or (opts.slots_used >= opts.slots and opts.need_slot ~= false) then
     return plan_full(state, lane, contents, opts)
   end
   if cn == 0 then return EMPTY end
