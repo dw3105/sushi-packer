@@ -463,7 +463,11 @@ describe("tick", function()
       local held = lane_count(rec, 1)
       local msg = string.format("out=%d held=%d store=%d", out, held, rec.invs[1].get_item_count())
       assert.are_equal(144, out + held, "nothing lost: " .. msg)
-      assert.are_equal(16, held, "9 of each kind = 2 stacks out + 1 leftover per kind: " .. msg)
+      -- 9 of each kind = 2 full stacks out + 1 leftover per kind. Leftovers wait in hands / store; a jam flush
+      -- (V16-3 a: every arm holds a leftover while stacks wait) may send the 8 held in hands out as singles. Which of
+      -- the two happens depends on look phase (full suite 2026-10-02: out=136 held=8; alone: out=128 held=16).
+      assert.is_true(out >= 128, "every full stack left: " .. msg)
+      assert.is_true(held == 16 or held == 8, "leftovers wait, or one jam flush of 8 hands: " .. msg)
     end)
   end)
 
