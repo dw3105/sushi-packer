@@ -349,9 +349,11 @@ tests/offline/test_ledger_look.lua::ledger look > sweep merges partial hands of 
 tests/offline/test_ledger_look.lua::ledger look > next sweep comes when the oldest remembered hand times out
 tests/offline/test_ledger_look.lua::ledger look > second stack of same kind still in hands: next sweep at next look
 tests/offline/test_ledger_look.lua::ledger look > hands lanes are separate
+tests/offline/test_ledger_look.lua::ledger steer v20 > jam with few leftover kinds in hands does not steer
+tests/offline/test_ledger_look.lua::ledger steer v20 > jam with six leftover kinds in hands steers from next look
 tests/offline/test_ledger_look.lua::ledger steer v20 > lane is not steered until it jams
 tests/offline/test_ledger_look.lua::ledger steer v20 > jam switches steering on: kinds with a full stack only
-tests/offline/test_ledger_look.lua::ledger steer v20 > steering stays while leftovers are in store and ends after quiet looks
+tests/offline/test_ledger_look.lua::ledger steer v20 > steering stays while store holds leftovers and as many kinds as out arms; ends after quiet looks
 tests/offline/test_ledger_look.lua::ledger steer v20 > empty store on steered lane gives empty list
 tests/offline/test_ledger_look.lua::ledger steer v20 > steered lane keeps three slots free: oldest leftovers leave, several per look
 tests/offline/test_ledger_look.lua::ledger steer v20 > lane that is not steered flushes as before
@@ -434,7 +436,7 @@ tests/offline/test_sim.lua::sim > belt box and sink
 tests/offline/test_sim.lua::sim > camera centered on box
 tests/offline/test_sim.lua::sim > unknown kind errors
 tests/offline/test_stage.lua::stage > release info has no test dependency
-tests/offline/test_stage.lua::stage > versions are 0.1.19 and 0.2.19
+tests/offline/test_stage.lua::stage > versions are 0.1.20 and 0.2.20
 tests/offline/test_stage.lua::stage > release ships thumbnail and changelog
 tests/offline/test_stage.lua::stage > thumbnail is 144 by 144 png
 tests/offline/test_stage.lua::stage > release stage needs no Factorio
@@ -479,6 +481,7 @@ tests/offline/test_tick_look.lua::tick look > scan gets contents and options
 tests/offline/test_tick_look.lua::tick look > flush pieces are pushed and removed
 tests/offline/test_tick_look.lua::tick look > second flush piece of one look goes to a further belt spot
 tests/offline/test_tick_look.lua::tick look > steered lane: arms get allowed kinds, partial hand of other kind goes back to store, no jam flush
+tests/offline/test_tick_look.lua::tick look > steered lane with unchanged list reads no hands
 tests/offline/test_tick_look.lua::tick look > steered lane keeps hand when store has no room
 tests/offline/test_tick_look.lua::tick look > flush signal on steered lane still flushes hands
 tests/offline/test_tick_look.lua::tick look > hands are read only when wanted

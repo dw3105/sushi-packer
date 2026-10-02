@@ -1,4 +1,20 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.20
+Date: 2026-10-02
+  Bugfixes:
+    - Items piled up inside a box and little came out when many item kinds arrived, for example the same items in several qualities: every hidden inserter was holding a leftover of another kind. Such a lane now lets its inserters take only kinds that have a full stack.
+    - The box window shows the quality of every stored item.
+    - Blueprints and ghosts show the box with its hood instead of a bare belt with a wire frame.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.20
+Date: 2026-10-02
+  Bugfixes:
+    - Items piled up inside a box and little came out when many item kinds arrived, for example the same items in several qualities: every hidden inserter was holding a leftover of another kind. Such a lane now lets its inserters take only kinds that have a full stack.
+    - The box window shows the quality of every stored item.
+    - Blueprints and ghosts show the box with its hood instead of a bare belt with a wire frame.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.19
 Date: 2026-10-02
   Bugfixes:
