@@ -574,3 +574,28 @@ Scratch speed, shape Y upper bound (v1.16 box with chest kept + shut tier belt o
 Meaning: plain running belt as body needs a script stop whenever a lane store fills, and a belt can only be stopped whole (both lanes) -> breaks L-3. Shut body keeps v1.16 item path (proven), refuses side-loading by itself, lets outside inserters act as with belt.
 
 Verified-by: `~/wt-sushi-packer-probe-v17` (`make test-one FV=2.0|2.1 T='tests/game/test_probe_v17.lua::probe v17 > <name>'`, names: catch bss4, catch fast body, stop channels, shut body, blocked front then free, wire and window); logs `~/.cache/sushi-packer/v17/logs/` (`b1-catch-2.0.log`, `b1-fast-2.0.log`, `b3-stop-*.log`, `y-shut-*.log`, `x-blocked-*.log`, `b4-wire-*.log`, `pairs-v17-scratch.txt`, `pairs-v17-nomop.txt`)
+
+## FND-0049 - v17 INT: belt body built; defects found by review and real-game tests, old saves, suites
+
+2026-10-02, dev-vm, 2.0.77 + 2.1.20, branch `int/v17`. Lanes 052 data, 053 arms, 054 io, 055 gui, 056 lifecycle: all PASS on own checks in 3..11 minutes, merged. Then review + game tests:
+
+| Seen | Where seen | Fix |
+|---|---|---|
+| New packer got "read contents" off and settings read from an empty belt | code review: `registry.on_built` asked for control behaviour after `arms.create` had made one | ask before parts are made (V17-9) |
+| Old-save swap put items named by `rec.extra` in twice | code review of `registry.migrate` | by lane once; test `registry v17 > migrate never doubles items named by extra` |
+| Front belt gone or turned: old answer kept | code review of `belt_io.front_kind` | across belt kept beside front cache; test `kind follows a front belt that goes away or turns` |
+| Load error both versions: `Key "icon" not found ... sushi-packer-hood` | `make load-check` | hood icon |
+| Packer took items in, gave nothing out (`out=0`, stores full) | first full run: 77 of 145 red; state print: out arm `pickup_target = sushi-packer-body` | engine re-picks target when `pickup_position` is written: lane store named again after aim |
+| Robot upgrade yellow -> red: stored items on ground | `lifecycle > upgrade keeps state` (`ground_cu=1`, stores empty, no script spill in trace) | fresh out arm with nothing in front drops on ground; red arm swing 20 ticks < first look 30: out arms made paused (V17-7). v1.16 code, three packers rotated with nothing in front: `ground=2` of 240 |
+| Hood half a tile off (`fast-sushi-packer-hood@11,19` for packer at 10.5,18.5) | same test | hood off-grid with one-tile box |
+| v1.14 save: `ground=452` of 593, `lane_cross=21`; v1.15 / v1.16 saves `ground=2` | old-save harness | spare stores (V17-6); spill never onto belts |
+| With skip list last items enter packer later than in v1.16 | `tick > filtered item passes between stacks` (2 ore still on belt behind when 49th item was out) | none; all items get in; cause not looked for |
+| Jam test count depends on look phase (`out=136 held=8` in suite, `out=128 held=16` alone) | third full run | test states rule: leftovers wait or one jam flush of 8 hands |
+
+Final code of this entry: `make test FV=2.0` -> `Tests: 145 passed (145 total)`, `full-2.0-ok`; `make test FV=2.1` -> `Tests: 145 passed (145 total)`, `full-2.1-ok`; `make test-modsets FV=2.0` -> `test-modsets-2.0-ok` (13 sets); `FV=2.1` -> `test-modsets-2.1-ok` (8 sets); `make load-check` 2.0, 2.1, sets `them8`, `g433`: ok.
+
+Old saves (harness `~/.cache/sushi-packer/v17/oldsave/`, save made by 0.1.14 / 0.2.14, 0.1.15 / 0.2.15, 0.1.16 / 0.2.16, loaded by 0.1.17 / 0.2.17, front belts built at tick 1000, tally at tick 6000): every run `mismatch[] lane_cross=0`, no `ground` part. v1.14 save: all 593 items on front belts (`front1=266 front2=327`). v1.15 / v1.16 saves: `front1=110 front2=431 hands=16 store=174` - output stops because the 40 dead-end front tiles are full (right-lane out arms `waiting_for_space_in_destination`), not a packer stall.
+
+Not proven headless: click on packer opens window (custom input on game control `open-gui`); smart belt dragging across a packer; look of ghosts.
+
+Verified-by: `~/.cache/sushi-packer/v17/logs/` (`full-2.0-r4.log`, `full-2.1-r2.log`, `modsets-2.0-r2.log`, `modsets-2.1-r2.log`, `load-2.0*.log`, `load-2.1.log`), `~/.cache/sushi-packer/v17/oldsave/run.sh 2.0`, `... 2.1`

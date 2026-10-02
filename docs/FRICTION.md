@@ -202,3 +202,19 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0047 - Long proof rounds started before cheap checks
 
 **2026-10-02.** Four 45..90-minute rounds were stopped or wasted because a fix after them changed code again; quick bench (3 runs, 2 minutes) and the 10 sensitive game tests run alone would have caught each. Bucket: process. Proposed rule: before a full round: offline all, sensitive game tests alone, 3-row bench; full round only when those are clean.
+
+## FRC-0048 - Seam named an engine call order without the engine fact behind it
+
+**2026-10-02.** v17 seam let lane 053 write out-arm `pickup_target` before `pickup_position`. Engine re-picks the target when the position is written; v16 code had the right order by luck, no comment, no test. Result: packer gave nothing out, 77 red game tests, found only by printing arm state. **Rule:** when a seam moves writes on engine objects, list write-order facts ("X resets Y") in the seam and make the offline fake act like the engine.
+
+## FRC-0049 - Seam decision point placed after a call that changes the thing asked
+
+**2026-10-02.** Seam said "body has control behaviour -> sync, else apply" but `arms.create` (called first) gives every body one. Lane built it as written; every new packer would have read settings from an empty belt. Found in review, not by lane tests (fakes). **Rule:** for every "if X exists" in a seam, name which earlier call may create X.
+
+## FRC-0050 - Integrator merged lanes while two lanes still ran
+
+**2026-10-02.** Lanes 052..054 merged into `int/v17` while 055, 056 ran (rule: no commit on int branch while lanes run). No harm (lane checks compare with tag `lanes-base-v17`), but rule was broken. **Rule:** wait, or state in plan that lane checks pin the base tag and merges are allowed.
+
+## FRC-0051 - Speed hunt on a busy shared host
+
+**2026-10-02.** Removal experiments for a 0.07 ms gap ran while host load rose (own suites, other sessions): v1.16 reference moved 0.37 -> 0.44 ms inside one batch, 8 runs unusable. **Rule:** before a batch of single bench runs read `load1`; run reference first and last; drop batch when the two references differ by more than the gap hunted.

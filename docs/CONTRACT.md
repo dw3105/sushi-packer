@@ -401,3 +401,13 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 ### integrator at INT
 
 `control.lua` (filters over body, placer, legacy names; `on_player_rotated_entity` / `on_player_flipped_entity` -> `registry.on_rotated`; rotate inputs removed), `scripts/tick.lua` (no chest inventory; `belt_io.front_kind` -> `arms.aim_out`; mop pause), `scripts/sim.lua`, `scripts/led.lua`, locale, `tests/game/*`, bench.
+
+### v17 seam amendments made at integration (integrator, V17-6..10; code and tests are the reference)
+
+- `arms.aim_out` / `arms.create`: after writing `pickup_position` of an out arm write `pickup_target = rec.stores[lane]` again (engine re-picks target at that spot: belt body). Out arms are made with `disabled_by_script = true`, `rec.out_paused = { true, true }`. Hood re-made when `rec.hood.name ~= N.hood(rec.tier)`.
+- Hood prototype: flags add `placeable-off-grid`, `collision_box` one tile, `icon`.
+- `belt_io`: across belt kept beside front cache (`rec.belt.across`, `.across_line`, `.across_at`, `.across_scan`), looked for at most once per 60 ticks; `front_kind` = `cached front` -> "ahead", else across -> "across", else nil. `push` / `can_push` try ahead first, then across.
+- `circuit.sync`: `cond` copied only when `circuit_condition.first_signal` is set, constant nil -> 0; `circuit.apply` uses `get_or_create_control_behavior`.
+- `registry`: on_built order (V17-9); `on_rotated` clears `rec.belt`, `rec.front_was`; `migrate`: items named by `rec.extra` go to their lane once (never also as chest contents), overflow to `rec.spare` (V17-6), `arms.create` before `circuit.apply`; removal paths return and destroy spare stores.
+- `tick`: `rec.front_was` holds front kind; `arms.aim_out(rec, front)` at every look; `refill(rec, lane)` while `rec.spare`; merge rest that store refuses is spilled at packer.
+- `gui`: frame carries `tags.sushi_packer = unit`; `gui._refresh_open(player)`.
