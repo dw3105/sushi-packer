@@ -52,3 +52,8 @@
 | `049` | `sushi-packer/agent` | v16 ledger: slow-look rules | 2026-10-01 |
 | `050` | `sushi-packer/agent` | v16 tick: slow look for engine-mode boxes | 2026-10-01 |
 | `051` | `sushi-packer/agent` | v16 lifecycle: arm hand items on mine / death | 2026-10-01 |
+| `052` | `sushi-packer/agent` | v17 data: belt body, hood, legacy boxes hidden | 2026-10-02 |
+| `053` | `sushi-packer/agent` | v17 arms: parts on belt body | 2026-10-02 |
+| `054` | `sushi-packer/agent` | v17 io: front across, circuit settings on belt | 2026-10-02 |
+| `055` | `sushi-packer/agent` | v17 gui: own packer window | 2026-10-02 |
+| `056` | `sushi-packer/agent` | v17 lifecycle: body is packer, old chests migrate | 2026-10-02 |

@@ -41,4 +41,8 @@ function M.evaluate(rec)
   return enabled, flush_now
 end
 
+-- v17 seam stubs (lane 054)
+function M.sync(rec) error("stub: circuit.sync") end
+function M.apply(rec) error("stub: circuit.apply") end
+
 return M

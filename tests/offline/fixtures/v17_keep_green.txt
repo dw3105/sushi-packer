@@ -1,0 +1,243 @@
+tests/offline/test_bench_builder.lua::bench builder > default scene unchanged
+tests/offline/test_bench_builder.lua::bench builder > tier sets belt placer loader
+tests/offline/test_bench_builder.lua::bench builder > extra tier uses row names
+tests/offline/test_bench_builder.lua::bench builder > box false places belt instead of packer
+tests/offline/test_bench_builder.lua::bench builder > unknown tier errors
+tests/offline/test_bench_builder.lua::bench builder > unknown flow errors
+tests/offline/test_bench_builder.lua::bench builder > stacks layout
+tests/offline/test_bench_builder.lua::bench builder > stacks column pitch 16
+tests/offline/test_bench_builder.lua::bench builder > plan same seed same plan
+tests/offline/test_bench_builder.lua::bench builder > plan varies across boxes
+tests/offline/test_bench_builder.lua::bench builder > control passes settings and logs counters
+tests/offline/test_bench_run.lua::bench run > stale settings removed before init create
+tests/offline/test_bench_run.lua::bench run > belt only row marked box no
+tests/offline/test_bench_run.lua::bench run > parser prints old fields then new
+tests/offline/test_bench_run.lua::bench run > parser without counter lines says na
+tests/offline/test_bench_run.lua::bench run > parser rejects wrong tick count
+tests/offline/test_bench_run.lua::bench run > dry run prints resolved row
+tests/offline/test_bench_run.lua::bench run > defaults
+tests/offline/test_bench_run.lua::bench run > bad args exit 2
+tests/offline/test_bench_run.lua::bench run > modlist keeps stage entries adds bench
+tests/offline/test_bench_run.lua::bench run > makefile has bench-all rows
+tests/offline/test_bench_run.lua::bench run > run.sh no longer overwrites mod list
+tests/offline/test_core.lua::core > new box is idle and green
+tests/offline/test_core.lua::core > same item on two lanes keeps two buffers
+tests/offline/test_core.lua::core > quality is separate buffer
+tests/offline/test_core.lua::core > full stack becomes ready on its lane
+tests/offline/test_core.lua::core > ready stacks leave in ready order
+tests/offline/test_core.lua::core > arrival after ready starts new partial
+tests/offline/test_core.lua::core > accept splits across ready and new partial
+tests/offline/test_core.lua::core > used slots counts ready and partials
+tests/offline/test_core.lua::core > full box flushes oldest partial and accepts zero
+tests/offline/test_core.lua::core > oldest partial chosen across lanes
+tests/offline/test_core.lua::core > all ready refuses input
+tests/offline/test_core.lua::core > passthrough uses hold not slots
+tests/offline/test_core.lua::core > hold busy refuses second passthrough
+tests/offline/test_core.lua::core > hold waits while stack run started
+tests/offline/test_core.lua::core > hold goes before unstarted stack
+tests/offline/test_core.lua::core > take out last piece may be small
+tests/offline/test_core.lua::core > timeout flushes old partial only
+tests/offline/test_core.lua::core > timeout zero is off
+tests/offline/test_core.lua::core > flush partials queues all in arrival order
+tests/offline/test_core.lua::core > remove external takes newest partial first
+tests/offline/test_core.lua::core > adopt external lands on lane one
+tests/offline/test_core.lua::core > led yellow with items and red when full
+tests/offline/test_core.lua::core > totals sums lanes sorted
+tests/offline/test_core.lua::core > box is plain data
+tests/offline/test_core.lua::core > counters track partial and ready per lane
+tests/offline/test_core.lua::core > counters rebuilt for old box
+tests/offline/test_core.lua::core > accept passes item stack to room stubs
+tests/offline/test_core_cap.lua::cap > ore stops at 50 per lane
+tests/offline/test_core_cap.lua::cap > other lane same item unaffected
+tests/offline/test_core_cap.lua::cap > modded stack size 7 honored
+tests/offline/test_core_cap.lua::cap > quality separate
+tests/offline/test_core_cap.lua::cap > partial belt item accepted up to cap
+tests/offline/test_core_cap.lua::cap > drain reopens intake
+tests/offline/test_core_cap.lua::cap > no item stack means no cap
+tests/offline/test_core_fast.lua::core fast > same trace as v114
+tests/offline/test_core_fast.lua::core fast > keys built once per item
+tests/offline/test_core_fast.lua::core fast > take out does not rebuild head table
+tests/offline/test_core_fast.lua::core fast > full stack leaves partial list without scan
+tests/offline/test_core_quota.lua::quota > blocked lane never takes 25th slot
+tests/offline/test_core_quota.lua::quota > other lane keeps 24 slots
+tests/offline/test_core_quota.lua::quota > flush picks oldest partial same lane
+tests/offline/test_core_quota.lua::quota > led red when one lane full
+tests/offline/test_core_quota.lua::quota > old box over quota drains
+tests/offline/test_counters.lua::counters > off by default
+tests/offline/test_counters.lua::counters > on starts at zero
+tests/offline/test_counters.lua::counters > counters returns copy
+tests/offline/test_counters.lua::counters > on again resets
+tests/offline/test_counters.lua::counters > pull counts belt items and items
+tests/offline/test_counters.lua::counters > partial accept counts accepted only
+tests/offline/test_counters.lua::counters > refused item counts nothing
+tests/offline/test_counters.lua::counters > reads count each detailed call
+tests/offline/test_counters.lua::counters > push counts belt item and items
+tests/offline/test_counters.lua::counters > visit counted once per gate pass
+tests/offline/test_data_hidden.lua::data hidden > makes arm and store
+tests/offline/test_data_hidden.lua::data hidden > arm fields
+tests/offline/test_data_hidden.lua::data hidden > store fields
+tests/offline/test_data_hidden.lua::data hidden > parts are hidden and untouchable
+tests/offline/test_data_hidden.lua::data hidden > parts draw nothing
+tests/offline/test_data_hidden.lua::data hidden > out arm stacks only with space travel flag
+tests/offline/test_data_hidden.lua::data hidden > finalize widens out arm hand to engine max belt stack
+tests/offline/test_data_hidden.lua::data hidden > out arm swing follows belt speed
+tests/offline/test_data_hidden.lua::data hidden > finalize makes one out arm per tier belt speed
+tests/offline/test_data_hidden.lua::data hidden > source prototypes untouched
+tests/offline/test_filter.lua::filter > ≥ uncommon matches rare not normal
+tests/offline/test_filter.lua::filter > nil quality matches any
+tests/offline/test_filter.lua::filter > nil comparator means equals
+tests/offline/test_filter.lua::filter > all six comparators
+tests/offline/test_filter.lua::filter > other item never matches
+tests/offline/test_filter.lua::filter > empty slot false skipped
+tests/offline/test_guard.lua::guard > contract frozen
+tests/offline/test_guard.lua::guard > no require inside runtime functions
+tests/offline/test_guard.lua::guard > names frozen
+tests/offline/test_ledger.lua::ledger > full stacks leave partial stays
+tests/offline/test_ledger.lua::ledger > belt stack follows bss and item stack size
+tests/offline/test_ledger.lua::ledger > order by first seen then name then quality
+tests/offline/test_ledger.lua::ledger > kind gone is forgotten
+tests/offline/test_ledger.lua::ledger > timer flushes leftover after its stacks
+tests/offline/test_ledger.lua::ledger > flush all sends every leftover
+tests/offline/test_ledger.lua::ledger > full store flushes oldest only
+tests/offline/test_ledger.lua::ledger > full store without waiting new kind flushes nothing
+tests/offline/test_ledger.lua::ledger > hoard blocks at one stack and frees at half
+tests/offline/test_ledger.lua::ledger > skip kinds leave first whole
+tests/offline/test_ledger.lua::ledger > quality is separate kind
+tests/offline/test_ledger.lua::ledger > plan never changes contents
+tests/offline/test_ledger.lua::ledger > hoard lists kinds at one inventory stack
+tests/offline/test_ledger.lua::ledger > led states
+tests/offline/test_ledger.lua::ledger > state is plain data
+tests/offline/test_ledger_look.lua::ledger look > scan flushes nothing while leftover is young
+tests/offline/test_ledger_look.lua::ledger look > scan flushes leftover after timeout
+tests/offline/test_ledger_look.lua::ledger look > scan clock resets when kind reaches a stack or leaves
+tests/offline/test_ledger_look.lua::ledger look > scan never flushes full stacks
+tests/offline/test_ledger_look.lua::ledger look > scan timeout zero means off
+tests/offline/test_ledger_look.lua::ledger look > scan flush_all flushes every leftover
+tests/offline/test_ledger_look.lua::ledger look > scan need_slot flushes oldest leftover when store is full
+tests/offline/test_ledger_look.lua::ledger look > scan S uses item stack size
+tests/offline/test_ledger_look.lua::ledger look > scan ready streak and want_hands
+tests/offline/test_ledger_look.lua::ledger look > scan lanes are separate
+tests/offline/test_ledger_look.lua::ledger look > scan reuses its tables
+tests/offline/test_ledger_look.lua::ledger look > hands merges partial hands of one kind into a stack
+tests/offline/test_ledger_look.lua::ledger look > hands merge needs a full stack and same quality
+tests/offline/test_ledger_look.lua::ledger look > hands merge one stack per kind per call, several kinds
+tests/offline/test_ledger_look.lua::ledger look > hands merge uses item stack size
+tests/offline/test_ledger_look.lua::ledger look > hands jam flushes partial hands that can not merge
+tests/offline/test_ledger_look.lua::ledger look > hands sweep flushes hand stuck longer than timeout
+tests/offline/test_ledger_look.lua::ledger look > hands timeout zero never sweeps hands out
+tests/offline/test_ledger_look.lua::ledger look > hands flush_all flushes all partial hands that can not merge
+tests/offline/test_ledger_look.lua::ledger look > hands results are ascending and reused
+tests/offline/test_ledger_look.lua::ledger look > store unchanged at three looks with full stacks and room in front: jam
+tests/offline/test_ledger_look.lua::ledger look > sweep merges partial hands of one kind at once, every 300 ticks
+tests/offline/test_ledger_look.lua::ledger look > next sweep comes when the oldest remembered hand times out
+tests/offline/test_ledger_look.lua::ledger look > second stack of same kind still in hands: next sweep at next look
+tests/offline/test_ledger_look.lua::ledger look > hands lanes are separate
+tests/offline/test_locale.lua::locale > vanilla style names
+tests/offline/test_locale.lua::locale > every prototype has name and description
+tests/offline/test_locale.lua::locale > recipes and setting described
+tests/offline/test_locale.lua::locale > tips entry has locale and prototype
+tests/offline/test_locale.lua::locale > mod name and description
+tests/offline/test_locale_de.lua::locale de > same keys as en
+tests/offline/test_locale_de.lua::locale de > no empty value
+tests/offline/test_locale_de.lua::locale de > tier names end with Sushi-Packer
+tests/offline/test_locale_de.lua::locale de > names follow table
+tests/offline/test_locale_de.lua::locale de > same parameters as en
+tests/offline/test_locale_de.lua::locale de > vanilla German terms
+tests/offline/test_locale_extra.lua::locale extra > every extra tier has names and descriptions
+tests/offline/test_locale_extra.lua::locale extra > names mirror belt names
+tests/offline/test_locale_extra.lua::locale extra > descriptions name source mod
+tests/offline/test_locale_extra.lua::locale extra > readme and portal list every supported mod
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.9 and 0.1.9
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.11 and 0.1.11
+tests/offline/test_locale_extra.lua::locale extra > se space name
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.12 and 0.1.12
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.13 and 0.1.13
+tests/offline/test_locale_extra.lua::locale extra > changelog has 0.2.14 and 0.1.14
+tests/offline/test_locale_extra.lua::locale extra > readme lists space tier
+tests/offline/test_migration.lua::migration > maps every old name to new
+tests/offline/test_migration.lua::migration > both version files identical
+tests/offline/test_perf.lua::perf > circuit off makes no network calls
+tests/offline/test_perf.lua::perf > behind belt looked up once while valid
+tests/offline/test_perf.lua::perf > missing belt rescanned at most every 60 ticks
+tests/offline/test_perf.lua::perf > rotated cached belt is dropped
+tests/offline/test_perf.lua::perf scan > front rescan not starved by missing behind
+tests/offline/test_perf2.lua::perf2 > pull reads front item without detailed contents
+tests/offline/test_perf2.lua::perf2 > pull skips lane when no item at exit
+tests/offline/test_perf2.lua::perf2 > pull removes only accepted part of front item
+tests/offline/test_perf2.lua::perf2 > core finds partial by key with 47 others present
+tests/offline/test_sim.lua::sim > four infinity chests bottom pair one tile upstream
+tests/offline/test_sim.lua::sim > inserters between chests and belt
+tests/offline/test_sim.lua::sim > machinery off frame
+tests/offline/test_sim.lua::sim > power off frame
+tests/offline/test_sim.lua::sim > inserter hand size one
+tests/offline/test_sim.lua::sim > belt box and sink
+tests/offline/test_sim.lua::sim > camera centered on box
+tests/offline/test_sim.lua::sim > unknown kind errors
+tests/offline/test_stage.lua::stage > release info has no test dependency
+tests/offline/test_stage.lua::stage > versions are 0.1.16 and 0.2.16
+tests/offline/test_stage.lua::stage > release ships thumbnail and changelog
+tests/offline/test_stage.lua::stage > thumbnail is 144 by 144 png
+tests/offline/test_stage.lua::stage > release stage needs no Factorio
+tests/offline/test_stage.lua::stage > portal logo and description in repo
+tests/offline/test_stage.lua::stage > release ships MIT license
+tests/offline/test_stage.lua::stage > changelog format valid
+tests/offline/test_text_v15.lua::text v15 > gui lane keys in en and de
+tests/offline/test_text_v15.lua::text v15 > no stale slot counts
+tests/offline/test_text_v15.lua::text v15 > changelog has 0.1.15 and 0.2.15
+tests/offline/test_text_v15.lua::text v15 > german avoids banned words
+tests/offline/test_tick.lua::tick arms > pushes ledger pieces on own lane and removes them
+tests/offline/test_tick.lua::tick arms > stops at blocked lane
+tests/offline/test_tick.lua::tick arms > rate cap by credit
+tests/offline/test_tick.lua::tick arms > passes rules to ledger
+tests/offline/test_tick.lua::tick arms > circuit off pauses both lanes
+tests/offline/test_tick.lua::tick arms > hoard kinds go to arms
+tests/offline/test_tick.lua::tick arms > extra leaves first and pauses its lane
+tests/offline/test_tick.lua::tick arms > led from used slots
+tests/offline/test_tick.lua::tick arms > empty box sleeps 15 ticks
+tests/offline/test_tick.lua::tick arms > sleeping box costs no engine read
+tests/offline/test_tick.lua::tick arms > unmigrated rec skipped
+tests/offline/test_tick.lua::tick arms > counters
+tests/offline/test_tick.lua::tick > timeout ticks custom and global
+tests/offline/test_tick.lua::tick > on research caches belt stack size
+tests/offline/test_tick.lua::tick > invalid entity drops rec
+tests/offline/test_tick.lua::tick > decon stops visits and pauses arms
+tests/offline/test_tick.lua::tick > decon mark pauses both lanes without a visit
+tests/offline/test_tick.lua::tick > items put into box from outside become extra on lane one
+tests/offline/test_tick.lua::tick > empty box container costs one cheap check per slot
+tests/offline/test_tick.lua::tick > visit gap follows belt item gap
+tests/offline/test_tick.lua::tick > full lane store asks arms whether a new kind waits
+tests/offline/test_tick.lua::tick > hoard asked only when a kind holds a full stack or a kind is still skipped
+tests/offline/test_tick.lua::tick > full lane store needs slot when belt behind carries a new kind
+tests/offline/test_tick_extra.lua::tick extra > lane rate is belt speed times 4
+tests/offline/test_tick_extra.lua::tick extra > missing belt prototype falls back to table rate
+tests/offline/test_tick_extra.lua::tick extra > modded vanilla speed followed
+tests/offline/test_tick_extra.lua::tick extra > 75 per s tier keeps rate over 800 ticks
+tests/offline/test_tick_extra.lua::tick extra > 90 per s tier keeps rate over 800 ticks
+tests/offline/test_tick_extra.lua::tick extra > 270 per s tier keeps rate over 800 ticks
+tests/offline/test_tick_extra.lua::tick extra > extra tier visits every tick
+tests/offline/test_tick_look.lua::tick look > engine box is looked at once per N.LOOK ticks
+tests/offline/test_tick_look.lua::tick look > look never plans or hoards
+tests/offline/test_tick_look.lua::tick look > look sets hand and pauses
+tests/offline/test_tick_look.lua::tick look > scan gets contents and options
+tests/offline/test_tick_look.lua::tick look > flush pieces are pushed and removed
+tests/offline/test_tick_look.lua::tick look > hands are read only when wanted
+tests/offline/test_tick_look.lua::tick look > need_slot only asked when store is full
+tests/offline/test_tick_look.lua::tick look > extra items leave first
+tests/offline/test_tick_look.lua::tick look > led and used slots
+tests/offline/test_tick_look.lua::tick look > mode switch
+tests/offline/test_tick_look.lua::tick look > schedule touches only boxes whose look tick it is and follows box table
+tests/offline/test_tick_look.lua::tick look > front belt asked once per 120 ticks while it is there, every look while it is missing
+tests/offline/test_tick_look.lua::tick look > look reuses option table
+tests/offline/test_tick_look.lua::tick look > merge pushes one full stack clears hands and returns rest to store
+tests/offline/test_tick_look.lua::tick look > merge does nothing when belt refuses
+tests/offline/test_tick_look.lua::tick look > merge rest that store refuses goes to box container
+tests/offline/test_tick_look.lua::tick look > stopped box still counts used slots for led
+tests/offline/test_tick_look.lua::tick look > items waiting in out arm hands keep led yellow
+tests/offline/test_tick_look.lua::tick look > no space travel flag and belt stack above 1: script path stacks, out arms paused
+tests/offline/test_tick_look.lua::tick look > front room is asked only when store looked the same at last look
+tests/offline/test_tick_look.lua::tick look > counters count looks
+tests/offline/test_tick_sleep.lua::tick sleep > sleeping box costs no engine read
+tests/offline/test_tick_sleep.lua::tick sleep > due box visits stores at due tick
+tests/offline/test_tick_sleep.lua::tick sleep > decon mark hides led same tick
+tests/offline/test_tick_sleep.lua::tick sleep > invalid entity dropped when due
+tests/offline/test_tick_sleep.lua::tick sleep > led set only on state change

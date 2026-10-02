@@ -298,6 +298,9 @@ function M.can_push(rec, lane)
 end
 
 -- v16: is there a belt-like entity in front that box may feed (same rules as push: same direction)? Cached like push.
+-- v17 seam stub (lane 054)
+function M.front_kind(rec) error("stub: belt_io.front_kind") end
+
 function M.front_ok(rec)
   return cached(rec, "front", 1) ~= nil
 end

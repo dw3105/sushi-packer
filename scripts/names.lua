@@ -66,6 +66,19 @@ function N.tech(tier) return N.item(tier) end
 function N.old_item(tier) return "sushi-packer-" .. tier end
 function N.led(state, dir) return "sushi-packer-led-" .. state .. "-" .. dir end
 
+-- v17 belt body (V17-1..5, FND-0048): packer body = transport-belt kind of tier's belt, kept shut by script.
+function N.body(tier) return N.item(tier) .. "-body" end   -- the entity player sees, selects, wires, rotates
+function N.hood(tier) return N.item(tier) .. "-hood" end   -- unselectable picture over body (belt kind has no picture)
+N.MOP_ARMS = 2                                             -- in arms per lane on own tile: take what lands on body
+-- Shut: belt connected to logistic network with a condition that is never true is disabled with and without a
+-- network (probe FND-0048); player's circuit condition stays free. Item of yellow tier exists in every game.
+N.SHUT = { first_signal = { type = "item", name = "sushi-packer" }, comparator = ">", constant = 2000000000 }
+N.INPUT_OPEN = "sushi-packer-open"                         -- custom input linked to game control "open-gui"
+function N.dir_name(direction)
+  for _, d in ipairs(N.DIRS) do if defines.direction[d] == direction then return d end end
+  return "north"
+end
+
 N.SETTING_TIMEOUT = "sushi-packer-flush-timeout"
 N.INPUT_ROTATE = "sushi-packer-rotate"
 N.INPUT_REVERSE_ROTATE = "sushi-packer-reverse-rotate"
@@ -147,10 +160,12 @@ end
 
 -- Reverse lookups: entity name -> {tier, dir}; placer name -> tier. Over N.ALL (names only; a name with no
 -- prototype never reaches an event, filters use N.active()).
-N.VARIANTS = {}
+N.VARIANTS = {}  -- v17: legacy chest bodies (saves and blueprints up to v1.16); swapped to belt body when met
 N.PLACERS = {}
+N.BODIES = {}    -- v17: belt body name -> tier
 for _, tier in ipairs(N.ALL) do
   N.PLACERS[N.placer(tier)] = tier
+  N.BODIES[N.body(tier)] = tier
   for _, dir in ipairs(N.DIRS) do
     N.VARIANTS[N.variant(tier, dir)] = { tier = tier, dir = dir }
   end

@@ -280,4 +280,8 @@ function M.on_configuration_changed(data)
   for _, unit in ipairs(remove) do boxes()[unit] = nil; storage.sched = nil end
 end
 
+-- v17 seam stubs (lane 056)
+function M.on_rotated(e) error("stub: registry.on_rotated") end
+function M.migrate(rec) error("stub: registry.migrate") end
+
 return M

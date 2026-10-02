@@ -57,6 +57,7 @@ script.on_event(defines.events.on_player_setup_blueprint, copy.on_setup_blueprin
 script.on_event(defines.events.on_entity_settings_pasted, copy.on_settings_pasted)
 script.on_event(defines.events.on_entity_cloned, copy.on_cloned, box_filter)
 
+script.on_event(N.INPUT_OPEN, gui.on_open_input)  -- v17: click on belt body (belt kind has no window of its own)
 script.on_event(defines.events.on_gui_opened, gui.on_opened)
 script.on_event(defines.events.on_gui_closed, gui.on_closed)
 for _, ev in ipairs({

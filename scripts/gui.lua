@@ -286,4 +286,8 @@ function M.on_event(e)
   end
 end
 
+-- v17 seam stubs (lane 055)
+function M.open(player, rec) error("stub: gui.open") end
+function M.on_open_input(e) end  -- no-op until lane 055: fires on every click
+
 return M

@@ -262,6 +262,11 @@ function M.drain_hands(rec)
   return items
 end
 
+-- v17 seam stubs (lane 053)
+function M.aim_out(rec, kind) error("stub: arms.aim_out") end
+function M.wire(rec, on) error("stub: arms.wire") end
+function M.shut(entity) error("stub: arms.shut") end
+
 function M.ensure(rec)
   local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
   local broken = false

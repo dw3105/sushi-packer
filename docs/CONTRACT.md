@@ -301,3 +301,103 @@ rec.ledger.left / .ready / .sweep / .held      -- slow-look memory, owned by scr
 - `ledger.scan`: `want_hands` = `flush_all`, or jam (`state.piled[lane]`: 16 belt stacks or more with full stacks at two looks; or store same at three looks with full stacks and `opts.can_push == true`), or sweep due (`state.sweep[lane]`, 480 ticks later while store shows a full stack).
 - `ledger.hands(state, lane, held, opts) -> flush, merge`: `merge` = list of `{ name, quality, total, arms }` (partial hands of one kind reaching one belt stack; one per kind per call); jam flushes every partial hand that can not merge; timeout by clock `state.since`; next sweep `tick + 300`, sooner at timer end of oldest remembered hand, `tick + 30` when another full stack of a merged kind waits.
 - `tick`: schedule `storage.sched`; front check cached 120 ticks (`rec.front_was`, `rec.front_at`); `rec.hands` for LED; counter `full`; script path also when engine can not stack (V16-10).
+
+## v17 belt body seam (V17-1..5) - frozen for lanes 052..056
+
+Packer of v16 with one change of body: the entity player sees is no chest any more but a belt-kind entity ("body", `N.body(tier)`, prototype type `transport-belt`, copy of tier's belt). Body is kept shut by script (nothing ever rides onto it from belts). Item path is v16: in arms take from tile behind into lane stores, out arms push belt stacks to front. Facts proven in real game on 2.0 + 2.1: `docs/FINDINGS.md` FND-0048. Sections "v15 arms box seam" and "v16 engine output seam" hold for everything this section does not change.
+
+Words: **body** = belt-kind entity `rec.entity`; **legacy box** = chest entity of saves / blueprints up to v1.16 (`N.VARIANTS`); **hood** = unselectable picture entity over body; **mop arms** = in arms on own tile taking what outside inserters drop onto body.
+
+Engine facts (FND-0048), same on 2.0 and 2.1:
+- Belt with `get_or_create_control_behavior().connect_to_logistic_network = true` and `logistic_condition = N.SHUT` is disabled with and without a logistic network: nothing enters from belt behind or from side, items on it stay, inserters still drop onto it and pick from it. Player's `circuit_condition` stays free. `control_behavior.disabled` is true for either reason (can not tell them apart).
+- Outside inserter aimed at packer tile targets body (belt), never lane stores. Arm with `pickup_target = body`, lane flags and `drop_target = store` moves items from body lane into that store.
+- Stores wired by script wire to body connector: network shows store contents; belt `read_contents` (hold) adds items lying on body.
+- Out arm `drop_position` at near side of a belt running across (front tile centre - 0.25 along packer travel): both packer lanes land on near lane of that belt, stacked.
+- Game rotates body (`rotate`, R key); upgrade by fast-replace and blueprints carry body's control behaviour (shut condition and player's circuit condition).
+- Plain belt can not replace body (own fast-replace group); placer (belt group) replaces plain belt.
+
+### names (integrator, done)
+
+`N.body(tier)`, `N.hood(tier)`, `N.BODIES[name] = tier`, `N.MOP_ARMS` (2), `N.SHUT` (condition table), `N.INPUT_OPEN`, `N.dir_name(direction) -> "north"|"east"|"south"|"west"`. `N.VARIANTS` = legacy boxes only. `N.PLACERS` unchanged (item still places placer).
+
+### rec fields (changed / new)
+
+```lua
+rec.entity            -- body (transport-belt kind). rec.dir = N.dir_name(body.direction), kept in step by registry
+rec.hood              -- LuaEntity N.hood(tier), owned by scripts/arms.lua
+rec.mop = { {arm, ...}, {arm, ...} }   -- mop arms per lane, owned by scripts/arms.lua
+rec.aim               -- "ahead" | "across": last out-arm aim written, owned by scripts/arms.lua
+rec.wired             -- bool: stores wired to body connector, owned by scripts/arms.lua
+rec.settings.circuit  -- { enable, cond = { first_signal, comparator, constant }, read (bool, default true), flush, flush_signal }
+                      -- enable, cond, read mirror body's control behaviour (circuit.sync / circuit.apply)
+```
+No chest inventory anywhere: `rec.entity.get_inventory` must not be called. `rec.extra` is gone (migration puts old items into lane stores).
+
+### prototypes (lane 052) - `prototypes/tier.lua`, `prototypes/extra.lua`
+
+`tier.make(tier, opts)` returns, beside item / recipe / technology / placer / remnant as today:
+- body `N.body(tier)`: `table.deepcopy(data.raw["transport-belt"][N.TIER[tier].belt])` with: `name`; `icon` / `icon_size` of packer; `localised_name = { "entity-name." .. N.placer(tier) }`; `minable = { mining_time = 0.2, result = N.item(tier) }`; `placeable_by = { item = N.item(tier), count = 1 }`; `fast_replaceable_group = N.FAST_REPLACE_GROUP`; `next_upgrade = opts.next and N.body(opts.next) or nil`; `related_underground_belt = nil`; `corpse = N.remnant(tier)`; `max_health = 350`; `se_allow_in_space = true`; `factoriopedia_simulation` (was on north legacy box); `hidden_in_factoriopedia = false`. Speed, belt animation set, collision, circuit connector stay belt's own. No `icons` left over from belt (set `icons = nil`).
+- hood `N.hood(tier)`: `simple-entity-with-owner`, `picture` = same 4-direction picture as placer, `collision_mask = { layers = {} }`, `selectable_in_game = false`, `hidden = true`, `hidden_in_factoriopedia = true`, flags `not-on-map`, `not-blueprintable`, `not-deconstructable`, `not-upgradable`, `not-flammable`, `not-in-kill-statistics`, `not-repairable`, `placeable-neutral`; no `minable`; `max_health = 350`; `render_layer = "object"`.
+- legacy boxes `N.variant(tier, dir)`: stay as `container` (old saves need them), now `hidden = true`, `hidden_in_factoriopedia = true`, `next_upgrade = nil`, no `factoriopedia_simulation`; `minable`, `placeable_by`, `inventory_size`, picture, circuit connector unchanged.
+- `extra.build(raw)`: chain fix-ups (first extra tier after top vanilla, one collision box and mask per chain) apply to bodies in `raw["transport-belt"]`, no longer to containers.
+
+### scripts/arms.lua (lane 053)
+
+| Signature | Does |
+|---|---|
+| `arms.create(rec)` | as v16 on body: stores, in arms from tile behind, out arms. Changes: hands of old arms that do not fit the lane store are spilled at body position (no chest). Plus per lane `N.MOP_ARMS` mop arms (`N.ARM` at body position, `pickup_position = drop_position = body position`, lane flags, `pickup_target = rec.entity`, `drop_target = rec.stores[lane]`, `destructible = false`) in `rec.mop[lane]`; old mop arms are replaced like in arms (hands saved first). Plus hood: when `rec.hood` missing or invalid create `N.hood(rec.tier)` at body position with `direction = defines.direction[rec.dir]`, `destructible = false`; when valid and direction differs write `rec.hood.direction`. Calls `arms.shut(rec.entity)`. Sets `rec.aim = nil` then `arms.aim_out(rec, "ahead")`. Sets `rec.wired = nil` then `arms.wire(rec, rec.settings.circuit.read ~= false)`. No wires to a chest. |
+| `arms.shut(entity)` | `local cb = entity.get_or_create_control_behavior()`; `cb.connect_to_logistic_network = true`; `cb.logistic_condition = N.SHUT`. |
+| `arms.aim_out(rec, kind)` | `kind` = `"ahead"` or `"across"`. When `rec.aim == kind`: nothing. Else for each valid out arm of lane (s = +0.25 lane 1, -0.25 lane 2; f = unit vector of `rec.dir`; a = (f.y, -f.x)): ahead: drop = pos + f + a * s; across: drop = pos + 0.75 * f + a * (0.4 * s). `pickup_position` = pos - 0.3 * (drop - pos). Then `rec.aim = kind`. `arms.create` uses the same formula. |
+| `arms.wire(rec, on)` | when `rec.wired == on`: nothing. For red and green: body connector `rec.entity.get_wire_connector(id, true)`, store connector same call; `on`: `store_connector.connect_to(body_connector, false, defines.wire_origin.script)`; off: `store_connector.disconnect_from(body_connector, defines.wire_origin.script)`. `rec.wired = on`. |
+| `arms.pause(rec, lane, paused)` | as v15, and same write on mop arms of lane. |
+| `arms.destroy(rec, keep_stores)` | as v16, plus mop arms and hood destroyed, `rec.mop`, `rec.hood`, `rec.aim`, `rec.wired` cleared. |
+| `arms.drain_hands(rec)` | as v16, plus mop arms. |
+| `arms.need_slot(rec, lane, contents)` | as v15, plus mop arms. |
+| `arms.ensure(rec)` | as v16, plus broken when `rec.mop` missing, a mop arm invalid, count per lane `~= N.MOP_ARMS`, or hood missing / invalid. |
+
+`skip`, `pause_out`, `hand`, `held`, `clear_held`, `count` unchanged (mop arms get no skip filters).
+
+### scripts/belt_io.lua, scripts/circuit.lua (lane 054)
+
+| Signature | Does |
+|---|---|
+| `belt_io.front_kind(rec) -> "ahead" \| "across" \| nil` | `"ahead"`: front neighbour by today's push rules (same direction belt, underground entrance, splitter half, loader, linked belt). `"across"`: entity on front tile is a `transport-belt` whose direction is box direction turned 90 degrees either way. Else nil (also belt facing packer). Cached with the front cache like `front_ok`. |
+| `belt_io.front_ok(rec)` | `front_kind(rec) ~= nil`. |
+| `belt_io.can_push(rec, lane)`, `belt_io.push(rec, lane, item, bss)` | ahead: as today. Across: both packer lanes use near lane of that belt: line index 2 when its direction == (box direction + 4) % 16, else 1; `can_push` = `line.can_insert_at(0.5)`; `push` = `line.insert_at(0.5, stack, bss)`; counters as today. |
+| `circuit.sync(rec)` | body -> settings. `cb = rec.entity.get_control_behavior()`; nil: nothing. Else `c = rec.settings.circuit`: `c.enable = cb.circuit_enable_disable == true`; when `cb.circuit_condition` has `first_signal`: `c.cond = { first_signal =, comparator =, constant = }` (constant nil -> 0); `c.read = cb.read_contents == true`. |
+| `circuit.apply(rec)` | settings -> body. `cb = rec.entity.get_or_create_control_behavior()`: `cb.circuit_enable_disable = c.enable == true`; `cb.circuit_condition = { first_signal = c.cond.first_signal, comparator = c.cond.comparator, constant = c.cond.constant }`; `cb.read_contents = c.read ~= false`; when reading: `cb.read_contents_mode = defines.control_behavior.transport_belt.content_read_mode.hold`. Never touches `connect_to_logistic_network` / `logistic_condition`. |
+
+`circuit.evaluate(rec)` unchanged (reads `rec.settings.circuit`, signals via `rec.entity.get_signal`).
+
+### scripts/gui.lua (lane 055)
+
+Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gui.screen`, `player.opened = frame`, `frame.auto_center = true`, title bar with close button.
+
+| Signature | Does |
+|---|---|
+| `gui.open(player, rec)` | builds frame (old one destroyed first): lane views (read-only: click takes nothing), items to skip, flush timeout, circuit section; sets `player.opened`. |
+| `gui.on_opened(e)` | game opened body's own belt window (`e.entity` valid with rec): `gui.open(player, rec)` (replaces it). Else nothing. |
+| `gui.on_open_input(e)` | `player.selected` has a rec, `player.opened == nil` (`opened_gui_type == defines.gui_type.none`), `player.can_reach_entity(selected)`: `gui.open(player, rec)`. |
+| `gui.on_closed(e)` | `e.element` is our frame: destroy it. |
+| `gui.on_event(e)` | as today. Circuit section fields: `circuit.enable`, `circuit.cond.*`, `circuit.read` (new checkbox "read contents"), `circuit.flush`, `circuit.flush_signal`. After a change of enable / cond / read: `circuit.apply(rec)`; after `read` change also `arms.wire(rec, c.read)`. Lane slot click: nothing (no hand take). |
+
+### scripts/registry.lua, scripts/copy.lua (lane 056)
+
+| Signature | Does |
+|---|---|
+| `registry.new_rec(entity)` | for body (`N.BODIES[entity.name]`): `tier` from name, `dir = N.dir_name(entity.direction)`; rest as today (no `in_credit` change). Nil for other names. |
+| `registry.on_built(e)` | placer -> destroyed, body of that tier created at same position with same `direction`, force, quality, `last_user`. Legacy box (`N.VARIANTS`, e.g. old blueprint ghost revived) -> same swap with direction of variant. Body: rec = existing / stash / new; `arms.create` when created or recovered; tags imported; then `circuit.sync(rec)` when `entity.get_control_behavior()` is non-nil (blueprint, upgrade carried it) else `circuit.apply(rec)`; then `arms.wire(rec, rec.settings.circuit.read ~= false)`; LED as today. |
+| `registry.on_removed(e)`, `registry.on_died(e)` | as v16 without chest inventory (store items + drained hands only; items lying on body are returned by engine). |
+| `registry.on_rotated(e)` | `e.entity` with rec: `rec.dir = N.dir_name(e.entity.direction)`; `arms.create(rec)`; LED destroyed and created (sprite is per direction), state kept. No rec: nothing. |
+| `registry.migrate(rec)` | rec whose `rec.entity` is a legacy box: read player's wires of chest connector (red, green; skip script-origin wires), chest items; create body `N.body(rec.tier)` at same position, `direction = defines.direction[rec.dir]`, force, quality; chest items -> lane 1 store, rest spilled; `arms.destroy(rec, true)` before chest is destroyed (hands saved by `arms.drain_hands` -> stores / spill); destroy chest; re-key `storage.boxes`; `rec.extra` items -> their lane store, rest spilled, `rec.extra = nil`; reconnect player's wires to body connector; `rec.settings.circuit.read = true`; `circuit.apply(rec)`; `arms.create(rec)`; LED re-created with old state; `storage.sched = nil`. Returns rec, or nil when body could not be created (rec dropped, items spilled). |
+| `registry.on_configuration_changed(data)` | as today, plus: every rec with valid legacy box -> (v1.14 `rec.box` path first, as today) -> `registry.migrate(rec)`. Body recs: `arms.ensure`, `led.ensure`. |
+| `registry.stash`, `registry.take_stash` | as today for bodies (`N.BODIES`); `rec.dir` from new entity direction. |
+| `registry.swap`, `registry.on_rotate_input` | left as they are (legacy, no caller after integration; integrator removes). |
+| `copy.default_settings()` | `circuit.read = true` added. |
+| `copy.on_setup_blueprint(e)` | bodies (`N.BODIES[ent.name]`): name and direction kept, `tags.sushi_packer = export(rec)`. Legacy names no longer mapped. |
+| `copy.on_settings_pasted(e)` | import as today, then `circuit.sync(dst)` (engine already pasted belt control behaviour), `arms.wire(dst, dst.settings.circuit.read ~= false)`. |
+| `copy.on_cloned(e)` | as today for bodies (`N.BODIES`, dir from direction); after `arms.create`: `circuit.sync(rec)`. |
+
+### integrator at INT
+
+`control.lua` (filters over body, placer, legacy names; `on_player_rotated_entity` / `on_player_flipped_entity` -> `registry.on_rotated`; rotate inputs removed), `scripts/tick.lua` (no chest inventory; `belt_io.front_kind` -> `arms.aim_out`; mop pause), `scripts/sim.lua`, `scripts/led.lua`, locale, `tests/game/*`, bench.
