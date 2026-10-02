@@ -1,7 +1,6 @@
 local function setup()
   package.loaded["scripts.registry"] = nil
   package.loaded["scripts.names"] = nil
-  package.loaded["scripts.core"] = nil
   package.loaded["scripts.copy"] = nil
   package.loaded["scripts.led"] = nil
   package.loaded["scripts.arms"] = nil
@@ -46,7 +45,7 @@ end
 describe("registry", function()
   it("upgrade mine stashes rec", function()
     local r, led, entity = setup(); local old = entity(11); local rec = r.new_rec(old)
-    rec.settings.rate = 7; local hold = require("scripts.core").hold_items
+    rec.settings.rate = 7
     r.on_removed({ entity = old, robot = {}, buffer = { insert = function() error("hold sent to buffer") end } })
     eq(storage.boxes[11], nil); eq(#led.destroyed, 1); eq(storage.upgrade_stash["1:10.5:18.5"].rec, rec)
   end)

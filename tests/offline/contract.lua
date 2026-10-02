@@ -1,11 +1,6 @@
 -- Frozen contract table (SP-01): module -> { function name = arity }. Guard test and S0 stubs read this.
 return {
-  core = {
-    new_box = 0, accept = 9, lane_room = 2, item_room = 5, used_slots = 1, free_slots = 1, on_tick = 3, flush_partials = 2,
-    peek_out = 2, take_out = 3, remove_external = 4, adopt_external = 6, hold_items = 1,
-    clear_hold = 1, totals = 1, led_state = 1, is_idle = 1,
-  },
-  belt_io = { behind = 2, front = 2, pull = 3, push = 5, belt_stack_size = 1, lane_rate = 1, behind_kinds = 2, set_tick = 1, can_push = 2, front_ok = 1, front_kind = 1 },
+  belt_io = { behind = 2, front = 2, push = 5, belt_stack_size = 1, lane_rate = 1, behind_kinds = 2, set_tick = 1, can_push = 2, front_ok = 1, front_kind = 1 },
   led = { create = 1, set = 3, destroy = 1, ensure = 1 },
   registry = {
     on_built = 1, on_removed = 1, on_died = 1, get = 1,

@@ -1,11 +1,4 @@
-tests/offline/test_belt_io.lua::belt_io > pull reports eta of front item per lane
-tests/offline/test_belt_io.lua::belt_io > eta zero when item at exit, nil when lane empty
-tests/offline/test_belt_io.lua::belt_io > eta computed when budget empty
-tests/offline/test_belt_io.lua::belt_io > no eta read on lane that took an item
 tests/offline/test_belt_io.lua::belt_io > belt stack follows research up to engine max
-tests/offline/test_belt_io.lua::belt_io > full box shares freed slot between lanes
-tests/offline/test_belt_io.lua::belt_io > full box shares slot freed every fourth poll
-tests/offline/test_belt_io.lua::belt_io > splitter behind feeds from its output half
 tests/offline/test_belt_io.lua::belt_io > splitter in front takes output into its input half
 tests/offline/test_belt_io.lua::belt_io > loaders and linked belts connect like belts
 tests/offline/test_belt_io.lua::belt_io > front accepts same direction belt
@@ -20,13 +13,6 @@ tests/offline/test_belt_io_cache.lua::belt_io cache > moved belt dropped within 
 tests/offline/test_belt_io_cache.lua::belt_io cache > rotated belt dropped at once
 tests/offline/test_belt_io_cache.lua::belt_io cache > splitter neighbour keeps full check
 tests/offline/test_belt_io_cache.lua::belt_io cache > dropped belt clears cached lines
-tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt takes item arriving this tick
-tests/offline/test_belt_io_fast.lua::belt_io fast > 270 per s belt takes every item within one tick of end
-tests/offline/test_belt_io_fast.lua::belt_io fast > budget still caps fast take
-tests/offline/test_belt_io_fast.lua::belt_io fast > turbo and slower take item reaching end this tick
-tests/offline/test_belt_io_fast.lua::belt_io fast > yellow and red take resting items only
-tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt eta counts to take window not belt end
-tests/offline/test_belt_io_fast.lua::belt_io fast > refused item stops fast lane
 tests/offline/test_belt_io_front.lua::belt_io front v17 > kind ahead for same direction belt
 tests/offline/test_belt_io_front.lua::belt_io front v17 > kind across for belt turned 90
 tests/offline/test_belt_io_front.lua::belt_io front v17 > kind nil
@@ -80,57 +66,10 @@ tests/offline/test_copy.lua::copy v17 > default has read on
 tests/offline/test_copy.lua::copy v17 > blueprint keeps body and tags it
 tests/offline/test_copy.lua::copy v17 > paste syncs belt settings
 tests/offline/test_copy.lua::copy v17 > clone of body
-tests/offline/test_core.lua::core > new box is idle and green
-tests/offline/test_core.lua::core > same item on two lanes keeps two buffers
-tests/offline/test_core.lua::core > quality is separate buffer
-tests/offline/test_core.lua::core > full stack becomes ready on its lane
-tests/offline/test_core.lua::core > ready stacks leave in ready order
-tests/offline/test_core.lua::core > arrival after ready starts new partial
-tests/offline/test_core.lua::core > accept splits across ready and new partial
-tests/offline/test_core.lua::core > used slots counts ready and partials
-tests/offline/test_core.lua::core > full box flushes oldest partial and accepts zero
-tests/offline/test_core.lua::core > oldest partial chosen across lanes
-tests/offline/test_core.lua::core > all ready refuses input
-tests/offline/test_core.lua::core > passthrough uses hold not slots
-tests/offline/test_core.lua::core > hold busy refuses second passthrough
-tests/offline/test_core.lua::core > hold waits while stack run started
-tests/offline/test_core.lua::core > hold goes before unstarted stack
-tests/offline/test_core.lua::core > take out last piece may be small
-tests/offline/test_core.lua::core > timeout flushes old partial only
-tests/offline/test_core.lua::core > timeout zero is off
-tests/offline/test_core.lua::core > flush partials queues all in arrival order
-tests/offline/test_core.lua::core > remove external takes newest partial first
-tests/offline/test_core.lua::core > adopt external lands on lane one
-tests/offline/test_core.lua::core > led yellow with items and red when full
-tests/offline/test_core.lua::core > totals sums lanes sorted
-tests/offline/test_core.lua::core > box is plain data
-tests/offline/test_core.lua::core > counters track partial and ready per lane
-tests/offline/test_core.lua::core > counters rebuilt for old box
-tests/offline/test_core.lua::core > accept passes item stack to room stubs
-tests/offline/test_core_cap.lua::cap > ore stops at 50 per lane
-tests/offline/test_core_cap.lua::cap > other lane same item unaffected
-tests/offline/test_core_cap.lua::cap > modded stack size 7 honored
-tests/offline/test_core_cap.lua::cap > quality separate
-tests/offline/test_core_cap.lua::cap > partial belt item accepted up to cap
-tests/offline/test_core_cap.lua::cap > drain reopens intake
-tests/offline/test_core_cap.lua::cap > no item stack means no cap
-tests/offline/test_core_fast.lua::core fast > same trace as v114
-tests/offline/test_core_fast.lua::core fast > keys built once per item
-tests/offline/test_core_fast.lua::core fast > take out does not rebuild head table
-tests/offline/test_core_fast.lua::core fast > full stack leaves partial list without scan
-tests/offline/test_core_quota.lua::quota > blocked lane never takes 25th slot
-tests/offline/test_core_quota.lua::quota > other lane keeps 24 slots
-tests/offline/test_core_quota.lua::quota > flush picks oldest partial same lane
-tests/offline/test_core_quota.lua::quota > led red when one lane full
-tests/offline/test_core_quota.lua::quota > old box over quota drains
 tests/offline/test_counters.lua::counters > off by default
 tests/offline/test_counters.lua::counters > on starts at zero
 tests/offline/test_counters.lua::counters > counters returns copy
 tests/offline/test_counters.lua::counters > on again resets
-tests/offline/test_counters.lua::counters > pull counts belt items and items
-tests/offline/test_counters.lua::counters > partial accept counts accepted only
-tests/offline/test_counters.lua::counters > refused item counts nothing
-tests/offline/test_counters.lua::counters > reads count each detailed call
 tests/offline/test_counters.lua::counters > push counts belt item and items
 tests/offline/test_counters.lua::counters > visit counted once per gate pass
 tests/offline/test_data.lua::data v20 > body has no connector frame
@@ -254,10 +193,6 @@ tests/offline/test_perf.lua::perf > behind belt looked up once while valid
 tests/offline/test_perf.lua::perf > missing belt rescanned at most every 60 ticks
 tests/offline/test_perf.lua::perf > rotated cached belt is dropped
 tests/offline/test_perf.lua::perf scan > front rescan not starved by missing behind
-tests/offline/test_perf2.lua::perf2 > pull reads front item without detailed contents
-tests/offline/test_perf2.lua::perf2 > pull skips lane when no item at exit
-tests/offline/test_perf2.lua::perf2 > pull removes only accepted part of front item
-tests/offline/test_perf2.lua::perf2 > core finds partial by key with 47 others present
 tests/offline/test_registry.lua::registry > upgrade mine stashes rec
 tests/offline/test_registry.lua::registry > upgrade build takes stash
 tests/offline/test_registry.lua::registry > upgraded rec keeps settings and lane parts
@@ -289,7 +224,6 @@ tests/offline/test_sim.lua::sim > belt box and sink
 tests/offline/test_sim.lua::sim > camera centered on box
 tests/offline/test_sim.lua::sim > unknown kind errors
 tests/offline/test_stage.lua::stage > release info has no test dependency
-tests/offline/test_stage.lua::stage > versions are 0.1.20 and 0.2.20
 tests/offline/test_stage.lua::stage > release ships thumbnail and changelog
 tests/offline/test_stage.lua::stage > thumbnail is 144 by 144 png
 tests/offline/test_stage.lua::stage > release stage needs no Factorio

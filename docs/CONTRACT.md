@@ -57,7 +57,7 @@ Measured facts (S0 probes, `tests/game/test_probe.lua`, green on 2.0.77 and 2.1.
 - Test world: 1 connected player with character (`game.players[1]`): GUI via `player.opened`, mining via `player.mine_entity`.
 - In-game test full name = `<describe> > <it>`; FactorioTest path = `tests.game.<file> > <describe> > <it>`.
 
-## scripts/core.lua — pure engine (lane A). No game API at all.
+## scripts/core.lua — pure engine (lane A). No game API at all. REMOVED in v22 (V22-1): section kept as history only.
 
 Item key = (name, quality, lane). `quality` is a string (`"normal"`, ...).
 
@@ -428,3 +428,10 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 - ledger: `plan` / `plan_full` under store pressure put up to `N.PRESS` oldest leftovers at head of plan.
 - gui: lane slot buttons in a table of 12 columns per lane.
 - No public signature added or changed (`tests/offline/contract.lua` untouched).
+
+### v22 amendments (V22-1)
+
+- `scripts/core.lua` removed (v1.14 engine; no product code required it since v1.15). `rec.box` of v1.14 saves is still read as plain data by `registry` at update.
+- `belt_io.pull`, `belt_io._eta`, `belt_io._speed` removed (script intake of v1.14; intake is hidden inserters since v1.15). Counter fields `reads`, `pulls` stay in `storage.sp_counters` and bench log line, always 0.
+- `tests/offline/contract.lua`: module `core` and `belt_io.pull` dropped.
+

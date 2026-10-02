@@ -1,11 +1,7 @@
 -- Belt access for the packer. All coordinates are tile centres.
 local N = require("scripts.names")
 local M = {}
-local belt_speeds = {}
 local lane_rates = {}
-setmetatable(M, { __index = function(t, key)
-  if key == "speed" or key == "eta" then return rawget(t, "_" .. key) end
-end })
 
 local offsets = {
   north = { 0, -1 }, east = { 1, 0 }, south = { 0, 1 }, west = { -1, 0 },
@@ -193,92 +189,6 @@ end
 local function transport_line(rec, field, lane, map)
   local lines = rec.belt and rec.belt.lines and rec.belt.lines[field]
   if lines then return lines[lane] end
-end
-
-function M._eta(position, speed)
-  if not speed or speed <= 0 then return nil end
-  return math.max(0, math.ceil(position / speed))
-end
-
-local function belt_speed(belt)
-  if not belt then return nil end
-  local name = belt.name or (belt.prototype and belt.prototype.name)
-  if not name then return belt.prototype and belt.prototype.belt_speed end
-  if belt_speeds[name] == nil then
-    local prototype = belt.prototype or (prototypes and prototypes.entity and prototypes.entity[name])
-    belt_speeds[name] = prototype and prototype.belt_speed or false
-  end
-  return belt_speeds[name] or nil
-end
-
-function M._speed(rec)
-  if not rec or not rec.entity or not rec.entity.surface
-    or type(rec.entity.surface.find_entities_filtered) ~= "function" then return nil end
-  return belt_speed(cached(rec, "behind", -1))
-end
-
-function M.pull(rec, budget, sink)
-  local counters = storage and storage.sp_counters
-  local taken = { 0, 0 }
-  local belt, map = cached(rec, "behind", -1)
-  if not belt then return taken, nil end
-  local eta = { nil, nil }
-  -- FND-0011: lane that took an item last asks second next time, so a full box hands freed slots to lanes in turn
-  -- (no starving lane). All-refused visits keep order (no parity lock with output cadence).
-  local first = rec.pull_first == 2 and 2 or 1
-  -- FND-0024 / FND-0030: take items that reach the belt end within this tick (position <= belt_speed), not only
-  -- resting ones. Resting-only capped belts faster than turbo at 60/s and blue at 200/225 per lane (item gap 2.67
-  -- ticks vs 2-tick visits). Detailed read only while the front item is still moving.
-  -- FND-0031 / V11-7: window only above red (0.0625); yellow/red reach full rate on resting items (FND-0030), and
-  -- the read cost 200 yellow boxes x1.05..x1.50 script time (bench 2026-09-29).
-  local speed = belt_speed(belt) or 0
-  local fast = speed > 0.0625
-  for i = 0, 1 do
-    local lane = i == 0 and first or 3 - first
-    local line = transport_line(rec, "behind", lane, map)
-    local tries = 0
-    local detailed, di
-    while tries < (budget[lane] or 0) do
-      if #line == 0 then break end
-      if line.can_insert_at(0) then
-        if not fast then break end
-        if not detailed then
-          if counters then counters.reads = counters.reads + 1 end
-          detailed, di = line.get_detailed_contents(), 1
-        end
-        local d = detailed[di]
-        if not d or d.position > speed then break end
-      end
-      local s = line[1]
-      local name = s.name
-      local quality = s.quality and s.quality.name or "normal"
-      local count = s.count  -- handle invalid once removed (engine, FND-0024)
-      local accepted = sink(name, quality, lane, count)
-      tries = tries + 1
-      if accepted <= 0 then break end
-      line.remove_item({ name = name, count = accepted, quality = quality })
-      if counters then counters.pulls = counters.pulls + 1; counters.items_in = counters.items_in + accepted end
-      if detailed and accepted >= count then di = di + 1 end
-      taken[lane] = taken[lane] + 1
-      rec.pull_first = 3 - lane
-    end
-  end
-  -- ETA describes the leading item after any removals. Lane that took an item: next item sits >= 0.25 tile
-  -- (belt item gap) behind, never sooner than next tier visit (PERF-3) -> skip costly detailed read.
-  for lane = 1, 2 do
-    local line = transport_line(rec, "behind", lane, map)
-    if taken[lane] > 0 or #line == 0 then eta[lane] = nil
-    elseif not line.can_insert_at(0) then eta[lane] = 0
-    else
-      if counters then counters.reads = counters.reads + 1 end
-      local detailed = line.get_detailed_contents()
-      -- fast belt: wake when item enters take window (position <= speed), not at belt end (FND-0024)
-      local position = detailed[1].position
-      if fast then position = math.max(speed / 2, position - speed) end
-      eta[lane] = M.eta(position, speed)
-    end
-  end
-  return taken, eta
 end
 
 -- v15 (F-1, V15-2): what waits on one lane of the belt-like entity behind the box: array {name, quality, count} or nil.

@@ -1,5 +1,5 @@
 local function setup()
-  for _, name in ipairs({"scripts.registry", "scripts.copy", "scripts.names", "scripts.core", "scripts.ledger", "scripts.arms", "scripts.led"}) do package.loaded[name] = nil end
+  for _, name in ipairs({"scripts.registry", "scripts.copy", "scripts.names", "scripts.ledger", "scripts.arms", "scripts.led"}) do package.loaded[name] = nil end
   defines = { direction = { north = 0, east = 4, south = 8, west = 12 }, inventory = { chest = 1 }, wire_connector_id = { circuit_red = 1, circuit_green = 2 } }
   storage, game = { boxes = {} }, { tick = 100 }
   local N = require("scripts.names")

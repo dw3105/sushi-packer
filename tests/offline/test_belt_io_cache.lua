@@ -26,7 +26,8 @@ local function rig(kind, front)
       return values[key]
     end })
     values.line = { can_insert_at = function() return true end, can_insert_at_back = function() return true end,
-      get_detailed_contents = function() return {} end, insert_at_back = function() return true end }
+      get_detailed_contents = function() return {} end, insert_at_back = function() return true end,
+      get_contents = function() return {} end }
     values.lines = { values.line, values.line }
     values._values = values
     return b, values
@@ -43,7 +44,7 @@ local function rig(kind, front)
 end
 
 local function pull(rec)
-  return belt_io.pull(rec, { 0, 0 }, function() return 0 end)
+  return belt_io.behind_kinds(rec, 1)
 end
 local function push(rec)
   return belt_io.push(rec, 1, { name = "iron", count = 1, quality = "normal" }, 1)
@@ -90,15 +91,16 @@ describe("belt_io cache", function()
     local items = { [7] = { name = "iron", count = 1, quality = { name = "normal" } } }
     local function line(item)
       return setmetatable({ can_insert_at = function() return not item end,
-        remove_item = function() return 1 end, get_detailed_contents = function() return item and { { position = 0 } } or {} end },
+        remove_item = function() return 1 end, get_detailed_contents = function() return item and { { position = 0 } } or {} end,
+        get_contents = function() return item and { { name = item.name, count = item.count, quality = "normal" } } or {} end },
         { __len = function() return item and 1 or 0 end, __index = function(_, k) if k == 1 then return item end end })
     end
     local l7, l8 = line(items[7]), line(nil)
     local sp = { valid = true, type = "splitter", direction = 0, position = { x = -0.5, y = 1 } }
     function sp.get_transport_line(n) return n == 7 and l7 or l8 end
     r.entity.surface.find_entities_filtered = function(f) if f.position then return {} end; return { sp } end
-    local got = belt_io.pull(r, { 1, 0 }, function() return 1 end)
-    eq(got[1], 1)
+    local got = belt_io.behind_kinds(r, 1)
+    eq(#got, 1); eq(got[1].name, "iron")  -- lane 1 behind = splitter output line 7
     c.type = nil
   end)
   it("dropped belt clears cached lines", function()
@@ -109,7 +111,8 @@ describe("belt_io cache", function()
     local fresh, fresh_values = make("transport-belt", { x = 0, y = 1 })
     local item = { name = "iron", count = 1, quality = { name = "normal" } }
     fresh_values.line = setmetatable({ can_insert_at = function() return false end,
-      remove_item = function() return 1 end, get_detailed_contents = function() return {} end },
+      remove_item = function() return 1 end, get_detailed_contents = function() return {} end,
+      get_contents = function() return { { name = "iron", count = 1, quality = "normal" } } end },
       { __len = function() return 1 end, __index = function(_, k) if k == 1 then return item end end })
     fresh_values.lines = { fresh_values.line, fresh_values.line }
     r.entity.surface.find_entities_filtered = function(f)
@@ -122,7 +125,7 @@ describe("belt_io cache", function()
     local dropped_lines = r.belt.lines.behind
     ok(not dropped_lines or type(dropped_lines[1]) == "number", "cached LuaTransportLine survived belt drop")
     game.tick = 62
-    local got = belt_io.pull(r, { 1, 0 }, function() return 1 end)
-    eq(got[1], 1); eq(r.belt.behind, fresh)
+    local got = belt_io.behind_kinds(r, 1)
+    eq(got[1].name, "iron"); eq(r.belt.behind, fresh)
   end)
 end)
