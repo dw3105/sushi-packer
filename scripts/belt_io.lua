@@ -19,6 +19,9 @@ end
 
 -- Right-hand unit vector per direction (splitter halves: left = negative side).
 local right = { north = { 1, 0 }, east = { 0, 1 }, south = { -1, 0 }, west = { 0, -1 } }
+local clockwise = { north = "east", east = "south", south = "west", west = "north" }
+local counterclockwise = { north = "west", west = "south", south = "east", east = "north" }
+local ACROSS_TYPES = { "transport-belt", "underground-belt", "splitter", "loader", "loader-1x1", "linked-belt" }
 
 -- FND-0015 (author blueprint 2026-09-27, probe `probe > splitter transport line numbering`): splitter facing box
 -- direction touching box tile with one half. Behind: box takes that half's output lines (left 5/6, right 7/8).
@@ -291,22 +294,59 @@ end
 
 -- v15 perf: may lane take one more belt item now? One engine call (plus side check once per tick).
 function M.can_push(rec, lane)
+  if M.front_kind(rec) == "across" then
+    local belt=rec.belt.front
+    local target=((belt.direction-direction_value(rec.dir))%16)==4 and 2 or 1
+    local line=transport_line(rec,"front",target)
+    return line ~= nil and line.can_insert_at(0.5)
+  end
   local belt = cached(rec, "front", 1)
   if not belt then return false end
   local line = transport_line(rec, "front", lane)
   return line ~= nil and line.can_insert_at_back()
 end
 
--- v16: is there a belt-like entity in front that box may feed (same rules as push: same direction)? Cached like push.
--- v17 seam stub (lane 054)
-function M.front_kind(rec) error("stub: belt_io.front_kind") end
+-- v17 adds perpendicular transport belts. Classification is cached with the front side.
+function M.front_kind(rec)
+  local b=rec.belt
+  if not b then b={behind=nil,front=nil,scan={}}; rec.belt=b end
+  local tick=now or game.tick or 0
+  if b.front_kind_at and tick < b.front_kind_at+60 then return b.front_kind end
+  local belt=cached(rec,"front",1)
+  if belt then b.front_kind="ahead"
+  else
+    local offset=offsets[rec.dir]; local e=rec.entity
+    local found=offset and e.surface.find_entities_filtered({position={x=e.position.x+offset[1],y=e.position.y+offset[2]},type=ACROSS_TYPES}) or {}
+    local cw=clockwise[rec.dir]
+    local ccw=counterclockwise[rec.dir]
+    for _,candidate in ipairs(found) do
+      if candidate.valid and candidate.type=="transport-belt" and (candidate.direction==direction_value(cw) or candidate.direction==direction_value(ccw)) then
+        b.front=candidate; b.lines=b.lines or {}; b.lines.front={candidate.get_transport_line(1),candidate.get_transport_line(2)}
+        b.kind=b.kind or {}; b.kind.front=candidate.type; b.front_kind="across"; break
+      end
+    end
+  end
+  b.front_kind_at=tick
+  return b.front_kind
+end
 
 function M.front_ok(rec)
-  return cached(rec, "front", 1) ~= nil
+  return M.front_kind(rec) ~= nil
 end
 
 function M.push(rec, lane, item, belt_stack_size)
   local counters = storage and storage.sp_counters
+  if M.front_kind(rec)=="across" then
+    local belt=rec.belt.front
+    local target=((belt.direction-direction_value(rec.dir))%16)==4 and 2 or 1
+    local line=transport_line(rec,"front",target)
+    if not line or not line.can_insert_at(0.5) then return 0 end
+    if line.insert_at(0.5,{name=item.name,count=item.count,quality=item.quality},belt_stack_size) then
+      if counters then counters.pushes=counters.pushes+1; counters.items_out=counters.items_out+item.count end
+      return item.count
+    end
+    return 0
+  end
   local belt, map = cached(rec, "front", 1)
   if not belt then return 0 end
   local line = transport_line(rec, "front", lane, map)
