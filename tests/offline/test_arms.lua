@@ -4,6 +4,13 @@ local arms = require("scripts.arms")
 
 local function setup(speed)
   local created, writes, connectors = {}, {}, {}
+  if rendering == nil then  -- v22: hood is a render object; plain fake unless a test brings its own
+    rendering = { draw_sprite = function(spec)
+      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target, render_layer = spec.render_layer }
+      function o.destroy() o.valid = false end
+      return o
+    end }
+  end
   local function entity(spec)
     local e = { valid = true, name = spec.name, position = spec.position, force = spec.force, writes = {}, filters = {}, links = {} }
     setmetatable(e, { __index = function(t, k) local w = rawget(t, "_watched"); return w and w[k] end, __newindex = function(t, k, v)
@@ -243,10 +250,11 @@ describe("arms v17", function()
       eq(rec.invs[1].insert_calls,1); eq(old.valid,false)
     end)
     it("create makes hood once and turns it", function()
+      -- v22 (V22-2): hood is a script picture, no hood entity
       local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec); local hood=rec.hood
-      eq(hood.name,N.hood(rec.tier)); eq(hood.direction,defines.direction.north); eq(hood.destructible,false)
-      rec.dir="east"; arms.create(rec); eq(rec.hood,hood); eq(hood.direction,defines.direction.east)
-      local n=0; for _,v in ipairs(created) do if v.spec.name==N.hood(rec.tier) then n=n+1 end end; eq(n,1)
+      eq(hood.object_name,"LuaRenderObject"); eq(hood.sprite,N.hood_sprite(rec.tier,"north"))
+      rec.dir="east"; arms.create(rec); eq(rec.hood,hood); eq(hood.sprite,N.hood_sprite(rec.tier,"east"))
+      local n=0; for _,v in ipairs(created) do if v.spec.name==N.hood(rec.tier) then n=n+1 end end; eq(n,0)
     end)
     it("shut writes logistic condition", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local cb=rec.entity.behavior
@@ -275,7 +283,7 @@ describe("arms v17", function()
     it("hood follows tier after upgrade", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local old=rec.hood
       prototypes.entity[N.TIER.red.belt]={belt_speed=0.0625}; rec.tier="red"; arms.create(rec)
-      eq(old.valid,false); eq(rec.hood.name,N.hood("red"))
+      eq(rec.hood,old); eq(rec.hood.sprite,N.hood_sprite("red",rec.dir))  -- v22: same picture object, new tier
     end)
     it("aim unchanged writes nothing", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.aim_out(rec,"across")
@@ -301,7 +309,7 @@ describe("arms v17", function()
     end)
     it("ensure sees missing mop arms or hood", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); rec.mop=nil; eq(arms.ensure(rec),true)
-      rec.hood.valid=false; eq(arms.ensure(rec),true); eq(arms.ensure(rec),false)
+      rec.hood.valid=false; eq(arms.ensure(rec),false); ok(rec.hood.valid); eq(arms.ensure(rec),false)  -- v22: picture redrawn, no rebuild
     end)
     it("need_slot sees mop hand", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.mop[1][1],"iron-plate",1)
@@ -412,3 +420,48 @@ describe("arms v20", function()
     eq(rec.steer,nil); eq(rec.out[1][1].use_filters,nil)
   end)
 end)
+
+-- v22 (V22-2, FND-0054): hood is a script-drawn picture (render object), not a hidden entity: the entity cost script
+-- time on every packer (6 of 6 bench pairs). Rendering faked here.
+describe("arms v22", function()
+  local function fake_rendering()
+    local drawn = {}
+    rendering = { draw_sprite = function(spec)
+      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target, render_layer = spec.render_layer, writes = 0 }
+      setmetatable(o, { __newindex = function(t, k, v) if k == "sprite" then rawset(t, "writes", rawget(t, "writes") + 1) end; rawset(t, k, v) end })
+      function o.destroy() o.valid = false end
+      drawn[#drawn + 1] = o
+      return o
+    end }
+    return drawn
+  end
+  it("create draws hood picture of tier and direction", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
+    eq(#drawn, 1); eq(rec.hood, drawn[1]); eq(drawn[1].sprite, N.hood_sprite(rec.tier, rec.dir)); eq(drawn[1].target, rec.entity)
+    eq(drawn[1].render_layer, "object")
+    for _, v in ipairs(s.created or {}) do ok(v.spec.name ~= N.hood(rec.tier), "no hood entity") end
+  end)
+  it("turn and upgrade change picture, no second drawing", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
+    rec.dir = "east"; arms.create(rec); eq(#drawn, 1); eq(rec.hood.sprite, N.hood_sprite(rec.tier, "east"))
+    prototypes.entity[N.TIER.red.belt] = { belt_speed = 0.0625 }; rec.tier = "red"; arms.create(rec); eq(#drawn, 1); eq(rec.hood.sprite, N.hood_sprite("red", "east"))
+    local w = rec.hood.writes; arms.create(rec); eq(rec.hood.writes, w, "same picture: no write")
+  end)
+  it("hood entity of older save is removed and replaced", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
+    local old = { valid = true, object_name = "LuaEntity", name = N.hood(rec.tier) }; function old.destroy() old.valid = false end
+    rec.hood = old
+    eq(arms.ensure(rec), false); eq(old.valid, false); eq(rec.hood.object_name, "LuaRenderObject"); eq(rec.hood.sprite, N.hood_sprite(rec.tier, rec.dir))
+  end)
+  it("lost picture redrawn by ensure without rebuild", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
+    local arm = rec.arms[1][1]; rec.hood.valid = false
+    eq(arms.ensure(rec), false); eq(#drawn, 2); ok(rec.hood.valid); eq(rec.arms[1][1], arm)
+    eq(arms.ensure(rec), false); eq(#drawn, 2)
+  end)
+  it("destroy removes picture", function()
+    fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec); local h = rec.hood
+    arms.destroy(rec); eq(h.valid, false); eq(rec.hood, nil)
+  end)
+end)
+

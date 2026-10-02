@@ -75,7 +75,7 @@ describe("data extra", function()
     local extra = require("prototypes.extra")
     eq(extra.tiers(raw), {})
     extra.build(raw)
-    eq(#F.extended, 45)
+    eq(#F.extended, 61)  -- v22: + 16 hood sprites (4 tiers x 4 directions)
     for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("turbo", dir)].next_upgrade, nil) end
   end)
 

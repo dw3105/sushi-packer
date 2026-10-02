@@ -49,6 +49,20 @@ end
 local _out_positions
 local _apply_aim
 
+-- v22 (V22-2, FND-0054): hood = script-drawn picture on the body (render object), not a hidden entity: the entity
+-- cost script time on every packer. Hood entity of an older save is removed here. Writes only what changed.
+local function _hood(rec)
+  local h = rec.hood
+  if h ~= nil and h.valid and h.object_name ~= "LuaRenderObject" then h.destroy(); h = nil end
+  local want = N.hood_sprite(rec.tier, rec.dir)
+  if h ~= nil and h.valid then
+    if h.sprite ~= want then h.sprite = want end
+    return
+  end
+  local entity = rec.entity
+  rec.hood = rendering.draw_sprite { sprite = want, target = entity, surface = entity.surface, render_layer = "object" }
+end
+
 function M.create(rec)
   local entity = rec.entity
   local surface, pos, force = entity.surface, entity.position, entity.force
@@ -147,13 +161,7 @@ function M.create(rec)
   rec.out_paused = { true, true }
   rec.hand = bss
   rec.steer = nil  -- fresh out arms carry no filters
-  if _valid(rec.hood) and rec.hood.name ~= N.hood(rec.tier) then rec.hood.destroy() end  -- upgrade: hood of new tier
-  if not _valid(rec.hood) then
-    rec.hood = surface.create_entity { name = N.hood(rec.tier), position = pos, force = force }
-    rec.hood.destructible = false
-  end
-  local hood_direction = defines.direction[rec.dir]
-  if rec.hood.direction ~= hood_direction then rec.hood.direction = hood_direction end
+  _hood(rec)
   M.shut(entity)
   rec.aim = nil
   _apply_aim(rec, "ahead")
@@ -407,8 +415,8 @@ function M.ensure(rec)
     if not mops or #mops ~= N.MOP_ARMS then broken = true
     else for _, arm in ipairs(mops) do if not _valid(arm) then broken = true; break end end end
   end
-  if not _valid(rec.hood) then broken = true end
   if broken then M.create(rec); return true end
+  if not _valid(rec.hood) or rec.hood.object_name ~= "LuaRenderObject" then _hood(rec) end
   if rec.in_hands ~= table.concat(N.ARM_HANDS, ",") then _in_hands(rec) end
   return false
 end

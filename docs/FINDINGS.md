@@ -699,4 +699,5 @@ What is seen: same Lua code on same data runs slower in belt body versions, most
 Not tested (no means in headless game): Lua heap / garbage collector load, CPU cache effects of belt-kind body. Verdict: cause not found; no code change. Gap stays accepted (V17-11).
 
 Verified-by: `~/.cache/sushi-packer/v21/gap.sh 6`; section probes applied from the two patch files to trees at `f78e4fc` and `d0d32e3`, then `tools/bench/run.sh 2.0 --tier ub-ultimate --modset ubsa --ticks 1300 --flow stacks`
+Fix checked before build (2026-10-02 23:20-23:35 UTC, `~/.cache/sushi-packer/v21/logs/hood-3way.txt`, 6 rotated rounds, load1 5.6..8.9): script ms hood entity 0.744 / 0.724 / 0.680 / 0.730 / 0.745 / 0.619 (median 0.727), hood as script picture 0.647 / 0.607 / 0.552 / 0.638 / 0.612 / 0.628 (0.620), no hood 0.641 / 0.636 / 0.635 / 0.639 / 0.637 / 0.591 (0.637). Picture lower than entity in 5 of 6 rounds and level with no hood: the cost was the entity, a render object does not carry it. Built as V22-2.
 

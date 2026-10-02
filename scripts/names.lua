@@ -69,6 +69,7 @@ function N.led(state, dir) return "sushi-packer-led-" .. state .. "-" .. dir end
 -- v17 belt body (V17-1..5, FND-0048): packer body = transport-belt kind of tier's belt, kept shut by script.
 function N.body(tier) return N.item(tier) .. "-body" end   -- the entity player sees, selects, wires, rotates
 function N.hood(tier) return N.item(tier) .. "-hood" end   -- unselectable picture over body (belt kind has no picture)
+function N.hood_sprite(tier, dir) return N.item(tier) .. "-hood-" .. dir end  -- v22: hood drawn by script (V22-2); entity N.hood stays only so old saves load
 N.MOP_ARMS = 2                                             -- in arms per lane on own tile: take what lands on body
 -- v21 (V21-1..5, FND-0053, author pick 2026-10-02 "Full mix"): belt behind packer must not jerk.
 -- In hand i of a lane holds ARM_HANDS[(i - 1) % #ARM_HANDS + 1] items: an in hand holding fewer items than its size

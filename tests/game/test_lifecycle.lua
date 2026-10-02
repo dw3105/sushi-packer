@@ -59,9 +59,11 @@ describe("lifecycle", function()
       assert.are_equal(1, #found)
       assert.are_equal(defines.direction[dir], found[1].direction)
       assert.are_equal(dir, registry.get(found[1]).dir)
-      local hood = surface.find_entities_filtered({ name = N.hood("yellow"), area = { { pos[1] - 1, -1 }, { pos[1] + 1, 1 } } })
-      assert.are_equal(1, #hood); assert.are_equal(defines.direction[dir], hood[1].direction)
-      assert.are.same({ found[1].position.x, found[1].position.y }, { hood[1].position.x, hood[1].position.y }, "hood sits on packer")
+      -- v22 (V22-2): hood = script picture on the body, no hood entity
+      assert.are_equal(0, #surface.find_entities_filtered({ name = N.hood("yellow"), area = { { pos[1] - 1, -1 }, { pos[1] + 1, 1 } } }), "no hood entity")
+      local hood = registry.get(found[1]).hood
+      assert.is_true(hood.valid); assert.are_equal(N.hood_sprite("yellow", dir), hood.sprite.name or hood.sprite)
+      assert.are_equal(found[1], hood.target.entity, "hood drawn on packer")
     end
   end)
 
@@ -97,7 +99,7 @@ describe("lifecycle", function()
     assert.are_equal(31, rec.settings.timeout_s)
     assert.are_equal("east", rec.dir)
     assert.are_equal(5, rec.invs[1].get_item_count("iron-plate"))
-    assert.are_equal(defines.direction.east, rec.hood.direction)
+    assert.are_equal(N.hood_sprite(rec.tier, "east"), rec.hood.sprite.name or rec.hood.sprite)
     assert.are_equal(N.led(rec.led.state, "east"), rec.led.sprite.sprite)
     local own, script_targets = player_wires(e.get_wire_connector(defines.wire_connector_id.circuit_red, false))
     assert.are_equal(1, #own, "one player wire, as before")
@@ -517,6 +519,20 @@ describe("lifecycle", function()
       registry.on_configuration_changed({})
       after_ticks(3, function() assert.is_not_nil(storage.sched.hot, "schedule has hot set again") end)
     end)
+  end)
+  -- v22 (V22-2): saves of v1.17..v1.21 hold one hood entity per packer; after update it is gone and the hood is a
+  -- script picture of the right tier and direction.
+  it("hood entity of older save becomes script picture on update", function()
+    surface.create_entity({ name = N.placer("yellow"), position = { 0.5, 0.5 }, direction = defines.direction.east, force = force, raise_built = true })
+    local body = surface.find_entities_filtered({ name = N.body("yellow"), position = { 0.5, 0.5 } })[1]
+    local rec = registry.get(body)
+    if rec.hood and rec.hood.valid then rec.hood.destroy() end
+    rec.hood = surface.create_entity({ name = N.hood("yellow"), position = { 0.5, 0.5 }, force = force })  -- as saved by v1.21
+    registry.on_configuration_changed({})
+    rec = registry.get(body)
+    assert.are_equal(0, #surface.find_entities_filtered({ name = N.hood("yellow") }), "hood entity removed")
+    assert.are_equal("LuaRenderObject", rec.hood.object_name)
+    assert.are_equal(N.hood_sprite("yellow", "east"), rec.hood.sprite.name or rec.hood.sprite)
   end)
   it("packers of v1.20 get new in hand sizes on update, any count", function()
     for _, n in ipairs({ 1, 2, 15, 16, 33, 64, 128 }) do

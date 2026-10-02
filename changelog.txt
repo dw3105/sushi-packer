@@ -1,4 +1,20 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.22
+Date: 2026-10-02
+  Optimizations:
+    - Boxes use less script time: the hood is now drawn as a picture instead of a hidden entity. Measured about 15 % less script time on a 270 items/s modded belt.
+  Changes:
+    - Removed old unused code.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.22
+Date: 2026-10-02
+  Optimizations:
+    - Boxes use less script time: the hood is now drawn as a picture instead of a hidden entity. Measured about 15 % less script time on a 270 items/s modded belt.
+  Changes:
+    - Removed old unused code.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.21
 Date: 2026-10-02
   Bugfixes:

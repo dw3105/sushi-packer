@@ -236,6 +236,11 @@ function M.make(tier, opts)
     max_health = 350,
     render_layer = "object",
   }
+  -- v22 (V22-2, FND-0054): placed packer draws its hood by script from these sprites (same picture as placer, with
+  -- shadow). The hood entity above cost script time on every packer; it stays only so saves of v1.17..v1.21 load.
+  for _, dir in ipairs(N.DIRS) do
+    protos[#protos + 1] = { type = "sprite", name = N.hood_sprite(tier, dir), layers = placer.picture[dir].layers }
+  end
 
   for _, dir in ipairs(N.DIRS) do
     local box = {

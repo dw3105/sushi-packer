@@ -434,4 +434,5 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 - `scripts/core.lua` removed (v1.14 engine; no product code required it since v1.15). `rec.box` of v1.14 saves is still read as plain data by `registry` at update.
 - `belt_io.pull`, `belt_io._eta`, `belt_io._speed` removed (script intake of v1.14; intake is hidden inserters since v1.15). Counter fields `reads`, `pulls` stay in `storage.sp_counters` and bench log line, always 0.
 - `tests/offline/contract.lua`: module `core` and `belt_io.pull` dropped.
+- v22 (V22-2): `N.hood_sprite(tier, dir)`; `rec.hood` is a `LuaRenderObject` (sprite on body); a `LuaEntity` hood of older saves is replaced by `arms.ensure`.
 

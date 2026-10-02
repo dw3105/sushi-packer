@@ -318,3 +318,19 @@ describe("data", function()
     end
   end)
 end)
+
+describe("data v22", function()
+  it("hood sprite per tier and direction with shadow", function()
+    -- v22 (V22-2): placed packer draws its hood by script (render object) from these sprites; same picture as placer.
+    local raw = load()
+    for _, tier in ipairs(N.TIERS) do
+      local placer = raw["simple-entity-with-owner"][N.placer(tier)]
+      for _, dir in ipairs(N.DIRS) do
+        local sp = raw["sprite"] and raw["sprite"][N.hood_sprite(tier, dir)]
+        ok(sp ~= nil, "sprite " .. N.hood_sprite(tier, dir))
+        eq(sp.layers, placer.picture[dir].layers)
+        eq(sp.layers[2].draw_as_shadow, true)
+      end
+    end
+  end)
+end)
