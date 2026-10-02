@@ -4,6 +4,7 @@ local arms = require("scripts.arms")
 local M = {}
 
 local FRAME = "sushi_packer_frame"
+local LANE_COLUMNS = 12
 local FILTER_COMPARATORS = { "=", "≠", ">", "<", "≥", "≤" }
 local CIRCUIT_COMPARATORS = { ">", "<", "=", "≥", "≤", "≠" }
 
@@ -187,7 +188,9 @@ end
 local function build_lanes(frame, unit, rec)
   local box = section(frame, { "gui.lanes" }, "lanes_section")
   for lane = 1, 2 do
-    local row = aligned(box, "lane_" .. lane)
+    local row = box.add({ type = "table", name = "lane_" .. lane, column_count = LANE_COLUMNS })
+    row.style.horizontal_spacing = 0
+    row.style.vertical_spacing = 0
     for slot = 1, N.STORE_SLOTS do
       local button = add(row, { type = "sprite-button", name = "lane_slot_" .. slot, style = "slot_button" }, unit, "lane_slot")
       set_tag(button, "lane", lane)

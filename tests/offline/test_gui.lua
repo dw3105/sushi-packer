@@ -1,4 +1,5 @@
 local gui
+local N = require("scripts.names")
 
 local function fixture(one_quality)
   package.loaded["scripts.gui"] = nil
@@ -163,7 +164,7 @@ describe("gui", function()
 end)
 
 describe("gui lanes", function()
-  local slots = 12
+  local slots = N.STORE_SLOTS
   local function inventory()
     local inv = { [2] = { valid_for_read = true, name = "iron-plate", count = 7, quality = { name = "rare" } } }
     for i = 1, slots do if not inv[i] then inv[i] = { valid_for_read = false } end end
@@ -181,11 +182,12 @@ describe("gui lanes", function()
     gui._refresh(p, rec)
     return p, rec, calls
   end
-  it("section has two rows of twelve slots", function()
+  it("section has two lanes with every store slot", function()
     local p = fixture(); local f = p.gui.relative.sushi_packer_frame
     ok(f.lanes_section ~= nil)
     for lane = 1, 2 do
       local row = f.lanes_section["lane_" .. lane]; ok(row ~= nil)
+      eq(row.type, "table"); eq(row.column_count, 12)
       eq(#row.children, slots)
       for slot = 1, slots do
         local b = row.children[slot]; eq(b.type, "sprite-button")
@@ -224,6 +226,42 @@ describe("gui lanes", function()
     local old = f.lanes_section.lane_1.children[2]
     rec.invs = { inventory(), inventory() }; gui._refresh(p, rec)
     ok(p.gui.relative.sushi_packer_frame == f); eq(old.sprite, "item/iron-plate"); eq(old.number, 7)
+  end)
+end)
+
+describe("gui v21", function()
+  it("lane slots wrap at twelve per row", function()
+    local p = fixture(); local section = p.gui.screen.sushi_packer_frame.lanes_section
+    for lane = 1, 2 do
+      local grid = section["lane_" .. lane]
+      eq(grid.type, "table"); eq(grid.column_count, 12)
+    end
+  end)
+  it("every store slot has a button", function()
+    local p = fixture(); local section = p.gui.screen.sushi_packer_frame.lanes_section
+    for lane = 1, 2 do
+      local grid = section["lane_" .. lane]
+      eq(grid.type, "table"); eq(grid.column_count, 12)
+      eq(#grid.children, N.STORE_SLOTS)
+      for slot = 1, N.STORE_SLOTS do
+        local button = grid["lane_slot_" .. slot]
+        ok(button ~= nil); eq(button.type, "sprite-button")
+        eq(button.tags.lane, lane); eq(button.tags.slot, slot)
+      end
+    end
+  end)
+  it("refresh fills second row", function()
+    local p, rec = fixture()
+    local inv = { [13] = { valid_for_read = true, name = "copper-cable", count = 8, quality = { name = "rare" } } }
+    rec.invs = { inv, {} }
+    gui._refresh(p, rec)
+    local grid = p.gui.screen.sushi_packer_frame.lanes_section.lane_1
+    eq(grid.type, "table"); eq(grid.column_count, 12)
+    local button = grid.lane_slot_13
+    eq(button.sprite, "item/copper-cable"); eq(button.number, 8); eq(button.quality, "rare")
+    eq(button.elem_tooltip, { type = "item-with-quality", name = "copper-cable", quality = "rare" })
+    local empty = grid.lane_slot_24
+    eq(empty.sprite, nil); eq(empty.number, nil); eq(empty.quality, nil); eq(empty.elem_tooltip, nil)
   end)
 end)
 
