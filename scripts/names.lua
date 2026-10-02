@@ -75,9 +75,10 @@ N.MOP_ARMS = 2                                             -- in arms per lane o
 -- waits about 20 ticks over the belt for more of that kind; a hand of 1 never waits (but is slow on full stacks).
 N.ARM_HANDS = { 1, 4, 4, 4 }
 -- Out hands per lane: N.OUT_ARMS, more on belts faster than OUT_FAST.speed tiles per tick (8 pass 2.12 of 2.25
--- stacks per tick on a 270/s belt; 12 pass all but store piles to 200 items and 0.4..0.8 % of stacks leave small;
--- 16: store 8 items, no small stack). Swing time (N.out_swing) stays computed from N.OUT_ARMS.
-N.OUT_FAST = { speed = 0.3, n = 16 }
+-- stacks per tick on a 270/s belt; 12 pass all, but on a fully stacked 270/s belt store piles to about 200 items
+-- and 0.4..0.8 % of stacks leave small; 16: store 8 items, no small stack, whole tick +23 % instead of +12 %.
+-- Author picked 12, 2026-10-02). Swing time (N.out_swing) stays computed from N.OUT_ARMS.
+N.OUT_FAST = { speed = 0.3, n = 12 }
 function N.out_count(speed)
   if speed > N.OUT_FAST.speed then return N.OUT_FAST.n end
   return N.OUT_ARMS
