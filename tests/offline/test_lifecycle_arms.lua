@@ -25,7 +25,7 @@ local function setup()
   local id = 10
   local function entity(unit, name)
     id = id + 1
-    local e = { valid = true, name = name or N.variant("yellow", "east"), unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal", to_be_upgraded=function() return false end }
+    local e = { valid = true, name = name or N.body("yellow"), direction=4, unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal", to_be_upgraded=function() return false end }
     e.surface.spilled = {}
     e.surface.spill_item_stack = function(spec) e.surface.spilled[#e.surface.spilled + 1] = spec end
     e.surface.create_entity = function(spec) local n = entity(id + 100, spec.name); n.position=spec.position; n.force=spec.force; n.surface=e.surface; return n end
@@ -90,5 +90,13 @@ describe("lifecycle arms", function()
   end)
   it("stale stash cleans its parts", function()
     local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec={entity=e,unit_number=1,invs={inv({{name="iron",count=2}}),inv()}}; storage.upgrade_stash={stale={rec=rec,tick=99,force=1,surface=e.surface,position=e.position}}; game.tick=100; r.take_stash(entity(2)); eq(#a.destroys,1); eq(#e.surface.spilled,1)
+  end)
+end)
+
+describe("lifecycle v17", function()
+  it("mined body returns hands", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); e.name="sushi-packer-body"; local rec=r.new_rec(e); a.hand_items={{name="iron-plate",quality="normal",count=3,lane=1}}; local got={}
+    r.on_removed({entity=e,buffer={insert=function(s) got[#got+1]=s end}})
+    eq(got[1].name,"iron-plate"); eq(got[1].count,3)
   end)
 end)

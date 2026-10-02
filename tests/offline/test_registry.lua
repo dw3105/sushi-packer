@@ -94,3 +94,41 @@ describe("registry", function()
     eq(#arms.destroyed, 1); eq(storage.upgrade_stash, nil); eq(storage.boxes[11], nil)
   end)
 end)
+
+-- v17 belt-body lifecycle tests use independent module fakes so they stay useful while
+-- the arms and circuit lanes are being integrated.
+describe("registry v17", function()
+  local function setup()
+    for _, n in ipairs({"scripts.registry", "scripts.copy", "scripts.led", "scripts.names", "scripts.arms", "scripts.circuit", "scripts.ledger"}) do package.loaded[n] = nil end
+    defines = { direction={north=0,east=4,south=8,west=12}, inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={player=1,script=2} }
+    storage, game = {boxes={}}, {tick=10}
+    local N=require("scripts.names"); N.BODIES={ [N.body("yellow") ]="yellow", [N.body("red") ]="red", [N.body("blue") ]="blue" }
+    local log={}; local arms={create=function(r) log[#log+1]="arms.create" end,wire=function(r,on) log[#log+1]="arms.wire:"..tostring(on) end,destroy=function(r,k) log[#log+1]="arms.destroy" end,ensure=function() log[#log+1]="arms.ensure" end,drain_hands=function() return {} end}
+    local circuit={apply=function() log[#log+1]="circuit.apply" end,sync=function() log[#log+1]="circuit.sync" end}
+    package.loaded["scripts.arms"]=arms; package.loaded["scripts.circuit"]=circuit; package.loaded["scripts.ledger"]={new=function() return {} end}
+    local led={create=function(r) log[#log+1]="led.create" end,destroy=function() end,ensure=function() log[#log+1]="led.ensure" end,set=function(r,s,v) log[#log+1]="led.set:"..tostring(s) end}; package.loaded["scripts.led"]=led
+    local made={}; local id=100
+    local surface={index=1, spilled={}, spill_item_stack=function(self,s) self.spilled[#self.spilled+1]=s end}
+    local function entity(name,dir)
+      id=id+1; local e={valid=true,name=name,unit_number=id,direction=dir or 4,position={x=2.5,y=3.5},force={index=1},quality="normal",surface=surface}
+      e.destroy=function() e.valid=false end; e.get_or_create_control_behavior=function() return {} end
+      e.get_control_behavior=function() return nil end; e.get_wire_connector=function() return {connections={},connect_to=function() end} end
+      return e
+    end
+    surface.create_entity=function(spec) made[#made+1]=spec; return entity(spec.name,spec.direction) end
+    local r=require("scripts.registry")
+    return r,N,arms,log,entity,made,surface
+  end
+  it("placer becomes body", function() local r,N,a,l,ent,m=setup(); local p=ent(N.placer("red")); p.last_user="u"; local old=p; r.on_built({entity=p}); eq(old.valid,false); eq(m[1].name,N.body("red")); eq(m[1].direction,4); eq(#a and 1 or 1,1); eq(l[2],"circuit.apply") end)
+  it("legacy box built becomes body", function() local r,N,_,_,ent,m=setup(); local p=ent(N.variant("yellow","south"),8); r.on_built({entity=p}); eq(m[1].name,N.body("yellow")); eq(m[1].direction,8) end)
+  it("body with control behaviour is synced", function() local r,N,_,l,ent=setup(); local e=ent(N.body("red")); e.get_control_behavior=function() return {} end; r.on_built({entity=e}); eq(l[2],"circuit.sync") end)
+  it("tags imported before sync", function() local r,N,_,l,ent=setup(); local e=ent(N.body("red")); r.on_built({entity=e,tags={sushi_packer={circuit={read=false}}}}); eq(l[2],"circuit.sync") end)
+  it("new_rec only for bodies", function() local r,N,_,_,ent=setup(); eq(r.new_rec(ent(N.variant("red","east"))),nil); eq(r.new_rec(ent(N.placer("red"))),nil); eq(r.new_rec(ent(N.body("red"))).tier,"red") end)
+  it("rotated updates dir and parts", function() local r,N,a,l,ent=setup(); local e=ent(N.body("red")); local rec=r.new_rec(e); e.direction=0; r.on_rotated({entity=e}); eq(rec.dir,"north"); eq(l[2],"arms.create") end)
+  it("removal never reads chest inventory", function() local r,N,_,_,ent=setup(); local e=ent(N.body("yellow")); e.get_inventory=nil; local rec=r.new_rec(e); rec.invs={}; r.on_removed({entity=e}); r.on_died({entity=e}) end)
+  it("migrate chest to body", function() local r,N,_,_,ent,m=setup(); local e=ent(N.variant("yellow","east")); e.get_inventory=function() return {valid=true,get_contents=function() return {{name="plate",count=5}} end} end; local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",settings={circuit={read=false}},invs={{insert=function(x) return x.count end},{insert=function() return 0 end}}}; storage.boxes[e.unit_number]=rec; local got=r.migrate(rec); eq(got,rec); eq(m[1].name,N.body("yellow")); eq(e.valid,false); eq(rec.extra,nil) end)
+  it("migrate overflow is spilled", function() local r,N,_,_,ent=setup(); local e=ent(N.variant("yellow","east")); e.get_inventory=function() return {valid=true,get_contents=function() return {} end} end; local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",invs={{insert=function() return 1 end},{insert=function() return 0 end}}}; storage.boxes[e.unit_number]=rec; rec.extra={{name="coal",count=3,lane=1}}; r.migrate(rec); ok(#e.surface.spilled>=1) end)
+  it("migrate without body drops rec with items spilled", function() local r,N,_,_,ent,_,s=setup(); s.create_entity=function() return nil end; local e=ent(N.variant("yellow","east")); e.get_inventory=function() return {valid=true,get_contents=function() return {{name="iron",count=2}} end} end; local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",invs={}}; storage.boxes[e.unit_number]=rec; eq(r.migrate(rec),nil); eq(storage.boxes[e.unit_number],nil) end)
+  it("config change migrates legacy recs once", function() local r,N,a,l,ent=setup(); local e=ent(N.body("yellow")); local rec=r.new_rec(e); r.on_configuration_changed({}); eq(l[2],"arms.ensure") end)
+  it("stash and take_stash for bodies", function() local r,N,_,_,ent=setup(); local e=ent(N.body("red")); local rec=r.new_rec(e); r.stash(rec); local n=ent(N.body("red")); eq(r.take_stash(n),rec); eq(rec.dir,"east") end)
+end)
