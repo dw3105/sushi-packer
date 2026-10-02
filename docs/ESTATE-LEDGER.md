@@ -24,4 +24,6 @@ Cross-repo citation of findings raised in this repo (session-lifecycle CL-07). O
 | FND-0053 | 2026-10-02 | dev-vm | Belt behind packer jerks: in hands wait to fill, store smaller than kinds, out hands short on 270/s | fixed v1.21 (public, tag `0d97c55`); known by author's picks: fast mod belt + more than 24 kinds per lane still backs up (V21-4), 1 small stack in 150 on fully stacked 270/s belt (V21-3) |
 | FRC-0048..0063 | 2026-10-02 | dev-vm | v1.17..v1.21 session reflection | recorded; rule changes proposed in FRC-0062, FRC-0063 wait on author |
 | close 2026-10-02 | 2026-10-02 | dev-vm | Open at close: v1.21 not seen in real game (first deferral); `make skill-lint` red, REQUIREMENTS v14 text, dead code `core.lua` / `belt_io.pull` (second deferral each, costs in `docs/STEPS.md`) | OPEN |
+| FND-0054 | 2026-10-02 | dev-vm | Cause of FND-0049 speed gap hunted: not calls, data, wires, mop hands; same Lua runs slower with belt body | cause not found, gap accepted (V17-11); closed as "no means in headless game" |
+| close 2026-10-02 (2) | 2026-10-02 | dev-vm | Open list worked on author's word: skill-lint, dead code, REQUIREMENTS v21 text done | still OPEN with author: real-game look at v1.21, hood in blueprint preview (third deferral; cost: author, 2 min in game) |
 

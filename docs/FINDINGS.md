@@ -682,3 +682,21 @@ Verified-by: `make test-one FV=2.0 T='tests/game/test_tick.lua::tick > belt behi
 Same pressured bench on 270/s belt (`hotbench/run-ub.sh`, mod set `ubsa`, 100 `ub-ultimate` packer lines, feed `many`, feeder script time included, dev-vm 2026-10-02, load1 1.8..2.3): final code script 13.36 / 12.66 ms, whole tick 16.95 / 16.04 ms, intake 0.998; same code without extra looks 4.23 / 3.84 ms, whole 6.67 / 5.91 ms, intake 0.525; v1.20 3.53 ms, whole 5.56 ms, intake 0.530. Extra looks there buy 52 % -> 99.8 % of belt at about 3.5 x script time (about 2 x per item moved).
 Author's decision on these numbers (2026-10-02, V21-4): no extra looks on any belt. Release code: switch `N.HOT.above = math.huge`. Left as known: belt faster than turbo + more kinds than 24 per lane, engine way (scratch runs without extra looks, feed `many`: `ubsa` 0.527, `ab-sa` 0.899, `bb` 0.945, `k2so` 0.967, `arig` 0.972); every other feed and every game belt at or above 0.98.
 
+## FND-0054 - Hunt for cause of FND-0049 speed gap (chest body v1.16 -> belt body v1.17+): narrowed, not found
+
+Measured 2026-10-02 21:55-22:25 UTC on dev-vm 2.0.77, row `ub-ultimate` (`ubsa`, 200 packers, flow `stacks`, 1300 ticks), load1 1.5..4.2. Codes: v1.16 `f78e4fc`, v1.19 `d0d32e3`, v1.21 `0d97c55`. Logs `~/.cache/sushi-packer/v21/logs/gap.txt`, `gap-sections.txt`; probe patches `gap16-probe.patch`, `gap19-probe.patch` (scratch trees, removed).
+
+Gap is real: six rotated runs, script ms median v1.16 0.408 (0.382..0.435), v1.19 0.471 (0.446..0.499), v1.21 0.564 (0.530..0.669; 12 out hands on this belt since V21-3). Whole tick median v1.16 6.76, v1.19 6.58 (not slower), v1.21 8.10.
+
+Ruled out, each by a run:
+- More calls: per-function call counts over 1200 ticks are the same in v1.16 and v1.19 (`ledger.scan=16000`, `arms.pause=16000`, `circuit.evaluate=8000`, `arms.held` 3381 vs 3251, `belt_io.can_push` 3974 vs 3647); only new calls are `arms.aim_out=8000` (6 ms of 1200 ticks) and `front_kind` in place of `front_ok` (35 vs 28 ms).
+- More data: kinds read per look 1.20 vs 1.26.
+- Hidden wires from lane stores to belt body: knockout (no wires) leaves slow section at 193..211 ms (v1.16: 150..161).
+- Mop hands: knockout (`N.MOP_ARMS = 0`) leaves it unchanged (bookkeeping section 63..67 ms; v1.16 40..45).
+- Code of slow sections: identical text in both versions (store read, slot count, options for `ledger.scan`).
+
+What is seen: same Lua code on same data runs slower in belt body versions, most in the per-lane part of a look: store read `inv.get_contents()` 72..87 ms -> 94..100 ms, plain bookkeeping after it 40..45 ms -> 63..69 ms (per 1200 ticks, 16000 lane looks), `circuit.evaluate` 13..14 -> 17..22 ms; schedule walk got faster (71..77 -> 54..58 ms). Sum of differences = the gap (about 0.06 ms per tick).
+Not tested (no means in headless game): Lua heap / garbage collector load, CPU cache effects of belt-kind body. Verdict: cause not found; no code change. Gap stays accepted (V17-11).
+
+Verified-by: `~/.cache/sushi-packer/v21/gap.sh 6`; section probes applied from the two patch files to trees at `f78e4fc` and `d0d32e3`, then `tools/bench/run.sh 2.0 --tier ub-ultimate --modset ubsa --ticks 1300 --flow stacks`
+
