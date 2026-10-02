@@ -44,6 +44,25 @@ local function includes(rows, expected)
 end
 
 describe("data extra", function()
+  it("chain fix-ups go to bodies", function()
+    local raw = load("arig")
+    raw["transport-belt"][N.TIER.turbo.belt].collision_box = { { -0.3, -0.3 }, { 0.3, 0.3 } }
+    raw["transport-belt"][N.TIER.turbo.belt].collision_mask = { layers = { ground_tile = true } }
+    require("prototypes.extra").build(raw)
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, N.body("planetaris-hyper"))
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].collision_box, raw["transport-belt"][N.body("turbo")].collision_box)
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].collision_mask, raw["transport-belt"][N.body("turbo")].collision_mask)
+    for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("turbo", dir)].next_upgrade, nil) end
+  end)
+
+  it("source belt missing in raw", function()
+    F.reset()
+    rawset(F.raw["transport-belt"], "transport-belt", nil)
+    local tier = require("prototypes.tier")
+    local good, err = pcall(tier.make, "yellow", { strict = true, index = 1 })
+    eq(good, false)
+    ok(tostring(err):find("yellow", 1, true) and tostring(err):find("transport-belt", 1, true), tostring(err))
+  end)
   it("vanilla prototypes identical to v8", function()
     F.reset()
     dofile("prototypes/packer.lua")
