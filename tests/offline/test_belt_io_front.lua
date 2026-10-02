@@ -70,24 +70,25 @@ describe("belt_io front v17", function()
   it("across push uses near lane", function()
     for _,dc in ipairs({{12,0,0,2},{12,8,0,1},{4,0,0,1},{4,8,0,2},{0,4,0,2},{0,12,0,1},{8,4,0,1},{8,12,0,2}}) do
       local got={}; local lines={}
-      for i=1,2 do lines[i]={can_insert_at=function() return true end,insert_at=function(pos,stack,bss) got[#got+1]={i,pos,stack.count,bss}; return true end} end
+      -- INT: back of lane, not a fixed spot (belt fed only by packer is a curve: near lane shorter than 0.5)
+      for i=1,2 do lines[i]={can_insert_at_back=function() return true end,insert_at_back=function(stack,bss) got[#got+1]={i,"back",stack.count,bss}; return true end} end
       local belt={valid=true,type="transport-belt",direction=dc[2],get_transport_line=function(i) return lines[i] end}
       local rec=make_rec(({[0]="north",[4]="east",[8]="south",[12]="west"})[dc[1]],belt)
       storage={sp_counters={pushes=0,items_out=0}}
       eq(io.push(rec,1,{name="iron",count=4},4),4); eq(io.push(rec,2,{name="iron",count=4},4),4)
-      eq(got,{{dc[4],0.5,4,4},{dc[4],0.5,4,4}})
+      eq(got,{{dc[4],"back",4,4},{dc[4],"back",4,4}})
       eq(storage.sp_counters,{pushes=2,items_out=8})
     end
   end)
-  it("across can_push asks near lane middle", function()
+  it("across can_push asks near lane back", function()
     for _,entry in ipairs({{0,2},{8,1}}) do
       local near=entry[2]
       local got={}; local lines={}
-      for i=1,2 do lines[i]={can_insert_at=function(pos) got[#got+1]={i,pos}; return true end} end
+      for i=1,2 do lines[i]={can_insert_at_back=function() got[#got+1]={i,"back"}; return true end} end
       local belt={valid=true,type="transport-belt",direction=entry[1],get_transport_line=function(i) return lines[i] end}
       local rec=make_rec("west",belt)
       eq(io.can_push(rec,1),true); eq(io.can_push(rec,2),true)
-      eq(got,{{near,0.5},{near,0.5}})
+      eq(got,{{near,"back"},{near,"back"}})
     end
   end)
   it("ahead push unchanged", function()

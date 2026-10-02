@@ -718,4 +718,109 @@ describe("tick", function()
 
   it("front item never rests at exit", function() never_rests("yellow", "transport-belt", 37) end)
   it("front item never rests at exit on turbo", function() never_rests("turbo", "turbo-transport-belt", 11) end)
+  -- v17 belt body (V17-1, V17-2, V17-5): behaviours of the packer as a belt piece, on final code.
+  -- last field: tiles of that belt before packer's front tile (0 = belt starts there and is laid as a curve)
+  for _, c in ipairs({ { "east", defines.direction.east, 1, 2, 0 }, { "west", defines.direction.west, -1, 1, 0 },
+      { "east (straight, passing by)", defines.direction.east, 1, 2, 3 }, { "west (straight, passing by)", defines.direction.west, -1, 1, 3 } }) do
+    it("belt running " .. c[1] .. " across in front gets both lanes on its near lane, stacked", function()
+      force.belt_stack_size_bonus = 3
+      local _, rec, feed = build(surface, force, { front = 0 })
+      local across = {}
+      for k = -c[5], 12 do across[#across + 1] = surface.create_entity({ name = "transport-belt", position = { 0.5 + k * c[3], -0.5 }, direction = c[2], force = force }) end
+      local near, far = c[4], 3 - c[4]
+      local function on(lane, name)
+        local n, small = 0, 0
+        for _, b in ipairs(across) do
+          for _, d in ipairs(b.get_transport_line(lane).get_detailed_contents()) do
+            if name == nil or d.stack.name == name then n = n + d.stack.count end
+            if d.stack.count < 4 then small = small + 1 end
+          end
+        end
+        return n, small
+      end
+      run_until(feeder(feed, { rep("iron-ore", 16), rep("copper-ore", 16) }), function() return on(near) >= 32 end, 1500, function()
+        local n, small = on(near)
+        local st = {}
+        for lane = 1, 2 do
+          for _, a in ipairs(rec.out[lane]) do
+            local k; for name, v in pairs(defines.entity_status) do if v == a.status then k = name end end
+            k = lane .. ":" .. tostring(k) .. (a.held_stack.valid_for_read and (":" .. a.held_stack.name .. "x" .. a.held_stack.count) or "")
+            st[k] = (st[k] or 0) + 1
+          end
+        end
+        local parts = {}; for k, v in pairs(st) do parts[#parts + 1] = k .. "=" .. v end; table.sort(parts)
+        local msg = string.format("near=%d far=%d inside=%d store=%d/%d front_was=%s aim=%s arms[%s]", n, on(far), stored(rec), rec.invs[1].get_item_count(), rec.invs[2].get_item_count(),
+          tostring(rec.front_was), tostring(rec.aim), table.concat(parts, " "))
+        assert.are_equal(32, n, "all items on near lane: " .. msg)
+        assert.are_equal(16, on(near, "iron-ore"), msg); assert.are_equal(16, on(near, "copper-ore"), msg)
+        assert.are_equal(0, on(far), "far lane untouched: " .. msg)
+        assert.are_equal(0, small, "only full belt stacks: " .. msg)
+        assert.are_equal("across", rec.aim, msg)
+        assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
+      end)
+    end)
+  end
+
+  it("belt pointing at packer flank puts nothing in", function()
+    local box, rec = build(surface, force, { front = 6 })
+    local side = {}
+    for k = 3, 1, -1 do side[#side + 1] = surface.create_entity({ name = "transport-belt", position = { 0.5 - k, 0.5 }, direction = defines.direction.east, force = force }) end
+    local fed = 0
+    run_until(function()
+      for lane = 1, 2 do
+        local line = side[1].get_transport_line(lane)
+        if line.can_insert_at_back() and line.insert_at_back({ name = "stone", count = 1 }) then fed = fed + 1 end
+      end
+    end, function(t) return t >= 600 end, 700, function()
+      local on_side = 0
+      for _, b in ipairs(side) do on_side = on_side + b.get_transport_line(1).get_item_count() + b.get_transport_line(2).get_item_count() end
+      assert.is_true(fed > 0, "side belt was fed")
+      assert.are_equal(fed, on_side, "every item still on side belt")
+      assert.are_equal(0, stored(rec), "nothing inside packer")
+      assert.are_equal(0, box.get_transport_line(1).get_item_count() + box.get_transport_line(2).get_item_count(), "nothing on belt body")
+    end)
+  end)
+
+  it("outside inserters act as with belt: drop gets packed, take never reaches stored items", function()
+    force.belt_stack_size_bonus = 3
+    local box, rec, _, front = build(surface, force, { front = 12 })
+    surface.create_entity({ name = "electric-energy-interface", position = { 6.5, 6.5 }, force = force })
+    surface.create_entity({ name = "substation", position = { 3.5, 4.5 }, force = force })
+    -- giver west of packer: chest (-1.5, 0.5) -> inserter (-0.5, 0.5) drops east onto packer tile
+    local chest_in = surface.create_entity({ name = "steel-chest", position = { -1.5, 0.5 }, force = force })
+    chest_in.get_inventory(defines.inventory.chest).insert({ name = "plastic-bar", count = 24 })
+    local giver = surface.create_entity({ name = "bulk-inserter", position = { -0.5, 0.5 }, direction = defines.direction.west, force = force })
+    -- taker east of packer: takes from packer tile into chest (2.5, 0.5)
+    local chest_out = surface.create_entity({ name = "steel-chest", position = { 2.5, 0.5 }, force = force })
+    local taker = surface.create_entity({ name = "bulk-inserter", position = { 1.5, 0.5 }, direction = defines.direction.west, force = force })
+    rec.invs[1].insert({ name = "iron-plate", count = 3 })  -- leftover: stays inside, taker must not get it
+    local function plastic_out() return total(output(front, 1), "plastic-bar") + total(output(front, 2), "plastic-bar") end
+    run_until(function() end, function() return plastic_out() + chest_out.get_item_count("plastic-bar") >= 24 end, 1800, function()
+      local msg = string.format("giver.drop_target=%s taker.pickup_target=%s out=%d taken=%d inside=%d chest_in=%d", tostring(giver.drop_target and giver.drop_target.name),
+        tostring(taker.pickup_target and taker.pickup_target.name), plastic_out(), chest_out.get_item_count(), stored(rec), chest_in.get_item_count())
+      assert.are_equal(box.name, giver.drop_target and giver.drop_target.name, msg)
+      assert.are_equal(box.name, taker.pickup_target and taker.pickup_target.name, msg)
+      assert.are_equal(24, plastic_out() + chest_out.get_item_count("plastic-bar") + stored(rec, "plastic-bar"), "no plastic lost: " .. msg)
+      assert.are_equal(0, chest_out.get_item_count("iron-plate"), "stored items never taken by outside inserter: " .. msg)
+      assert.are_equal(3, stored(rec, "iron-plate"), msg)
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
+    end)
+  end)
+
+  it("packer feeding packer: nothing lost, lanes kept", function()
+    force.belt_stack_size_bonus = 3
+    local _, rec, feed = build(surface, force, { front = 0 })
+    surface.create_entity({ name = N.placer("yellow"), position = { 0.5, -0.5 }, direction = NORTH, force = force, raise_built = true })
+    local second = storage.boxes[find_box(surface, { 0.5, -0.5 }).unit_number]
+    local front = {}
+    for i = 1, 12 do front[i] = surface.create_entity({ name = "transport-belt", position = { 0.5, -0.5 - i }, direction = NORTH, force = force }) end
+    run_until(feeder(feed, { rep("iron-ore", 40), rep("copper-ore", 40) }), function() return total(output(front, 1)) + total(output(front, 2)) >= 80 end, 3000, function()
+      local l, r = output(front, 1), output(front, 2)
+      local msg = string.format("out=%d/%d first=%d second=%d", total(l), total(r), stored(rec), stored(second))
+      assert.are_equal(80, total(l) + total(r) + stored(rec) + stored(second), "nothing lost: " .. msg)
+      assert.are_equal(40, total(l, "iron-ore"), msg); assert.are_equal(40, total(r, "copper-ore"), msg)
+      assert.are_equal(0, total(l, "copper-ore") + total(r, "iron-ore"), "lanes kept: " .. msg)
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
+    end)
+  end)
 end)

@@ -323,8 +323,10 @@ end
 function M.can_push(rec, lane)
   local belt = cached(rec, "front", 1)
   if not belt then
+    -- back of near lane: belt fed only by packer is drawn and laid as a curve, its inner (near) lane is shorter than
+    -- half a tile, so a fixed spot like 0.5 is refused (game 2026-10-02: split leftovers never merged out)
     local line = across(rec)
-    return line ~= nil and line.can_insert_at(0.5)
+    return line ~= nil and line.can_insert_at_back()
   end
   local line = transport_line(rec, "front", lane)
   return line ~= nil and line.can_insert_at_back()
@@ -352,8 +354,8 @@ function M.push(rec, lane, item, belt_stack_size)
     if not line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
   else
     line = across(rec)
-    if not line or not line.can_insert_at(0.5) then return 0 end
-    if not line.insert_at(0.5, { name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
+    if not line or not line.can_insert_at_back() then return 0 end
+    if not line.insert_at_back({ name = item.name, count = item.count, quality = item.quality }, belt_stack_size) then return 0 end
   end
   if counters then counters.pushes = counters.pushes + 1; counters.items_out = counters.items_out + item.count end
   return item.count
