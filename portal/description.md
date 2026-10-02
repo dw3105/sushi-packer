@@ -2,7 +2,7 @@
 
 **Turn a mixed "sushi" belt into neat stacked belt items — without splitting lanes.**
 
-With belt stacking enabled, hidden inserters move items in and out of the box, so it needs very little script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them.
+With belt stacking enabled, hidden inserters move items in and out of the box, so it needs very little script time. Each lane holds 12 slots. Since 0.1.17 the box is a belt piece: belts join it, the game rotates it, and wires work as on a belt. Its own window shows both lanes.
 
 Sushi Packer is a 1×1 box you place straight onto a belt. Items of any kind ride in on both lanes. The box keeps the two lanes apart, gathers each item kind until it fills one belt stack, then sends that stack out on the same lane it came in on. One belt, many item kinds, fully stacked — no splitters, no filter inserters, no sorting spaghetti.
 
@@ -68,7 +68,7 @@ Each tier has its own technology after its belt technology. Upgrade planner swap
 ## Requirements
 
 - **Space Age** is optional; belt stacking research can also come from Stack Inserters or Infinite Belt Stacking.
-- Factorio 2.0 → mod version **0.1.16**; Factorio 2.1 → mod version **0.2.16**. Same features in both.
+- Factorio 2.0 → mod version **0.1.17**; Factorio 2.1 → mod version **0.2.17**. Same features in both.
 
 ## Source and bug reports
 

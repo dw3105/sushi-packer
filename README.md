@@ -4,7 +4,7 @@
 
 Sushi Packer is a 1×1 inline belt box for mixed item belts. It keeps the two belt lanes separate, gathers each item type until it fills one belt stack (1 item before belt stacking research, then whatever research sets: 4 in vanilla Space Age, more when a mod raises it), then sends that stack forward as one stacked belt item. The box preserves the lane each item entered on.
 
-With belt stacking enabled, hidden inserters move items in and out of the box, so it needs very little script time. Each lane holds 12 slots. Its window shows both lanes, and you can take items by clicking them. Items below one full stack wait in a hidden inserter hand until the stack is complete or the flush timer runs out.
+With belt stacking enabled, hidden inserters move items in and out of the box, so it needs very little script time. Each lane holds 12 slots. Since 0.1.17 the box is a belt piece: belts join it, the game rotates it, and wires work as on a belt. Its own window shows both lanes. Items below one full stack wait in a hidden inserter hand until the stack is complete or the flush timer runs out.
 
 ## Tiers and recipes
 
@@ -49,7 +49,7 @@ The map setting **Sushi packer flush timeout** sets the default age, in seconds,
 
 ## Factorio versions
 
-The source supports two builds: Factorio 2.0 uses mod version `0.1.16`; Factorio 2.1 uses mod version `0.2.16`. Space Age is optional.
+The source supports two builds: Factorio 2.0 uses mod version `0.1.17`; Factorio 2.1 uses mod version `0.2.17`. Space Age is optional.
 
 ## Mod portal assets
 

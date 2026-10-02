@@ -1,4 +1,32 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.17
+Date: 2026-10-02
+  Changes:
+    - The box is now a belt piece instead of a chest: the game rotates it like a belt (R), and upgrade planner, copy-paste and blueprints carry its circuit settings like on a belt.
+    - Circuit network: enable condition and "read contents" are the belt's own settings. Read contents shows every item inside the box and is on by default.
+    - A belt running across in front of the box now gets the stacks on its near lane, like from a belt. A belt pointing at the side of the box puts nothing in.
+    - Inserters next to a box drop onto its belt piece (the items get packed) and take only what lies on that piece, not stored items.
+    - The box has its own window (click it). Items shown there can no longer be taken by hand; mine the box to get them.
+    - The box item no longer has rotate key bindings of its own.
+    - Boxes in existing saves and blueprints are converted on load; items, settings and wires are kept.
+  Bugfixes:
+    - A rotated or upgraded box with nothing in front could drop stored items on the ground.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.1.17
+Date: 2026-10-02
+  Changes:
+    - The box is now a belt piece instead of a chest: the game rotates it like a belt (R), and upgrade planner, copy-paste and blueprints carry its circuit settings like on a belt.
+    - Circuit network: enable condition and "read contents" are the belt's own settings. Read contents shows every item inside the box and is on by default.
+    - A belt running across in front of the box now gets the stacks on its near lane, like from a belt. A belt pointing at the side of the box puts nothing in.
+    - Inserters next to a box drop onto its belt piece (the items get packed) and take only what lies on that piece, not stored items.
+    - The box has its own window (click it). Items shown there can no longer be taken by hand; mine the box to get them.
+    - The box item no longer has rotate key bindings of its own.
+    - Boxes in existing saves and blueprints are converted on load; items, settings and wires are kept.
+  Bugfixes:
+    - A rotated or upgraded box with nothing in front could drop stored items on the ground.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.2.16
 Date: 2026-10-02
   Optimisations:
