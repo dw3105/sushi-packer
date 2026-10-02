@@ -17,3 +17,11 @@
 **Bench row** — one tier, 200 boxes, full flow, belt stack 4. Standing rows: yellow, red, blue, turbo, fastest extra tier live for that game version.
 
 **Root tier** — tier at start of chain; recipe needs no earlier box. Yellow; Space Exploration space tier.
+
+**Packer** (also "box") — whole one-tile thing player places inline on belt. "Box" never means chest kind underneath.
+
+**Lane store** — holding place inside packer, one per lane, for items waiting to become full belt stacks.
+
+**Belt body** — packer that is itself belt piece: belt behind joins it like belt, it turns like belt, wire options are belt's own. Opposite: **chest body** (packer up to v1.16).
+
+**Side-loading in** — belt pointing at packer's flank pushing items into it. **Sideways front** — belt in front of packer running across; packer pushes onto its near lane like belt does.
