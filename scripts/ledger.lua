@@ -404,7 +404,16 @@ function M.hands(state, lane, held, opts)
       for i = 1, n do if held[i].arm == arm and HAND_KEY[i] == key and not HAND_MERGED[i] then still = true; break end end
       if not still then memory[arm], since[arm], counts_mem[arm] = nil, nil, nil end
     end
-    sweep[lane] = tick + SWEEP
+    -- next sweep: normal pace, or sooner when a remembered hand runs out of time before that (not before next look)
+    local next_sweep = tick + SWEEP
+    if timeout > 0 then
+      for arm in pairs(memory) do
+        local ends = since[arm] + timeout
+        if ends < next_sweep then next_sweep = ends end
+      end
+      if next_sweep < tick + 30 then next_sweep = tick + 30 end
+    end
+    sweep[lane] = next_sweep
   end
   for i = 2, out_n do
     local arm, j = HANDS_OUT[i], i - 1
