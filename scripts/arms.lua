@@ -130,6 +130,7 @@ function M.create(rec)
   rec.skip = { "", "" }
   rec.out_paused = { true, true }
   rec.hand = bss
+  rec.steer = nil  -- fresh out arms carry no filters
   if _valid(rec.hood) and rec.hood.name ~= N.hood(rec.tier) then rec.hood.destroy() end  -- upgrade: hood of new tier
   if not _valid(rec.hood) then
     rec.hood = surface.create_entity { name = N.hood(rec.tier), position = pos, force = force }
@@ -217,6 +218,34 @@ function M.need_slot(rec, lane, contents)
     end
   end
   return false
+end
+
+-- v20 (V20-1): kinds out arms of a lane may take (whitelist), nil = anything (filters off). 5 filter slots per arm:
+-- with more kinds each arm gets its own window of the list. Writes only when the list changed.
+function M.steer(rec, lane, kinds)
+  rec.steer = rec.steer or {}
+  if kinds == nil then
+    if rec.steer[lane] == nil then return end
+    for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+      if _valid(arm) then arm.use_filters = false end
+    end
+    rec.steer[lane] = nil
+    return
+  end
+  local signature = _signature(kinds)
+  if rec.steer[lane] == signature then return end
+  local n = #kinds
+  for j, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+    if _valid(arm) then
+      arm.use_filters = true
+      arm.inserter_filter_mode = "whitelist"
+      for i = 1, N.ARM_FILTERS do
+        local kind = i <= n and kinds[(j + i - 2) % n + 1] or nil
+        arm.set_filter(i, kind and { name = kind.name, quality = kind.quality, comparator = "=" } or nil)
+      end
+    end
+  end
+  rec.steer[lane] = signature
 end
 
 function M.pause_out(rec, lane, paused)

@@ -229,6 +229,17 @@ local SCAN_NAMES, SCAN_QUALITIES, SCAN_COUNTS, SCAN_SIZES, SCAN_KIND_KEYS = {}, 
 local SCAN_PRESENT = {}
 local HANDS_OUT = {}
 local function look_key(name, quality) return name .. "\0" .. quality end
+local STEER_OUT, STEER_POOL = {}, {}
+local STEER_OFF = 10
+local STEER_FREE = 3
+-- Kinds out arms of this lane may take, from the scan just made for it: reused array of { name, quality } (may be
+-- empty: nothing has a full stack yet), or nil when lane is not steered.
+function M.steer(state, lane)
+  local steer = state.steer
+  if steer and steer[lane] ~= nil then return STEER_OUT end
+  return nil
+end
+
 function M.scan(state, lane, contents, opts)
   local left = state.left
   if not left then left = { {}, {} }; state.left = left end
@@ -271,6 +282,10 @@ function M.scan(state, lane, contents, opts)
 
   local flush_all = opts.flush_all
   local pressured = opts.need_slot and opts.slots_used >= opts.slots
+  -- v20: steered lane keeps STEER_FREE slots free (leftover kinds wait in store there, new kinds keep arriving):
+  -- oldest leftovers leave as they are, several per look
+  local steered = state.steer ~= nil and state.steer[lane] ~= nil
+  local spare = steered and (opts.slots_used - (opts.slots - STEER_FREE)) or 0
   local oldest_i, oldest_tick
   for i = 1, n do
     if counts[i] < sizes[i] then
@@ -289,6 +304,19 @@ function M.scan(state, lane, contents, opts)
     for i = 1, out_n do if SCAN_OUT[i].name == names[oldest_i] and SCAN_OUT[i].quality == qualities[oldest_i] then already = true; break end end
     if not already then add(contents[oldest_i], sizes[oldest_i], keys[oldest_i]) end
   end
+  while spare > 0 do
+    local pick, pick_tick
+    for i = 1, n do
+      if counts[i] < sizes[i] and clocks[keys[i]] ~= nil then
+        local age = clocks[keys[i]]
+        if pick_tick == nil or age < pick_tick or (age == pick_tick and (names[i] < names[pick] or
+            (names[i] == names[pick] and qualities[i] < qualities[pick]))) then pick, pick_tick = i, age end
+      end
+    end
+    if not pick then break end
+    add(contents[pick], sizes[pick], keys[pick])  -- clears its clock: not picked twice
+    spare = spare - 1
+  end
   for i = out_n + 1, #SCAN_OUT do SCAN_OUT[i] = nil end
   -- hand look is costly: only on flush_all, at sweep, or when lane looks jammed (full stacks seen at two looks in a
   -- row AND store piles up: 16 belt stacks or more). A busy healthy lane holds few items (FND-0046).
@@ -305,6 +333,29 @@ function M.scan(state, lane, contents, opts)
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled
+  -- v20 steering (V20-1): a jammed lane gets out arms that may take only kinds with a full belt stack in store, so no
+  -- arm picks up a leftover again. state.steer[lane] = looks in a row without any leftover kind in store, nil = off.
+  -- Stays on while leftovers are around (rare kinds trickling in), goes off after STEER_OFF quiet looks.
+  local steer = state.steer
+  if not steer then steer = {}; state.steer = steer end
+  local sn = 0
+  if piled or steer[lane] ~= nil then
+    local partial = false
+    for i = 1, n do
+      if counts[i] >= sizes[i] then
+        sn = sn + 1
+        local k = STEER_POOL[sn]
+        if not k then k = {}; STEER_POOL[sn] = k end
+        k.name, k.quality = names[i], qualities[i]
+        STEER_OUT[sn] = k
+      else
+        partial = true
+      end
+    end
+    if piled or partial then steer[lane] = 0 else steer[lane] = steer[lane] + 1 end
+    if steer[lane] > STEER_OFF then steer[lane] = nil end
+  end
+  for i = sn + 1, #STEER_OUT do STEER_OUT[i] = nil end
   -- busy lane (full stack in store now): hands fill by themselves, sweep late
   local due = (sweep[lane] or 0) + (ready[lane] > 0 and 480 or 0)
   local want = flush_all or piled or tick >= due

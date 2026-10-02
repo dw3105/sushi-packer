@@ -44,14 +44,14 @@ local function setup(speed)
   local box = entity({ name="box", position={x=10,y=20}, force="force" })
   box.get_inventory=function() return box.inventory end
   local rec = { entity=box, tier="turbo", dir="north" }
-  prototypes = { entity = { [N.TIER.turbo.belt] = { belt_speed=speed or 0.125 } } }
+  prototypes = { entity = { [N.TIER.turbo.belt] = { belt_speed=speed or 0.0625 } } }
   defines = { direction={north=0,east=4,south=8,west=12}, inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={script=3} }
   return rec, surface, created, writes, connectors, entity
 end
 
 describe("arms v17", function()
   it("count from speed table", function()
-    eq(arms.count(0.03125),4); eq(arms.count(0.0625),4); eq(arms.count(0.125),4)
+    eq(arms.count(0.03125),4); eq(arms.count(0.0625),4); eq(arms.count(0.09375),4); eq(arms.count(0.125),6)  -- v20: turbo 6 (single rare items, FND-0052)
     eq(arms.count(0.15625),8); eq(arms.count(0.3),8); eq(arms.count(0.3125),12); eq(arms.count(0.5625),12)
   end)
   it("create makes two stores and n arms per lane", function()
@@ -131,7 +131,7 @@ describe("arms v17", function()
     a.held_stack={valid_for_read=true,name=name,count=count,quality={name=quality or "normal"},clear=function() a.held_stack.valid_for_read=false end}
   end
   it("create uses out arm of tier speed when that prototype exists", function()
-    local rec, surface, created = setup()
+    local rec, surface, created = setup(0.125)
     prototypes.entity[N.OUT .. "-10"] = {}
     rec.entity.surface = surface
     arms.create(rec)
@@ -307,4 +307,42 @@ describe("arms v17", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.mop[1][1],"iron-plate",1)
       eq(arms.need_slot(rec,1,{}),true)
     end)
+end)
+
+describe("arms v20", function()
+  local function K(...) local t={} for i,n in ipairs({...}) do t[i]={name=n,quality="normal"} end return t end
+  local function filters(arm) local o={} for i=1,N.ARM_FILTERS do o[i]=arm.filters[i] and arm.filters[i].name or false end return o end
+  it("steer whitelists kinds on out arms of that lane only", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+    arms.steer(rec,1,K("iron","gear"))
+    for _,a in ipairs(rec.out[1]) do eq(a.use_filters,true); eq(a.inserter_filter_mode,"whitelist") end
+    eq(filters(rec.out[1][1]),{"iron","gear",false,false,false}); eq(filters(rec.out[1][2]),{"gear","iron",false,false,false})
+    eq(rec.out[1][1].filters[1],{name="iron",quality="normal",comparator="="})
+    eq(rec.out[2][1].use_filters,nil); eq(rec.arms[1][1].use_filters,nil)
+  end)
+  it("steer with more kinds than slots gives each arm its own window", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+    arms.steer(rec,1,K("a","b","c","d","e","f","g"))
+    eq(filters(rec.out[1][1]),{"a","b","c","d","e"}); eq(filters(rec.out[1][3]),{"c","d","e","f","g"}); eq(filters(rec.out[1][7]),{"g","a","b","c","d"})
+  end)
+  it("steer writes only when list changed", function()
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec)
+    arms.steer(rec,1,K("iron")); local n=writes.filters; local u=writes.use_filters
+    arms.steer(rec,1,K("iron")); eq(writes.filters,n); eq(writes.use_filters,u)
+    arms.steer(rec,1,K("gear")); ok(writes.filters>n)
+  end)
+  it("steer with empty list lets arms take nothing", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+    arms.steer(rec,1,{}); eq(rec.out[1][1].use_filters,true); eq(rec.out[1][1].inserter_filter_mode,"whitelist"); eq(filters(rec.out[1][1]),{false,false,false,false,false})
+  end)
+  it("steer nil switches filters off once", function()
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec)
+    arms.steer(rec,1,nil); eq(writes.use_filters,nil,"never steered: no write")
+    arms.steer(rec,1,K("iron")); arms.steer(rec,1,nil); eq(rec.out[1][1].use_filters,false); local u=writes.use_filters
+    arms.steer(rec,1,nil); eq(writes.use_filters,u)
+  end)
+  it("new arms forget steering", function()
+    local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.steer(rec,1,K("iron")); arms.create(rec)
+    eq(rec.steer,nil); eq(rec.out[1][1].use_filters,nil)
+  end)
 end)

@@ -32,7 +32,7 @@ function N.out_name(speed) return N.OUT .. "-" .. N.out_swing(speed) end        
                                            -- in hand until 12 of one kind while lane store ran empty (trace 2026-10-01, blue dip)
 -- arms per lane by belt speed (tiles per tick), first row whose `max` >= speed (FND-0042)
 -- hand 4: 270/s needs 12 (8 gave 1271 of 1350); yellow needs 4 (2 passed 95.7 % of a belt of mixed stacks, bench 2026-10-01)
-N.ARMS = { { max = 0.125, n = 4 }, { max = 0.3, n = 8 }, { max = math.huge, n = 12 } }
+N.ARMS = { { max = 0.1, n = 4 }, { max = 0.125, n = 6 }, { max = 0.3, n = 8 }, { max = math.huge, n = 12 } }
 
 -- Per tier: matching vanilla belt, its tech, belt-items per lane per tick (O-4, E-4).
 -- Recipe (U-2, author 2026-09-26): base (steel-chest or previous tier box) + 1 splitter + 2 inserter + circuits.
