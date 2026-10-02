@@ -9,12 +9,12 @@ local led=require("scripts.led")
 local function inv(contents)
   local x={items=contents or {},reads=0,removed={}}
   function x.get_contents() x.reads=x.reads+1; local a={}; for i,v in ipairs(x.items) do a[i]={name=v.name,quality=v.quality,count=v.count} end; return a end
-  function x.count_empty_stacks() return 12-#x.items end
+  function x.count_empty_stacks() return 24-#x.items end
   function x.remove(v) x.removed[#x.removed+1]=v; return v.count end
   x.inserted={}; x.room=1000
   function x.insert(v) local n=math.min(v.count,x.room); x.inserted[#x.inserted+1]={name=v.name,quality=v.quality,count=v.count}; return n end
   function x.is_empty() return #x.items==0 end
-  return setmetatable(x,{__len=function() return 12 end})
+  return setmetatable(x,{__len=function() return 24 end})
 end
 local function fixture()
   defines={inventory={chest=1},gui_type={entity=1}}
@@ -103,7 +103,7 @@ describe("tick look",function()
     ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
   end)
   it("hands are read only when wanted",function() local f=fixture(); f.run(30); eq(#f.held_calls,0); f.wants[1]=true; f.held_values[1]={{arm=2,name="iron",quality="rare",count=2},{arm=5,name="gear",quality="normal",count=1}}; f.hand_indices[1]={2,5}; f.run(60); eq(f.held_calls,{1}); eq(#f.hands,1); eq(f.pushes[1].piece,{name="iron",quality="rare",count=2}); eq(f.clears,{{1,2},{1,5}}); f.restore(); local g=fixture(); g.wants[1]=true; g.held_values[1]={{arm=2,name="iron",quality="rare",count=2}}; g.hand_indices[1]={2}; g.fail_at=1; g.run(30); eq(#g.clears,0); g.restore() end)
-  it("need_slot only asked when store is full",function() local f=fixture(); local contents={}; for i=1,12 do contents[i]={name="iron",quality="q"..i,count=4} end; f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 0 end; f.run(30); eq(f.need_calls,{1}); eq(f.scans[1].snapshot.need_slot,true); f.restore() end)
+  it("need_slot only asked when store is full",function() local f=fixture(); local contents={}; for i=1,24 do contents[i]={name="iron",quality="q"..i,count=4} end; f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 0 end; f.run(30); eq(f.need_calls,{1}); eq(f.scans[1].snapshot.need_slot,true); f.restore() end)
   it("led and used slots",function() local f=fixture(); f.rec.invs[1]=inv({{name="iron",quality="normal",count=5}}); f.run(30); eq(f.rec.used[1],1); eq(f.ledcalls,{{"yellow",true}}); f.restore() end)
   it("mode switch",function()
     -- INT schedule: engine-mode box is touched only at its look ticks, so a new filter is seen at next look (<= 30 ticks)
@@ -206,3 +206,31 @@ describe("tick look",function()
   end)
   it("counters count looks",function() local f=fixture(); tick.counters_on(); f.run(30); eq(storage.sp_counters.visits,1); f.restore() end)
 end)
+describe("tick v21",function()
+  local function hot_fixture(contents, steer)
+    local f=fixture(); f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 24-#contents end
+    local old=ledger.steer; ledger.steer=function(_,lane) return steer and lane==1 and {} or nil end
+    return f,function() ledger.steer=old; f.restore() end
+  end
+  it("pressured steered packer gets extra looks",function()
+    local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(x,true); for t=1,30 do f.run(t) end; eq(f.rec.hot,true); ok(storage.sched.hot[30]); eq(f.evals,6); done()
+  end)
+  it("extra looks stop when pressure is gone",function()
+    local x={}; for i=1,10 do x[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(x,true); f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot,nil); f.run(31); eq(f.evals,1); done()
+    local g,done2=hot_fixture(x,false); g.run(30); eq(g.rec.hot,nil); eq(storage.sched.hot,nil); done2()
+  end)
+  it("no extra look on own look tick",function()
+    local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(x,true); f.run(30); eq(f.evals,1); done()
+  end)
+  it("script way packer never gets extra looks",function()
+    local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot,nil); f.restore()
+  end)
+  it("schedule rebuild keeps hot packers",function()
+    local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(x,true); f.rec.hot=true; storage.sched=nil; f.run(1); ok(storage.sched.hot[30]); done()
+  end)
+end)
+

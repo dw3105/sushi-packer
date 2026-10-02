@@ -4,7 +4,7 @@ describe("ledger", function()
   local function opts(t)
     t = t or {}
     return { tick=t.tick or 100, bss=t.bss or 4, stack_size=t.stack_size or function() return 100 end,
-      timeout_ticks=t.timeout_ticks or 0, slots_used=t.slots_used or 1, slots=t.slots or 12,
+      timeout_ticks=t.timeout_ticks or 0, slots_used=t.slots_used or 1, slots=t.slots or 24,
       skip=t.skip, flush_all=t.flush_all, need_slot=t.need_slot }
   end
   local function pieces(list)
@@ -48,14 +48,14 @@ describe("ledger", function()
   end)
   it("full store flushes oldest only", function()
     local s=ledger.new(); ledger.plan(s,1,{c("iron",2)},opts({tick=1})); ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({tick=2})); ledger.plan(s,1,{c("iron",2),c("copper",3),c("coal",1)},opts({tick=3}))
-    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3),c("coal",1)},opts({slots_used=12}))),{{"iron","normal",2}})
-    eq(pieces(ledger.plan(ledger.new(),1,{c("iron",4),c("copper",2)},opts({slots_used=12}))),{{"iron","normal",4}})
+    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3),c("coal",1)},opts({slots_used=24}))),{{"iron","normal",2}})
+    eq(pieces(ledger.plan(ledger.new(),1,{c("iron",4),c("copper",2)},opts({slots_used=24}))),{{"iron","normal",4}})
   end)
   -- integrator, v15 INT (red first): F-1 = flush only when an arriving item needs a slot; C-6 slack for items in arm hands
   it("full store without waiting new kind flushes nothing", function()
     local s=ledger.new()
-    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=12,need_slot=false}))),{})
-    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=12,need_slot=true}))),{{"copper","normal",3}})
+    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=24,need_slot=false}))),{})
+    eq(pieces(ledger.plan(s,1,{c("iron",2),c("copper",3)},opts({slots_used=24,need_slot=true}))),{{"copper","normal",3}})
   end)
   it("hoard blocks at one stack and frees at half", function()
     local function names(k) local o={}; for i,x in ipairs(k) do o[i]=x.name end; return o end
@@ -96,3 +96,27 @@ describe("ledger", function()
     walk(s)
   end)
 end)
+describe("ledger v21", function()
+  local function o(t) t=t or {}; return {tick=t.tick or 100,bss=4,stack_size=function() return 100 end,timeout_ticks=t.timeout_ticks or 0,slots=24,slots_used=t.slots_used or 24,need_slot=t.need_slot,skip=t.skip,flush_all=t.flush_all} end
+  local function c(n,k) return {name=n,quality="normal",count=k} end
+  local function p(x) local r={}; for _,v in ipairs(x) do r[#r+1]={v.name,v.count} end; return r end
+  it("full store with new kind waiting flushes oldest leftover first",function()
+    local s=ledger.new(); ledger.plan(s,1,{c("A",9)},o({tick=10,slots_used=1})); ledger.plan(s,1,{c("A",9),c("B",1)},o({tick=20,slots_used=1})); ledger.plan(s,1,{c("A",9),c("B",1),c("C",3)},o({tick=30,slots_used=1}));
+    eq(p(ledger.plan(s,1,{c("A",9),c("B",1),c("C",3)},o({tick=31}))),{{"B",1},{"A",4},{"A",4}})
+  end)
+  it("pressure flush prefers kind below one belt stack",function()
+    local s=ledger.new(); ledger.plan(s,1,{c("A",6)},o({tick=1,slots_used=1})); ledger.plan(s,1,{c("A",6),c("B",2)},o({tick=5,slots_used=1})); eq(p(ledger.plan(s,1,{c("A",6),c("B",2)},o())),{{"B",2},{"A",4}})
+    local x=ledger.new(); ledger.plan(x,1,{c("A",6)},o({tick=1,slots_used=1})); ledger.plan(x,1,{c("A",6),c("D",8)},o({tick=5,slots_used=1})); eq(p(ledger.plan(x,1,{c("A",6),c("D",8)},o())),{{"A",2},{"A",4},{"D",4},{"D",4}})
+  end)
+  it("no pressure flush without need for a slot",function()
+    local function setup() local s=ledger.new(); ledger.plan(s,1,{c("A",6)},o({tick=1,slots_used=1})); ledger.plan(s,1,{c("A",6),c("D",8)},o({tick=5,slots_used=1})); return s end
+    eq(p(ledger.plan(setup(),1,{c("A",6),c("D",8)},o({need_slot=false}))),{{"D",4},{"D",4}})
+    eq(p(ledger.plan(setup(),1,{c("A",6),c("D",8)},o({slots_used=23}))),{{"D",4},{"D",4}})
+  end)
+  it("skip and timed pieces keep their rules",function()
+    local s=ledger.new(); ledger.plan(s,1,{c("A",6),c("B",2)},o({tick=1,slots_used=1})); eq(p(ledger.plan(s,1,{c("A",6),c("B",2)},o({skip=function(n) return n=="B" end}))),{{"A",2},{"B",2},{"A",4}})
+    local t=ledger.new(); ledger.plan(t,1,{c("A",6),c("B",2)},o({tick=1,slots_used=1})); eq(p(ledger.plan(t,1,{c("A",6),c("B",2)},o({tick=20,timeout_ticks=10}))),{{"A",4},{"D",4},{"A",2},{"B",2}})
+    eq(p(ledger.plan(ledger.new(),1,{c("A",6),c("D",8)},o({flush_all=true}))),{{"A",4},{"D",4},{"A",2},{"D",4}})
+  end)
+end)
+
