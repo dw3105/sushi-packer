@@ -175,6 +175,21 @@ describe("ledger look", function()
     local a, m = ledger.hands(s,1,held,opts({tick=0}))
     eq(copy(a),{1,2,3,4,5,6,7,8}); local b, m2 = ledger.hands(s,1,{},opts({tick=1})); ok(a==b); ok(m==m2); eq(copy(b),{})
   end)
+  it("idle lane sweeps after 120 ticks and merges at once", function()
+    -- INT (suite 2026-10-02): 8 plates trickled in and sat split over two hands for > 10 s. Idle = caller saw no
+    -- item on belt behind (opts.idle) and store has no full stack: no flow that would fill hands by itself.
+    local s=ledger.new(); s.sweep={300,300}
+    local _,w=ledger.scan(s,1,{},opts({tick=119,idle=true})); eq(w,false)
+    _,w=ledger.scan(s,1,{},opts({tick=120,idle=true})); eq(w,true, "idle: 180 ticks earlier than flowing lane")
+    _,w=ledger.scan(s,1,{},opts({tick=120})); eq(w,false, "not idle")
+    _,w=ledger.scan(s,1,{c("iron",4)},opts({tick=120,idle=true})); eq(w,false, "full stack in store: lane is not idle")
+    ledger.scan(s,1,{},opts({tick=120,idle=true}))  -- store empty again
+    local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",2)},opts({tick=120,idle=true,timeout_ticks=0}))
+    eq(merges(merge),{{name="iron",quality="normal",total=4,arms={1,3}}}, "no wait for stuck proof on idle lane")
+    eq(s.sweep[1],180, "sweep done: next 60 ticks after a merge")
+    local t=ledger.new(); t.sweep={300,300}
+    ledger.hands(t,1,{h(2,"gear",1)},opts({tick=120,idle=true})); eq(t.held[1][2],"gear\0normal"); eq(t.since[1][2],120); eq(t.sweep[1],420)
+  end)
   it("hands lanes are separate", function()
     local s=ledger.new(); ledger.hands(s,1,{h(2,"iron",3)},opts({tick=0}))
     eq(s.held[2][2],nil); eq(s.sweep[2] or 0,0)

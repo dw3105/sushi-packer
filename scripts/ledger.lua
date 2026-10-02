@@ -301,7 +301,10 @@ function M.scan(state, lane, contents, opts)
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled
-  local due = (sweep[lane] or 0) + (ready[lane] > 0 and 480 or 0)  -- busy lane: hands complete by themselves
+  -- busy lane: hands complete by themselves, sweep late. Idle lane (caller saw empty belt behind, no full stack in
+  -- store): nothing will fill the hands, sweep 180 ticks early (120 after previous sweep).
+  local due = sweep[lane] or 0
+  if ready[lane] > 0 then due = due + 480 elseif opts.idle then due = due - 180 end
   local want = flush_all or piled or tick >= due
   return SCAN_OUT, want
 end
@@ -328,7 +331,8 @@ function M.hands(state, lane, held, opts)
   local memory, since, counts_mem = memories[lane], sinces[lane], cmems[lane]
   local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
   local n = #held
-  local do_sweep = tick >= (sweep[lane] or 0)  -- (scan may call later than this on a busy lane)
+  local idle = opts.idle == true and (ready[lane] or 0) == 0
+  local do_sweep = tick >= (sweep[lane] or 0) - (idle and 180 or 0)  -- (scan may call later than this on a busy lane)
   local jam = state.piled ~= nil and state.piled[lane] == true  -- store piles up: arms holding leftovers are lost capacity
 
   -- per hand: belt stack size of its kind (0 = full hand, not our business), key
@@ -342,7 +346,7 @@ function M.hands(state, lane, held, opts)
     -- may this hand be merged now? Jam / flush_all: any partial hand. Quiet sweep: only a hand that did not change
     -- since previous sweep (same kind, same count): on a flowing lane partial hands fill by themselves.
     local key = HAND_KEY[i]
-    HAND_OK[i] = key and (flush_all or jam or (do_sweep and memory[h.arm] == key and counts_mem[h.arm] == h.count)) or false
+    HAND_OK[i] = key and (flush_all or jam or (do_sweep and (idle or (memory[h.arm] == key and counts_mem[h.arm] == h.count)))) or false
   end
   for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i], HAND_OK[i] = nil, nil, nil, nil end
 

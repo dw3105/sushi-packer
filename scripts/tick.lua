@@ -212,7 +212,7 @@ end
 local function engine_look(rec, tick, bss, flush_all)
   -- front belt check costs engine calls: asked once per 120 ticks (V16-6: up to 2 s late after front belt is rotated)
   local front = rec.front_was
-  if front == nil or tick - (rec.front_at or -120) >= 120 then
+  if front ~= true or tick - (rec.front_at or -120) >= 120 then  -- missing front: asked at every look
     front = belt_io.front_ok(rec); rec.front_was, rec.front_at = front, tick
   end
   local stopped = rec.enabled == false or rec.decon == true or not front
@@ -269,6 +269,9 @@ local function engine_look(rec, tick, bss, flush_all)
         opts.tick, opts.bss, opts.stack_size, opts.timeout_ticks = tick, bss, stack_size, timeout_for(rec)
         opts.slots, opts.slots_used, opts.flush_all, opts.n_out = N.STORE_SLOTS, used, flush_all, #rec.out[lane]
         opts.skip = nil
+        -- idle flag only when a hand sweep could be due (one cached belt check per lane per ~120 ticks)
+        local sweeps = rec.ledger.sweep
+        if sweeps and tick >= (sweeps[lane] or 0) - 180 then opts.idle = belt_io.behind_empty(rec, lane) else opts.idle = nil end
         local flush, want = ledger.scan(rec.ledger, lane, contents, opts)
         for i=1,#flush do
           local piece=flush[i]

@@ -95,31 +95,6 @@ describe("core fast", function()
     ok(reads <= 4,"partial reads "..reads)
   end)
 
-  it("faster than v114", function()
-    local names={"iron","copper","gear","plate","wire"}
-    local function workload(m)
-      local b=m.new_box()
-      for i=1,200000 do
-        local lane=((i-1)%2)+1
-        local name=names[((i-1)%5)+1]
-        m.accept(b,name,"normal",lane,((i-1)%4)+1,4,i,false,100000)
-        local v=m.peek_out(b,lane)
-        if v and v.count==4 then m.take_out(b,lane,4) end
-      end
-    end
-    local function measure(m)
-      local t=os.clock(); workload(m); return os.clock()-t
-    end
-    local a,b
-    for round=1,5 do
-      if round % 2 == 1 then
-        local av, bv = measure(base), measure(core)
-        a = a and math.min(a,av) or av; b = b and math.min(b,bv) or bv
-      else
-        local bv, av = measure(core), measure(base)
-        a = math.min(a,av); b = math.min(b,bv)
-      end
-    end
-    ok(b <= 0.70*a, ("new %.4fs baseline %.4fs ratio %.3f"):format(b,a,b/a))
-  end)
+  -- "faster than v114" (wall-clock comparison) removed 2026-10-02: failed twice under host load 13..18 with no code
+  -- change; scripts/core.lua is not loaded at runtime any more (V15-6).
 end)

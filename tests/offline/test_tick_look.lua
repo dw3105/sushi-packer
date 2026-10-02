@@ -83,9 +83,19 @@ describe("tick look",function()
     storage.sched=nil; f.run(60); eq(f.evals,3); ok(storage.sched ~= nil)
     f.restore()
   end)
-  it("front belt asked once per 120 ticks",function()
-    local f=fixture(); local asks=0; local real=belt.front_ok; belt.front_ok=function() asks=asks+1; return true end
-    f.run(30); f.run(60); f.run(90); f.run(120); eq(asks,1); f.run(150); eq(asks,2); belt.front_ok=real; f.restore()
+  it("front belt asked once per 120 ticks while it is there, every look while it is missing",function()
+    local f=fixture(); local asks,front=0,true; local real=belt.front_ok; belt.front_ok=function() asks=asks+1; return front end
+    f.run(30); f.run(60); f.run(90); f.run(120); eq(asks,1); f.run(150); eq(asks,2)
+    front=false; f.rec.front_at=nil; f.run(180); f.run(210); f.run(240); eq(asks,5, "missing front: asked at every look so output restarts within 30 ticks")
+    belt.front_ok=real; f.restore()
+  end)
+  it("idle flag: belt behind asked only when a hand sweep could be due",function()
+    local f=fixture(); local asks=0; local real=belt.behind_empty; belt.behind_empty=function(r,l) asks=asks+1; return true end
+    f.rec.ledger.sweep={1000,1000}
+    f.run(30); eq(asks,0); eq(f.scans[1].snapshot.idle,nil)
+    f.rec.ledger.sweep={200,1000}
+    f.run(60); eq(asks,1, "lane 1: tick 60 >= 200 - 180"); eq(f.scans[3].snapshot.idle,true); eq(f.scans[4].snapshot.idle,nil)
+    belt.behind_empty=real; f.restore()
   end)
   it("look reuses option table",function() local f=fixture(); f.run(30); local o=f.scans[1].opts; f.run(60); eq(f.scans[3].opts,o); f.restore() end)
   it("merge pushes one full stack clears hands and returns rest to store",function()

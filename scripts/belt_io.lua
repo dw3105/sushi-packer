@@ -289,6 +289,14 @@ function M.behind_kinds(rec, lane)
   return line and line.get_contents() or nil
 end
 
+-- v16: no item on this lane of belt behind (or no belt behind)? Asked rarely (before a hand sweep).
+function M.behind_empty(rec, lane)
+  local belt = cached(rec, "behind", -1)
+  if not belt then return true end
+  local line = transport_line(rec, "behind", lane)
+  return line == nil or #line == 0
+end
+
 -- v15 perf: may lane take one more belt item now? One engine call (plus side check once per tick).
 function M.can_push(rec, lane)
   local belt = cached(rec, "front", 1)
