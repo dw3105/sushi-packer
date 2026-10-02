@@ -195,6 +195,7 @@ local function engine_look(rec, tick, bss, flush_all)
   end
   if front then arms.aim_out(rec, front) end  -- no engine call when aim unchanged (parts re-made by rotation aim ahead)
   local stopped = rec.enabled == false or rec.decon == true or not front
+  local hot = false
   arms.hand(rec, bss)
   rec.used = rec.used or { 0, 0 }
   for lane=1,2 do
@@ -250,6 +251,7 @@ local function engine_look(rec, tick, bss, flush_all)
         -- v20 (V20-1): steered lane. Out arms take only kinds with a full stack; a partial hand of a kind that is
         -- not allowed any more (count fell below one stack between looks) goes back to the store.
         local allowed = ledger.steer(rec.ledger, lane)
+        if allowed ~= nil and used >= N.STORE_SLOTS - N.HOT_FREE then hot = true end
         local changed = arms.steer(rec, lane, allowed)
         if allowed and not flush_all then want = false end
         if allowed and changed and not flush_all then  -- hands are read only when the allowed list changed
@@ -306,6 +308,7 @@ local function engine_look(rec, tick, bss, flush_all)
       end
     end
   end
+  rec.hot = (not stopped and hot) and true or nil
 end
 
 local function update_led(rec)
@@ -342,7 +345,7 @@ local function build_sched()
   local units, n = {}, 0
   for unit in pairs(storage.boxes) do n = n + 1; units[n] = unit end
   table.sort(units)
-  local buckets, fast = {}, {}
+  local buckets, fast, hot = {}, {}, {}
   for k = 1, 2 * LOOK do buckets[k] = {} end
   for i = 1, n do
     local unit = units[i]
@@ -352,9 +355,10 @@ local function build_sched()
       local list = buckets[b + 1]; list[#list + 1] = unit
       list = buckets[b + LOOK + 1]; list[#list + 1] = unit
       if is_script_mode(rec) then fast[unit] = true end
+      if rec.hot then hot[unit] = true end
     end
   end
-  return { n = n, buckets = buckets, fast = fast }
+  return { n = n, buckets = buckets, fast = fast, hot = hot }
 end
 
 local function visit(rec, tick, script_mode, interval, counters)
@@ -389,6 +393,10 @@ local function visit(rec, tick, script_mode, interval, counters)
     rec.next_poll = tick + (idle and M._nap(rec.tier) or interval)
   else
     engine_look(rec, tick, bss, flush_now)
+    local sched = storage.sched
+    if sched and sched.hot then
+      if rec.hot then sched.hot[rec.unit_number] = true else sched.hot[rec.unit_number] = nil end
+    end
     rec.last_poll = tick
     rec.next_poll = tick + (interval or 0)
     rec.empty_since = nil
@@ -427,6 +435,14 @@ function M.on_tick(e)
     local rec = boxes[unit]
     if rec and rec.stores then fast_step(sched, rec, unit, tick, counters) else fast[unit] = nil end
   end
+  local hot = sched.hot
+  for unit in pairs(hot) do
+    if storage.sched ~= sched then break end
+    local rec = boxes[unit]
+    if not rec or not rec.stores or rec.hot ~= true or fast[unit] then hot[unit] = nil
+    elseif (tick + unit) % N.HOT_LOOK == 0 and (tick + unit) % LOOK ~= 0 then visit(rec, tick, false, nil, counters) end
+  end
+  if storage.sched ~= sched then return end
   local list = sched.buckets[tick % (2 * LOOK) + 1]
   for i = 1, #list do
     local unit = list[i]

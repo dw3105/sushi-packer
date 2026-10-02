@@ -4,7 +4,7 @@ describe("ledger look", function()
   local function c(name, count, quality) return { name=name, quality=quality or "normal", count=count } end
   local function opts(t)
     local o = { tick=0, bss=4, stack_size=function(name) return name == "tool" and 1 or 100 end,
-      timeout_ticks=300, slots=12, slots_used=1, need_slot=false, flush_all=false, n_out=8 }
+      timeout_ticks=300, slots=24, slots_used=1, need_slot=false, flush_all=false, n_out=8 }
     for k,v in pairs(t or {}) do o[k]=v end
     return o
   end
@@ -46,11 +46,11 @@ describe("ledger look", function()
   end)
   it("scan need_slot flushes oldest leftover when store is full", function()
     local s=ledger.new(); ledger.scan(s,1,{c("iron",3)},opts({tick=0})); ledger.scan(s,1,{c("iron",3),c("gear",1)},opts({tick=30}))
-    eq(pieces(ledger.scan(s,1,{c("iron",3),c("gear",1)},opts({tick=60,need_slot=true,slots_used=12}))),{c("iron",3)})
-    eq(pieces(ledger.scan(s,1,{c("iron",3),c("gear",1)},opts({tick=61,need_slot=true,slots_used=11}))),{})
-    eq(pieces(ledger.scan(s,1,{c("iron",4),c("gear",4)},opts({tick=62,need_slot=true,slots_used=12}))),{})
+    eq(pieces(ledger.scan(s,1,{c("iron",3),c("gear",1)},opts({tick=60,need_slot=true,slots_used=24}))),{c("iron",3)})
+    eq(pieces(ledger.scan(s,1,{c("iron",3),c("gear",1)},opts({tick=61,need_slot=true,slots_used=23}))),{})
+    eq(pieces(ledger.scan(s,1,{c("iron",4),c("gear",4)},opts({tick=62,need_slot=true,slots_used=24}))),{})
     local t=ledger.new(); ledger.scan(t,1,{c("iron",3),c("iron",2,"rare")},opts({tick=1}))
-    eq(pieces(ledger.scan(t,1,{c("iron",3),c("iron",2,"rare")},opts({tick=2,need_slot=true,slots_used=12}))),{c("iron",3)})
+    eq(pieces(ledger.scan(t,1,{c("iron",3),c("iron",2,"rare")},opts({tick=2,need_slot=true,slots_used=24}))),{c("iron",3)})
   end)
   it("scan S uses item stack size", function()
     eq(pieces(ledger.scan(ledger.new(),1,{c("tool",1)},opts())),{})
@@ -208,7 +208,7 @@ describe("ledger steer v20", function()
   local L = ledger
   local function c(name, count, quality) return { name=name, quality=quality or "normal", count=count } end
   local function opts(t)
-    local o = { tick=0, bss=4, stack_size=function() return 100 end, timeout_ticks=0, slots=12, slots_used=1, need_slot=false, flush_all=false, n_out=8 }
+    local o = { tick=0, bss=4, stack_size=function() return 100 end, timeout_ticks=0, slots=24, slots_used=1, need_slot=false, flush_all=false, n_out=8 }
     for k,v in pairs(t or {}) do o[k]=v end
     return o
   end
@@ -248,16 +248,16 @@ describe("ledger steer v20", function()
   it("steered lane keeps three slots free: oldest leftovers leave, several per look", function()
     local state=L.new(); jam(state)
     local contents={}
-    for i=1,11 do contents[i]=c("k"..string.format("%02d",i),1) end
-    for i=1,11 do L.scan(state,1,{contents[i]},opts{tick=100+i}) end  -- clocks: k01 oldest... (one kind per look, others reset)
+    for i=1,24 do contents[i]=c("k"..string.format("%02d",i),1) end
+    for i=1,24 do L.scan(state,1,{contents[i]},opts{tick=100+i}) end  -- clocks: k01 oldest... (one kind per look, others reset)
     local state2=L.new(); jam(state2)
-    L.scan(state2,1,contents,opts{tick=200,slots_used=9}); local f=L.scan(state2,1,contents,opts{tick=230,slots_used=11})
-    eq(#f,2,"11 used of 12, 3 must stay free: two leave"); eq(f[1].name,"k01"); eq(f[2].name,"k02")
-    local g=L.scan(state2,1,contents,opts{tick=260,slots_used=9}); eq(#g,0)
+    L.scan(state2,1,contents,opts{tick=200,slots_used=21}); local f=L.scan(state2,1,contents,opts{tick=230,slots_used=23})
+    eq(#f,2,"23 used of 24, 3 must stay free: two leave"); eq(f[1].name,"k01"); eq(f[2].name,"k02")
+    local g=L.scan(state2,1,contents,opts{tick=260,slots_used=21}); eq(#g,0)
   end)
   it("lane that is not steered flushes as before", function()
     local state=L.new(); local contents={}
-    for i=1,11 do contents[i]=c("k"..i,1) end
-    local f=L.scan(state,1,contents,opts{tick=10,slots_used=11}); eq(#f,0)
+    for i=1,23 do contents[i]=c("k"..i,1) end
+    local f=L.scan(state,1,contents,opts{tick=10,slots_used=23}); eq(#f,0)
   end)
 end)
