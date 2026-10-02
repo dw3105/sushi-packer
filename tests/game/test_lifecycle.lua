@@ -3,6 +3,7 @@ local registry = require("scripts.registry")
 local copy = require("scripts.copy")
 local led = require("scripts.led")
 local arms = require("scripts.arms")
+local circuit = require("scripts.circuit")
 
 local function clear(surface)
   for _, e in ipairs(surface.find_entities_filtered({ area = { { -30, -30 }, { 30, 30 } } })) do
@@ -60,6 +61,7 @@ describe("lifecycle", function()
       assert.are_equal(dir, registry.get(found[1]).dir)
       local hood = surface.find_entities_filtered({ name = N.hood("yellow"), area = { { pos[1] - 1, -1 }, { pos[1] + 1, 1 } } })
       assert.are_equal(1, #hood); assert.are_equal(defines.direction[dir], hood[1].direction)
+      assert.are.same({ found[1].position.x, found[1].position.y }, { hood[1].position.x, hood[1].position.y }, "hood sits on packer")
     end
   end)
 
@@ -208,7 +210,7 @@ describe("lifecycle", function()
     local rec = registry.get(e); rec.settings.timeout_s = 19
     rec.settings.circuit.enable = true; rec.settings.circuit.cond = { first_signal = { type = "virtual", name = "signal-A" }, comparator = ">", constant = 5 }
     rec.settings.circuit.read = false
-    require("scripts.circuit").apply(rec)
+    circuit.apply(rec)
     local inv = game.create_inventory(1); inv[1].set_stack({ name = "blueprint" })
     inv[1].create_blueprint({ surface = surface, force = force, area = { { -1, -1 }, { 2, 2 } } })
     copy.on_setup_blueprint({ stack = inv[1], mapping = { get = function() return { [1] = e } end } })
@@ -291,8 +293,21 @@ describe("lifecycle", function()
       assert.is_not_nil(nr, "rec carried")
       assert.are_equal(33, nr.settings.timeout_s)
       assert.are_equal("red", nr.tier); assert.are_equal("east", nr.dir)
-      assert.are_equal(1, nr.invs[1].get_item_count("copper-plate")); assert.are_equal(1, nr.invs[1].get_item_count())
-      assert.are_equal(6, nr.invs[2].get_item_count("coal")); assert.are_equal(6, nr.invs[2].get_item_count())
+      -- store + arm hands: a lone plate may wait in an out-arm hand (leftover, V16-3)
+      local function lane_items(r, lane, name)
+        local n = r.invs[lane].get_item_count(name)
+        for _, group in ipairs({ r.arms[lane], r.out[lane], r.mop[lane] }) do
+          for _, arm in ipairs(group) do local h = arm.held_stack; if h.valid_for_read and h.name == name then n = n + h.count end end
+        end
+        return n
+      end
+      assert.are_equal(1, lane_items(nr, 1, "copper-plate"), "store=" .. nr.invs[1].get_item_count() .. "/" .. nr.invs[2].get_item_count() .. " body=" .. new.get_transport_line(1).get_item_count() .. "/" .. new.get_transport_line(2).get_item_count()
+        .. " ground_cu=" .. dropped_count(surface, "copper-plate") .. " stores_on_tile=" .. #surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.STORE })
+        .. " cu_in_all_stores=" .. (function() local n = 0; for _, st in ipairs(surface.find_entities_filtered({ name = N.STORE })) do n = n + st.get_inventory(defines.inventory.chest).get_item_count("copper-plate") end; return n end)()
+        .. " coal_in_all_stores=" .. (function() local n = 0; for _, st in ipairs(surface.find_entities_filtered({ name = N.STORE })) do n = n + st.get_inventory(defines.inventory.chest).get_item_count("coal") end; return n end)()
+        .. " stores_valid=" .. tostring(nr.stores[1].valid) .. " inv_is_store=" .. tostring(nr.invs[1] == nr.stores[1].get_inventory(defines.inventory.chest))
+        .. " port=" .. (function() local n = 0; for _, c in ipairs(surface.find_entities_filtered({ name = "storage-chest" })) do n = n + c.get_item_count("copper-plate") end; return n end)()); assert.are_equal(0, lane_items(nr, 2, "copper-plate"))
+      assert.are_equal(6, lane_items(nr, 2, "coal")); assert.are_equal(0, lane_items(nr, 1, "coal"))
       assert.are_equal(0, dropped_count(surface, "copper-plate") + dropped_count(surface, "coal"), "nothing spilled")
       assert.are_equal(defines.direction.east, new.direction)
       assert.is_true(new.get_control_behavior().connect_to_logistic_network, "upgraded packer still shut")
@@ -302,8 +317,10 @@ describe("lifecycle", function()
       assert.are.same({ N.STORE, N.STORE }, script_targets)
       -- hidden parts: same two lane stores, arms rebuilt for red belt speed, none left over
       assert.are.same({ 2, 2 * in_arms("fast-transport-belt") }, { hidden_parts(surface, { 10.5, 18.5 }) })
-      assert.are_equal(1, #surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.hood("red") }), "hood of new tier")
-      assert.are_equal(0, #surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.hood("yellow") }), "old hood gone")
+      local hoods = {}
+      for _, h in ipairs(surface.find_entities_filtered({ type = "simple-entity-with-owner" })) do hoods[#hoods + 1] = h.name .. "@" .. h.position.x .. "," .. h.position.y end
+      assert.are.same({ N.hood("red") .. "@10.5,18.5" }, hoods, "one hood, of new tier")
+      assert.are_equal(nr.hood.name, N.hood("red"))
       assert.is_true(nr.led and nr.led.sprite.valid)
       local n = 0
       for _ in pairs(storage.boxes) do n = n + 1 end
@@ -392,8 +409,9 @@ describe("lifecycle", function()
   end)
 
   it("ghost of old blueprint builds belt body", function()
-    local e = surface.create_entity({ name = N.variant("red", "south"), position = { 0.5, 0.5 }, force = force, raise_built = true })
-    assert.is_false(e.valid)
+    -- built legacy chest is swapped inside the build event
+    surface.create_entity({ name = N.variant("red", "south"), position = { 0.5, 0.5 }, force = force, raise_built = true })
+    assert.are_equal(0, #surface.find_entities_filtered({ position = { 0.5, 0.5 }, name = N.variant("red", "south") }))
     local b = surface.find_entities_filtered({ position = { 0.5, 0.5 }, name = N.body("red") })[1]
     assert.is_not_nil(b); assert.are_equal(defines.direction.south, b.direction); assert.are_equal("south", registry.get(b).dir)
   end)

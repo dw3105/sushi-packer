@@ -118,13 +118,14 @@ describe("data", function()
   it("upgrade chain weight and no surface limit", function()
     for i, tier in ipairs(N.TIERS) do
       assert.are_equal(N.ITEM_WEIGHT, prototypes.item[N.item(tier)].weight, tier)
-      for _, dir in ipairs(N.DIRS) do
-        local p = prototypes.entity[N.variant(tier, dir)]
-        local nxt = N.TIERS[i + 1]
-        if nxt then assert.are_equal(N.variant(nxt, dir), p.next_upgrade and p.next_upgrade.name)
-        else assert.is_nil(p.next_upgrade) end
-        assert.is_nil(p.surface_conditions)
-      end
+      -- v17: upgrade chain runs over belt bodies; legacy chest boxes have none
+      local p = prototypes.entity[N.body(tier)]
+      local nxt = N.TIERS[i + 1]
+      assert.are_equal("transport-belt", p.type)
+      if nxt then assert.are_equal(N.body(nxt), p.next_upgrade and p.next_upgrade.name)
+      else assert.is_nil(p.next_upgrade) end
+      assert.is_nil(p.surface_conditions)
+      for _, dir in ipairs(N.DIRS) do assert.is_nil(prototypes.entity[N.variant(tier, dir)].next_upgrade) end
     end
   end)
 

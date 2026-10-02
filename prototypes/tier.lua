@@ -165,7 +165,9 @@ function M.make(tier, opts)
     type = "simple-entity-with-owner",
     name = N.hood(tier),
     icon = icon(tier), icon_size = 64,  -- engine asks icon of every entity (load error without)
-    flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral" },
+    -- off-grid + one-tile box: entity without size snaps to tile corner (game 2026-10-02: hood sat at 11,19 for packer at 10.5,18.5)
+    flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral", "placeable-off-grid" },
+    collision_box = { { -0.35, -0.35 }, { 0.35, 0.35 } },
     picture = placer.picture,
     collision_mask = { layers = {} },
     selectable_in_game = false,

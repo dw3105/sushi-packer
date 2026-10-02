@@ -119,14 +119,18 @@ function M.create(rec)
       local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
       arm.inserter_stack_size_override = bss  -- before it can take anything: hand = belt stack from first tick
+      -- starts paused: an out arm with nothing in front drops on the ground, and fast tiers finish a swing before
+      -- the first look. Look unpauses when front is there (game 2026-10-02: upgrade to red put stored items on ground)
+      arm.disabled_by_script = true
       arm.pickup_target = rec.stores[lane]
       rec.out[lane][#rec.out[lane] + 1] = arm
     end
   end
   rec.paused = { false, false }
   rec.skip = { "", "" }
-  rec.out_paused = { false, false }
+  rec.out_paused = { true, true }
   rec.hand = bss
+  if _valid(rec.hood) and rec.hood.name ~= N.hood(rec.tier) then rec.hood.destroy() end  -- upgrade: hood of new tier
   if not _valid(rec.hood) then
     rec.hood = surface.create_entity { name = N.hood(rec.tier), position = pos, force = force }
     rec.hood.destructible = false

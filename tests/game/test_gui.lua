@@ -44,7 +44,7 @@ describe("gui", function()
     assert.is_not_nil(f)
     local names = {}
     for _, c in ipairs(f.children) do names[#names + 1] = c.name end
-    assert.are_same({ "lanes_section", "filters_section", "timeout_section", "circuit_section" }, names)
+    assert.are_same({ "titlebar", "lanes_section", "filters_section", "timeout_section", "circuit_section" }, names)
     local lanes = f.lanes_section
     for lane = 1, 2 do
       assert.is_not_nil(lanes["lane_" .. lane], "lane row " .. lane)
@@ -53,8 +53,8 @@ describe("gui", function()
   end)
 
   it("closing removes frame", function()
-    open()
-    gui.on_closed({ player_index = player.index })
+    local f = open()
+    gui.on_closed({ player_index = player.index, element = f })
     assert.is_nil(player.gui.screen.sushi_packer_frame)
   end)
 

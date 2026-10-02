@@ -93,9 +93,10 @@ describe("arms v17", function()
     arms.destroy({arms={{ {valid=false} },{nil}},stores={{valid=false},nil},invs={}})
   end)
   it("pause writes only on change", function()
-    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.pause(rec,1,true); local n=writes.disabled_by_script
-    arms.pause(rec,1,true); eq(writes.disabled_by_script,n); eq(n,#rec.arms[1]+N.MOP_ARMS); eq(rec.arms[2][1].disabled_by_script,nil)
-    arms.pause(rec,1,false); eq(writes.disabled_by_script,2*n)
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); local base=writes.disabled_by_script  -- out arms are made paused (16 writes)
+    arms.pause(rec,1,true); local n=writes.disabled_by_script-base
+    arms.pause(rec,1,true); eq(writes.disabled_by_script-base,n); eq(n,#rec.arms[1]+N.MOP_ARMS); eq(rec.arms[2][1].disabled_by_script,nil)
+    arms.pause(rec,1,false); eq(writes.disabled_by_script-base,2*n)
   end)
   it("skip sets blacklist only on change", function()
     local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); local kinds={{name="iron-plate",quality="normal"}}
@@ -154,7 +155,7 @@ describe("arms v17", function()
 
   it("create makes out arms per lane", function()
     local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec)
-    eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{false,false}); eq(rec.hand,1, "fixture force has no bonus: belt stack 1")
+    eq(#rec.out[1],N.OUT_ARMS); eq(#rec.out[2],N.OUT_ARMS); eq(rec.out_paused,{true,true}); eq(rec.hand,1, "fixture force has no bonus: belt stack 1")
     local n=0; for _,v in ipairs(created) do if v.spec.name==N.OUT then n=n+1; eq(v.entity.destructible,false); eq(v.spec.position,rec.entity.position); eq(v.spec.force,"force") end end
     eq(n,N.OUT_ARMS*2)
   end)
@@ -185,9 +186,11 @@ describe("arms v17", function()
     arms.destroy({arms={{},{}},out={{nil,{valid=false}},{}},stores={{valid=false},nil},invs={}})
   end)
   it("pause_out writes only on change", function()
-    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.pause_out(rec,1,true); local n=writes.disabled_by_script
-    arms.pause_out(rec,1,true); eq(writes.disabled_by_script,n); eq(n,#rec.out[1]); eq(rec.out[2][1].disabled_by_script,nil); eq(rec.arms[1][1].disabled_by_script,nil)
-    arms.pause_out(rec,1,false); eq(writes.disabled_by_script,2*n)
+    local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); local base=writes.disabled_by_script  -- made paused
+    arms.pause_out(rec,1,true); eq(writes.disabled_by_script,base,"already paused: no write")
+    arms.pause_out(rec,1,false); local n=writes.disabled_by_script-base
+    arms.pause_out(rec,1,false); eq(writes.disabled_by_script-base,n); eq(n,#rec.out[1]); eq(rec.out[2][1].disabled_by_script,true); eq(rec.arms[1][1].disabled_by_script,nil)
+    arms.pause_out(rec,1,true); eq(writes.disabled_by_script-base,2*n)
   end)
   it("hand writes only on change", function()
     -- create already wrote hand 1 once (fixture force has no bonus)
@@ -257,6 +260,22 @@ describe("arms v17", function()
           eq(a.drop_position,{x=d[1],y=d[2]}); eq(a.pickup_position,{x=10-0.3*(d[1]-10),y=20-0.3*(d[2]-20)})
         end
       end end
+    end)
+    it("out arms start paused until a look finds a front", function()
+      -- INT 2026-10-02 (game: robot upgrade to red put stored items on ground): fresh out arm with no belt in front
+      -- drops on the ground; fast tiers finish a swing before first look (30 ticks)
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+      for lane=1,2 do
+        eq(rec.out_paused[lane],true)
+        for _,a in ipairs(rec.out[lane]) do eq(a.disabled_by_script,true) end
+        for _,a in ipairs(rec.arms[lane]) do eq(a.disabled_by_script,nil) end
+      end
+      arms.pause_out(rec,1,false); eq(rec.out[1][1].disabled_by_script,false); eq(rec.out[2][1].disabled_by_script,true)
+    end)
+    it("hood follows tier after upgrade", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local old=rec.hood
+      prototypes.entity[N.TIER.red.belt]={belt_speed=0.0625}; rec.tier="red"; arms.create(rec)
+      eq(old.valid,false); eq(rec.hood.name,N.hood("red"))
     end)
     it("aim unchanged writes nothing", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.aim_out(rec,"across")

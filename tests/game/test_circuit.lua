@@ -55,7 +55,8 @@ describe("circuit", function()
     wire(box, cc, "red")
     after_ticks(2, function()
       local signal = { type = "item", name = "iron-plate", quality = "uncommon" }
-      assert.are_equal(3, box.get_signal(signal, defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green))
+      -- what player sees on the wire: red network (stores hang on body by hidden wires of both colours)
+      assert.are_equal(3, box.get_circuit_network(defines.wire_connector_id.circuit_red).get_signal(signal))
     end)
   end)
 

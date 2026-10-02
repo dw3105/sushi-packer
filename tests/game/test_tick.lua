@@ -308,14 +308,21 @@ describe("tick", function()
     local box, rec, feed, front = build(surface, force, {})
     rec.settings.filters = { { name = "coal" } }
     local q = rep("iron-ore", 10); q[#q + 1] = "coal"; for i = 1, 40 do q[#q + 1] = "iron-ore" end
-    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 49 end, 3400, function()
+    -- v17: last two ore may still ride the belt behind when the 49th item is out: wait until they are inside
+    run_until(feeder(feed, { q, {} }), function() return total(output(front, 1)) >= 49 and stored(rec) >= 2 end, 3400, function()
       local seq = output(front, 1)
       assert.are_equal(1, total(seq, "coal")); assert.are_equal(48, total(seq, "iron-ore"))
       for _, s in ipairs(seq) do
         if s.name == "iron-ore" then assert.are_equal(4, s.count, "iron only in full stacks") end
       end
       assert.are_equal(0, stored(rec, "coal"), "coal not kept")
-      assert.are_equal(2, stored(rec), "only iron partial kept")
+      local behind_n = 0
+      for _, b in ipairs(surface.find_entities_filtered({ area = { { 0, 1 }, { 1, 5 } }, type = "transport-belt" })) do
+        behind_n = behind_n + b.get_transport_line(1).get_item_count() + b.get_transport_line(2).get_item_count()
+      end
+      assert.are_equal(2, stored(rec), "only iron partial kept; store=" .. rec.invs[1].get_item_count() .. "/" .. rec.invs[2].get_item_count()
+        .. " hands=" .. hands(rec, 1) .. "/" .. hands(rec, 2) .. " behind=" .. behind_n .. " out=" .. total(seq) .. " ground="
+        .. #surface.find_entities_filtered({ type = "item-entity" }))
       -- P-3: coal is its own belt item, never inside an iron stack run piece
       for _, s in ipairs(seq) do if s.name == "coal" then assert.are_equal(1, s.count) end end
     end)
@@ -368,7 +375,8 @@ describe("tick", function()
       assert.are_equal(10, rec.invs[1].get_item_count("iron-ore"))
       game.players[1].teleport({ 2.5, 0.5 }) -- within reach, or opening is refused
       game.players[1].opened = box
-      assert.are_equal(box, game.players[1].opened, "player has box open")
+      local opened = game.players[1].opened
+      assert.are_equal("sushi_packer_frame", opened and opened.object_name == "LuaGuiElement" and opened.name, "player has packer window open")
       assert.are_equal(4, rec.invs[1].remove({ name = "iron-ore", count = 4 }))
       local front = front_belts(surface, force, 0, 20, "transport-belt")
       run_until(function() end, function() return total(output(front, 1)) >= 4 end, 600, function()
