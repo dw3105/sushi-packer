@@ -320,10 +320,10 @@ describe("lifecycle", function()
       assert.are.same({ N.STORE, N.STORE }, script_targets)
       -- hidden parts: same two lane stores, arms rebuilt for red belt speed, none left over
       assert.are.same({ 2, 2 * in_arms("fast-transport-belt") }, { hidden_parts(surface, { 10.5, 18.5 }) })
-      local hoods = {}
-      for _, h in ipairs(surface.find_entities_filtered({ type = "simple-entity-with-owner" })) do hoods[#hoods + 1] = h.name .. "@" .. h.position.x .. "," .. h.position.y end
-      assert.are.same({ N.hood("red") .. "@10.5,18.5" }, hoods, "one hood, of new tier")
-      assert.are_equal(nr.hood.name, N.hood("red"))
+      -- v22 (V22-2): hood = script picture of new tier on new body, no hood entity anywhere
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "simple-entity-with-owner", name = { N.hood("yellow"), N.hood("red") } }), "no hood entity")
+      assert.is_true(nr.hood.valid); assert.are_equal(N.hood_sprite("red", nr.dir), nr.hood.sprite.name or nr.hood.sprite)
+      assert.are_equal(nr.entity, nr.hood.target.entity)
       assert.is_true(nr.led and nr.led.sprite.valid)
       local n = 0
       for _ in pairs(storage.boxes) do n = n + 1 end
