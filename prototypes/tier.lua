@@ -23,6 +23,8 @@ local function icon(tier) return G .. "icons/sushi-packer-" .. tier .. ".png" en
 function M.make(tier, opts)
   opts = opts or {}
   local T = N.TIER[tier]
+  local source_belt = data.raw["transport-belt"] and data.raw["transport-belt"][T.belt]
+  if not source_belt then error("sushi-packer: missing transport-belt prototype for tier " .. tier .. ": " .. tostring(T.belt)) end
   local recipe = T
   if T.extra and (not data.raw.item["stack-inserter"] or not data.raw.item["quantum-processor"]) then recipe = N.EXTRA_RECIPE_NOSA end
   local root_recipe = opts.root and T.extra and N.EXTRA_RECIPE_ROOT
@@ -142,7 +144,36 @@ function M.make(tier, opts)
   for k, v in pairs(common) do placer[k] = v end
   protos[#protos + 1] = placer
 
-  local next_tier = opts.next
+  local body = table.deepcopy(source_belt)
+  body.name = N.body(tier)
+  body.icon, body.icon_size = icon(tier), 64
+  body.icons = nil
+  body.localised_name = { "entity-name." .. N.placer(tier) }
+  body.minable = { mining_time = 0.2, result = N.item(tier) }
+  body.placeable_by = { item = N.item(tier), count = 1 }
+  body.fast_replaceable_group = N.FAST_REPLACE_GROUP
+  body.next_upgrade = opts.next and N.body(opts.next) or nil
+  body.related_underground_belt = nil
+  body.corpse = N.remnant(tier)
+  body.max_health = 350
+  body.se_allow_in_space = true
+  body.factoriopedia_simulation = FACTORIOPEDIA_SIMULATION
+  body.hidden_in_factoriopedia = false
+  protos[#protos + 1] = body
+
+  protos[#protos + 1] = {
+    type = "simple-entity-with-owner",
+    name = N.hood(tier),
+    flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral" },
+    picture = placer.picture,
+    collision_mask = { layers = {} },
+    selectable_in_game = false,
+    hidden = true,
+    hidden_in_factoriopedia = true,
+    max_health = 350,
+    render_layer = "object",
+  }
+
   for _, dir in ipairs(N.DIRS) do
     local box = {
       type = "container",
@@ -154,9 +185,10 @@ function M.make(tier, opts)
       picture = picture(tier, dir),
       circuit_connector = circuit_connector_definitions["chest"],
       circuit_wire_max_distance = default_circuit_wire_max_distance,
-      hidden_in_factoriopedia = dir ~= "north",
-      factoriopedia_simulation = dir == "north" and FACTORIOPEDIA_SIMULATION or nil,
-      next_upgrade = next_tier and N.variant(next_tier, dir) or nil,  -- U-3 upgrade planner, same dir
+      hidden = true,
+      hidden_in_factoriopedia = true,
+      factoriopedia_simulation = nil,
+      next_upgrade = nil,
       se_allow_in_space = true,  -- v10 Q10: Space Exploration lets flagged containers stand on space tiles; engine ignores key
     }
     for k, v in pairs(common) do box[k] = v end

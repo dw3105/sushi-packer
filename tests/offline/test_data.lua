@@ -117,7 +117,7 @@ describe("data", function()
       expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
       eq(raw.item[N.item(tier)].factoriopedia_simulation, expected, tier .. " item")
       expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
-      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation, expected, tier .. " north")
+      eq(raw["transport-belt"][N.body(tier)].factoriopedia_simulation, expected, tier .. " body")
     end
     expected.init = 'remote.call("sushi-packer", "scene", "tips")'
     eq(raw["tips-and-tricks-item"][N.TIPS].simulation, expected)
@@ -128,7 +128,7 @@ describe("data", function()
     dofile("prototypes/tips.lua")
     for _, tier in ipairs(N.TIERS) do
       eq(raw.item[N.item(tier)].factoriopedia_simulation.init_update_count, 900, tier .. " item")
-      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation.init_update_count, 900, tier .. " north")
+      eq(raw["transport-belt"][N.body(tier)].factoriopedia_simulation.init_update_count, 900, tier .. " body")
     end
     eq(raw["tips-and-tricks-item"][N.TIPS].simulation.init_update_count, 900)
   end)
@@ -208,11 +208,11 @@ describe("data", function()
     end
   end)
 
-  it("next_upgrade chain keeps direction", function()
+  it("body upgrade chain follows tier order", function()
     local raw = load()
-    eq(raw.container[N.variant("yellow", "east")].next_upgrade, N.variant("red", "east"))
-    eq(raw.container[N.variant("blue", "west")].next_upgrade, N.variant("turbo", "west"))
-    eq(raw.container[N.variant("turbo", "west")].next_upgrade, nil)
+    eq(raw["transport-belt"][N.body("yellow")].next_upgrade, N.body("red"))
+    eq(raw["transport-belt"][N.body("blue")].next_upgrade, N.body("turbo"))
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, nil)
   end)
 
   it("item weight 20 kg", function()
