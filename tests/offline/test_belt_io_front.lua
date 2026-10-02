@@ -27,18 +27,4 @@ describe("belt_io front", function()
     eq(io_.front_ok(rec_with({})), false)
     eq(io_.front_ok(rec_with({ belt("transport-belt", 4, 0.5, -0.5) })), false)
   end)
-  it("behind_empty true without belt behind or with empty lane", function()
-    _G.defines = { direction = { north = 0, east = 4, south = 8, west = 12 } }
-    _G.game = { tick = 0 }
-    package.loaded["scripts.belt_io"] = nil
-    local io_ = require("scripts.belt_io")
-    io_.set_tick(0)
-    eq(io_.behind_empty(rec_with({}), 1), true)
-    local n = 0
-    local b = belt("transport-belt", 0, 0.5, 1.5)
-    b.get_transport_line = function() return setmetatable({}, { __len = function() return n end }) end
-    local rec = rec_with({ b })
-    eq(io_.behind_empty(rec, 1), true)
-    n = 3; eq(io_.behind_empty(rec, 1), false)
-  end)
 end)

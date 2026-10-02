@@ -292,22 +292,21 @@ function M.scan(state, lane, contents, opts)
   for i = out_n + 1, #SCAN_OUT do SCAN_OUT[i] = nil end
   -- hand look is costly: only on flush_all, at sweep, or when lane looks jammed (full stacks seen at two looks in a
   -- row AND store piles up: 16 belt stacks or more). A busy healthy lane holds few items (FND-0046).
-  local piled = false
-  if ready[lane] >= 2 then
-    local total = 0
-    for i = 1, n do total = total + counts[i] end
-    piled = total >= 16 * bss
-  end
-  -- also a jam: full stacks sit in store at three looks in a row while nothing arrives (caller saw belt behind
-  -- empty): arms are not taking them, so they must all be holding leftovers.
-  if not piled and ready[lane] >= 3 and opts.idle == true then piled = true end
+  local total = 0
+  for i = 1, n do total = total + counts[i] end
+  local piled = ready[lane] >= 2 and total >= 16 * bss
+  -- second jam sign: store holds full stacks and is exactly the same (kinds, items) at three looks in a row while
+  -- front belt has room: arms are not taking them, so they all hold leftovers of other kinds.
+  local same = state.same
+  if not same then same = { 0, 0 }; state.same = same; state.last_n = { -1, -1 }; state.last_total = { -1, -1 } end
+  if full and state.last_n[lane] == n and state.last_total[lane] == total then same[lane] = same[lane] + 1 else same[lane] = 0 end
+  state.last_n[lane], state.last_total[lane] = n, total
+  if not piled and same[lane] >= 2 and opts.can_push == true then piled = true end
   local piles = state.piled
   if not piles then piles = { false, false }; state.piled = piles end
   piles[lane] = piled
-  -- busy lane: hands complete by themselves, sweep late. Idle lane (caller saw empty belt behind, no full stack in
-  -- store): nothing will fill the hands, sweep 180 ticks early (120 after previous sweep).
-  local due = sweep[lane] or 0
-  if ready[lane] > 0 then due = due + 480 elseif opts.idle then due = due - 180 end
+  -- busy lane (full stack in store now): hands fill by themselves, sweep late
+  local due = (sweep[lane] or 0) + (ready[lane] > 0 and 480 or 0)
   local want = flush_all or piled or tick >= due
   return SCAN_OUT, want
 end
@@ -317,7 +316,7 @@ end
 --   merge: at most one entry per kind: { name=, quality=, total=, arms = { ascending arm indexes } }: partial hands of
 --          one kind that together hold at least one belt stack. Caller clears those hands, pushes one full stack,
 --          puts the rest (total - S) back into the lane store.
-local SWEEP, SWEEP_SOON = 300, 60  -- hand looks cost ~80 us per lane (bench 2026-10-01): rare
+local SWEEP = 300  -- hand looks cost ~80 us per lane (bench 2026-10-01): rare
 local MERGE_OUT, MERGE_POOL = {}, {}
 local HAND_SIZE, HAND_KEY, HAND_MERGED, HAND_OK = {}, {}, {}, {}
 function M.hands(state, lane, held, opts)
@@ -334,8 +333,7 @@ function M.hands(state, lane, held, opts)
   local memory, since, counts_mem = memories[lane], sinces[lane], cmems[lane]
   local tick, timeout, bss, flush_all = opts.tick, opts.timeout_ticks, opts.bss, opts.flush_all
   local n = #held
-  local idle = opts.idle == true and (ready[lane] or 0) == 0
-  local do_sweep = tick >= (sweep[lane] or 0) - (idle and 180 or 0)  -- (scan may call later than this on a busy lane)
+  local do_sweep = tick >= (sweep[lane] or 0)  -- (scan may call later than this on a busy lane)
   local jam = state.piled ~= nil and state.piled[lane] == true  -- store piles up: arms holding leftovers are lost capacity
 
   -- per hand: belt stack size of its kind (0 = full hand, not our business), key
@@ -346,10 +344,8 @@ function M.hands(state, lane, held, opts)
     if item_size < size then size = item_size end
     if h.count < size then HAND_SIZE[i] = size; HAND_KEY[i] = look_key(h.name, h.quality) else HAND_SIZE[i] = 0; HAND_KEY[i] = false end
     HAND_MERGED[i] = false
-    -- may this hand be merged now? Jam / flush_all: any partial hand. Quiet sweep: only a hand that did not change
-    -- since previous sweep (same kind, same count): on a flowing lane partial hands fill by themselves.
-    local key = HAND_KEY[i]
-    HAND_OK[i] = key and (flush_all or jam or (do_sweep and (idle or (memory[h.arm] == key and counts_mem[h.arm] == h.count)))) or false
+    -- may this hand be merged now? At every sweep, in a jam, on flush_all.
+    HAND_OK[i] = HAND_KEY[i] and (flush_all or jam or do_sweep) or false
   end
   for i = n + 1, #HAND_SIZE do HAND_SIZE[i], HAND_KEY[i], HAND_MERGED[i], HAND_OK[i] = nil, nil, nil, nil end
 
@@ -408,7 +404,7 @@ function M.hands(state, lane, held, opts)
       for i = 1, n do if held[i].arm == arm and HAND_KEY[i] == key and not HAND_MERGED[i] then still = true; break end end
       if not still then memory[arm], since[arm], counts_mem[arm] = nil, nil, nil end
     end
-    sweep[lane] = tick + (merge_n > 0 and SWEEP_SOON or SWEEP)
+    sweep[lane] = tick + SWEEP
   end
   for i = 2, out_n do
     local arm, j = HANDS_OUT[i], i - 1

@@ -89,16 +89,6 @@ describe("tick look",function()
     front=false; f.rec.front_at=nil; f.run(180); f.run(210); f.run(240); eq(asks,5, "missing front: asked at every look so output restarts within 30 ticks")
     belt.front_ok=real; f.restore()
   end)
-  it("idle flag: belt behind asked only when a hand sweep could be due",function()
-    local f=fixture(); local asks=0; local real=belt.behind_empty; belt.behind_empty=function(r,l) asks=asks+1; return true end
-    f.rec.ledger.sweep={1000,1000}
-    f.run(30); eq(asks,0); eq(f.scans[1].snapshot.idle,nil)
-    f.rec.ledger.sweep={200,1000}
-    f.run(60); eq(asks,1, "lane 1: tick 60 >= 200 - 180"); eq(f.scans[3].snapshot.idle,true); eq(f.scans[4].snapshot.idle,nil)
-    f.rec.ledger.sweep={1000,1000}; f.rec.ledger.ready={0,2}; asks=0
-    f.run(90); eq(asks,1, "lane 2 had full stacks at two looks: ask whether anything still arrives"); eq(f.scans[6].snapshot.idle,true)
-    belt.behind_empty=real; f.restore()
-  end)
   it("look reuses option table",function() local f=fixture(); f.run(30); local o=f.scans[1].opts; f.run(60); eq(f.scans[3].opts,o); f.restore() end)
   it("merge pushes one full stack clears hands and returns rest to store",function()
     local f=fixture(); f.wants[1]=true
@@ -138,6 +128,13 @@ describe("tick look",function()
     storage.belt_stack[1]=1; f.outs={}; f.plans=0; f.run(30)
     eq(#f.scans,2, "belt stack 1: engine path needs no stacking"); eq(f.plans,0)
     script=nil; tick._reset_flags(); f.restore()
+  end)
+  it("front room is asked only when store looked the same at last look",function()
+    local f=fixture(); local asks=0; local real=belt.can_push; belt.can_push=function() asks=asks+1; return true end
+    f.run(30); eq(asks,0); eq(f.scans[1].snapshot.can_push,nil)
+    f.rec.ledger.same={0,1}
+    f.run(60); eq(asks,1); eq(f.scans[3].snapshot.can_push,nil); eq(f.scans[4].snapshot.can_push,true)
+    belt.can_push=real; f.restore()
   end)
   it("counters count looks",function() local f=fixture(); tick.counters_on(); f.run(30); eq(storage.sp_counters.visits,1); f.restore() end)
 end)

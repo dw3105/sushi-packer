@@ -269,13 +269,9 @@ local function engine_look(rec, tick, bss, flush_all)
         opts.tick, opts.bss, opts.stack_size, opts.timeout_ticks = tick, bss, stack_size, timeout_for(rec)
         opts.slots, opts.slots_used, opts.flush_all, opts.n_out = N.STORE_SLOTS, used, flush_all, #rec.out[lane]
         opts.skip = nil
-        -- idle flag only when a hand sweep could be due (one cached belt check per lane per ~120 ticks)
-        local sweeps, readies = rec.ledger.sweep, rec.ledger.ready
-        if (sweeps and tick >= (sweeps[lane] or 0) - 180) or (readies and readies[lane] >= 2) then
-          opts.idle = belt_io.behind_empty(rec, lane)
-        else
-          opts.idle = nil
-        end
+        -- front room matters only for the "store unchanged" jam sign: asked when store was same at last look
+        local same = rec.ledger.same
+        if same and same[lane] >= 1 then opts.can_push = belt_io.can_push(rec, lane) else opts.can_push = nil end
         local flush, want = ledger.scan(rec.ledger, lane, contents, opts)
         for i=1,#flush do
           local piece=flush[i]

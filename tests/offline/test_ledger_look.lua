@@ -98,18 +98,6 @@ describe("ledger look", function()
     local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",3),h(4,"copper",1),h(6,"iron",1)},opts({tick=0}))
     eq(copy(flush),{4}, "piled: copper can not merge -> flushed; third iron hand waits for a later merge"); eq(merges(merge),{{name="iron",quality="normal",total=5,arms={1,3}}})
   end)
-  it("hands on a quiet sweep merge only hands unchanged since previous sweep", function()
-    -- INT (bench 2026-10-01): on a flowing lane partial hands are normal and fill by themselves; merging them at
-    -- every sweep made script push 15 % of all stacks. Stuck = same arm, same kind, same count one sweep later.
-    local s=ledger.new()
-    local held={h(1,"iron",2),h(3,"iron",3)}
-    local flush, merge = ledger.hands(s,1,held,opts({tick=0,timeout_ticks=0}))
-    eq(merges(merge),{}, "first sweep only remembers"); eq(s.sweep[1],300)
-    flush, merge = ledger.hands(s,1,{h(1,"iron",3),h(3,"iron",3)},opts({tick=300,timeout_ticks=0}))
-    eq(merges(merge),{}, "arm 1 grew: lane is flowing, not stuck")
-    flush, merge = ledger.hands(s,1,{h(1,"iron",3),h(3,"iron",3)},opts({tick=600,timeout_ticks=0}))
-    eq(merges(merge),{{name="iron",quality="normal",total=6,arms={1,3}}}); eq(s.sweep[1],660, "sooner after a merge")
-  end)
   it("hands merge needs a full stack and same quality", function()
     local s=ledger.new(); s.sweep={1000,1000}; s.piled={true,false}
     local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(2,"iron",1),h(3,"iron",2,"rare")},opts({tick=0}))
@@ -158,12 +146,6 @@ describe("ledger look", function()
     local s=ledger.new(); local x={h(2,"iron",3)}
     for _,tick in ipairs({0,300,600,3600}) do eq(copy(ledger.hands(s,1,x,opts({tick=tick,timeout_ticks=0}))),{}) end
   end)
-  it("hands sweep comes sooner after a merge", function()
-    local s=ledger.new(); local x={h(1,"iron",2),h(3,"iron",3)}
-    ledger.hands(s,1,x,opts({tick=10,timeout_ticks=0})); eq(s.sweep[1],310)
-    local _, merge = ledger.hands(s,1,x,opts({tick=310,timeout_ticks=0})); eq(#merge,1); eq(s.sweep[1],370)
-    ledger.hands(s,1,{h(1,"iron",1)},opts({tick=370,timeout_ticks=0})); eq(s.sweep[1],670)
-  end)
   it("hands flush_all flushes all partial hands that can not merge", function()
     local s=ledger.new()
     local flush, merge = ledger.hands(s,1,{h(1,"iron",4),h(2,"iron",2),h(3,"gear",1),h(4,"iron",3)},opts({flush_all=true}))
@@ -175,31 +157,28 @@ describe("ledger look", function()
     local a, m = ledger.hands(s,1,held,opts({tick=0}))
     eq(copy(a),{1,2,3,4,5,6,7,8}); local b, m2 = ledger.hands(s,1,{},opts({tick=1})); ok(a==b); ok(m==m2); eq(copy(b),{})
   end)
-  it("idle lane sweeps after 120 ticks and merges at once", function()
-    -- INT (suite 2026-10-02): 8 plates trickled in and sat split over two hands for > 10 s. Idle = caller saw no
-    -- item on belt behind (opts.idle) and store has no full stack: no flow that would fill hands by itself.
-    local s=ledger.new(); s.sweep={300,300}
-    local _,w=ledger.scan(s,1,{},opts({tick=119,idle=true})); eq(w,false)
-    _,w=ledger.scan(s,1,{},opts({tick=120,idle=true})); eq(w,true, "idle: 180 ticks earlier than flowing lane")
-    _,w=ledger.scan(s,1,{},opts({tick=120})); eq(w,false, "not idle")
-    _,w=ledger.scan(s,1,{c("iron",4)},opts({tick=120,idle=true})); eq(w,false, "full stack in store: lane is not idle")
-    ledger.scan(s,1,{},opts({tick=120,idle=true}))  -- store empty again
-    local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",2)},opts({tick=120,idle=true,timeout_ticks=0}))
-    eq(merges(merge),{{name="iron",quality="normal",total=4,arms={1,3}}}, "no wait for stuck proof on idle lane")
-    eq(s.sweep[1],180, "sweep done: next 60 ticks after a merge")
-    local t=ledger.new(); t.sweep={300,300}
-    ledger.hands(t,1,{h(2,"gear",1)},opts({tick=120,idle=true})); eq(t.held[1][2],"gear\0normal"); eq(t.since[1][2],120); eq(t.sweep[1],420)
-  end)
-  it("full stacks sitting in store while belt behind is empty: hands are flushed", function()
+  it("store unchanged at three looks with full stacks and room in front: jam", function()
     -- game test 2026-10-02 (red: out=0 store=40 hands=8): every out arm held a leftover of another kind, later
-    -- stacks stayed in store for ever: 40 items is below pile mark, nothing arrives any more.
+    -- stacks stayed in store for ever. Sign: store holds full stacks and is exactly the same (kinds, items) at three
+    -- looks in a row while front belt has room. (Belt behind being empty is no sign: arms eat it on a busy belt.)
     local s=ledger.new(); s.sweep={100000,100000}; local x={c("iron",8),c("copper",8)}
-    local _,w=ledger.scan(s,1,x,opts({tick=30,idle=true})); eq(w,false)
-    _,w=ledger.scan(s,1,x,opts({tick=60,idle=true})); eq(w,false, "two looks: arms may be mid swing")
-    _,w=ledger.scan(s,1,x,opts({tick=90,idle=true})); eq(w,true, "three looks in a row with full stacks and no flow")
-    eq(copy(ledger.hands(s,1,{h(1,"gear",1),h(2,"wood",1)},opts({tick=90,idle=true}))),{1,2})
+    local _,w=ledger.scan(s,1,x,opts({tick=30,can_push=true})); eq(w,false)
+    _,w=ledger.scan(s,1,x,opts({tick=60,can_push=true})); eq(w,false, "two same looks: arms may be mid swing")
+    _,w=ledger.scan(s,1,x,opts({tick=90,can_push=true})); eq(w,true, "three same looks"); eq(s.piled[1],true)
+    eq(copy(ledger.hands(s,1,{h(1,"gear",1),h(2,"wood",1)},opts({tick=90}))),{1,2})
     local t=ledger.new(); t.sweep={100000,100000}
-    for _,tick in ipairs({30,60,90,120}) do _,w=ledger.scan(t,1,x,opts({tick=tick})); eq(w,false, "belt behind not known empty: flowing lane") end
+    for _,tick in ipairs({30,60,90,120}) do _,w=ledger.scan(t,1,x,opts({tick=tick,can_push=false})); eq(w,false, "front blocked: back-pressure, not a jam") end
+    local u=ledger.new(); u.sweep={100000,100000}
+    for i,tick in ipairs({30,60,90,120}) do _,w=ledger.scan(u,1,{c("iron",8+i)},opts({tick=tick,can_push=true})); eq(w,false, "store changes: lane flows") end
+    local v=ledger.new(); v.sweep={100000,100000}
+    for _,tick in ipairs({30,60,90,120}) do _,w=ledger.scan(v,1,{c("iron",3)},opts({tick=tick,can_push=true})); eq(w,false, "only leftovers in store: nothing to wait for") end
+  end)
+  it("sweep merges partial hands of one kind at once, every 300 ticks", function()
+    local s=ledger.new()
+    local flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",3)},opts({tick=0,timeout_ticks=0}))
+    eq(merges(merge),{{name="iron",quality="normal",total=5,arms={1,3}}}); eq(s.sweep[1],300)
+    flush, merge = ledger.hands(s,1,{h(1,"iron",2),h(3,"iron",3)},opts({tick=100,timeout_ticks=0}))
+    eq(merges(merge),{}, "no sweep due, no jam: hands are left alone")
   end)
   it("hands lanes are separate", function()
     local s=ledger.new(); ledger.hands(s,1,{h(2,"iron",3)},opts({tick=0}))
