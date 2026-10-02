@@ -17,3 +17,5 @@ Post after 0.1.17 / 0.2.17 is live on portal. Author posts. English. Numbers: de
 Speed is the same as 0.1.16 on vanilla belts. On one very fast modded belt (270 items/s) script time per 200 packers went from 0.38 ms to 0.45 ms.
 
 0.1.18 / 0.2.18 (same day): fixes one case of 0.1.17 - with a belt running across in front of the packer, a few leftover items could stay inside for good.
+
+0.1.19 / 0.2.19 (same day): fixes a load error ("invalid key to 'next'") that 0.1.17 and 0.1.18 could give on saves made with earlier versions. If you hit it: update, then load the same save again; the save itself is fine.

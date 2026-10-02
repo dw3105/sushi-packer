@@ -218,3 +218,11 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0051 - Speed hunt on a busy shared host
 
 **2026-10-02.** Removal experiments for a 0.07 ms gap ran while host load rose (own suites, other sessions): v1.16 reference moved 0.37 -> 0.44 ms inside one batch, 8 runs unusable. **Rule:** before a batch of single bench runs read `load1`; run reference first and last; drop batch when the two references differ by more than the gap hunted.
+
+## FRC-0052 - Release box given while author-visible behaviour was proven only by probes
+
+**2026-10-02.** v1.17 box went out with "push onto belt running across" proven only on a probe rig; product path (script push) failed there; author had published within minutes; v1.18 same day (FND-0050). **Rule:** every author-decided behaviour has a game test on final code before a release box is given.
+
+## FRC-0053 - Migration tested on 3 packers; table walked while re-keyed
+
+**2026-10-02.** `registry.on_configuration_changed` added keys to `storage.boxes` inside `pairs`; crash depends on table size and unit numbers; harness saves held 3 packers, a 120-packer test passed by luck; v1.17 and v1.18 public with it; author's save crashed (FND-0051). **Rule:** never change keys of a table inside `pairs` over it (walk a list made first); migration tests sweep many entity counts in one run.
