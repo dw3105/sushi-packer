@@ -3,6 +3,7 @@ local function setup()
   defines = { direction = { north = 0, east = 4, south = 8, west = 12 }, inventory = { chest = 1 }, wire_connector_id = { circuit_red = 1, circuit_green = 2 } }
   storage, game = { boxes = {} }, { tick = 100 }
   local N = require("scripts.names")
+  N.BODIES = { [N.body("yellow")]="yellow", [N.body("red")]="red", [N.body("blue")]="blue" }
   local ledger = { new = function() return { fresh = true } end }
   package.loaded["scripts.ledger"] = ledger
   local arms = { creates = {}, destroys = {}, ensures = {}, drains = {}, order = {}, hand_items = {} }
@@ -19,13 +20,15 @@ local function setup()
   arms.destroy = function(rec, keep) arms.order[#arms.order + 1] = "destroy"; old_destroy(rec, keep) end
   arms.ensure = function(rec) arms.ensures[#arms.ensures + 1] = rec end
   package.loaded["scripts.arms"] = arms
+  arms.wire = function() end
+  package.loaded["scripts.circuit"] = { apply=function() end, sync=function() end }
   local led = { create = function() end, destroy = function() end, ensure = function() end, set = function() end }
   package.loaded["scripts.led"] = led
   local function inv(contents) return fake_inv(contents) end
   local id = 10
   local function entity(unit, name)
     id = id + 1
-    local e = { valid = true, name = name or N.variant("yellow", "east"), unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal", to_be_upgraded=function() return false end }
+    local e = { valid = true, name = name or N.body("yellow"), direction=4, unit_number = unit or id, position = { x=10.5,y=18.5 }, surface = { index=1 }, force = { index=1 }, quality="normal", to_be_upgraded=function() return false end }
     e.surface.spilled = {}
     e.surface.spill_item_stack = function(spec) e.surface.spilled[#e.surface.spilled + 1] = spec end
     e.surface.create_entity = function(spec) local n = entity(id + 100, spec.name); n.position=spec.position; n.force=spec.force; n.surface=e.surface; return n end
@@ -75,7 +78,7 @@ describe("lifecycle arms", function()
     storage.boxes[1]=rec; r.on_configuration_changed({}); eq(#a.ensures,1); eq(a.ensures[1],rec); eq(#a.creates,0)
   end)
   it("upgrade carries stores", function()
-    local r, _, a, _, entity, inv = setup(); local e=entity(1); e.to_be_upgraded=function() return true end; local rec=r.new_rec(e); rec.invs={inv({{name="iron",count=2}}),inv()}; r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); local n=entity(2,"fast-sushi-packer-south"); n.position=e.position; r.on_built({entity=n}); eq(r.get(n),rec); eq(#a.creates,1); eq(#a.destroys,0)
+    local r, _, a, _, entity, inv = setup(); local N=require("scripts.names"); local e=entity(1); e.to_be_upgraded=function() return true end; local rec=r.new_rec(e); rec.invs={inv({{name="iron",count=2}}),inv()}; r.on_removed({entity=e,robot={},buffer={insert=function() error("store returned") end}}); local n=entity(2,N.body("red")); n.direction=8; n.position=e.position; r.on_built({entity=n}); eq(r.get(n),rec); eq(#a.creates,1); eq(#a.destroys,0)
   end)
   it("clone gets own parts and copies items", function()
     local _, c, a, _, entity, inv = setup(); local s,d=entity(1),entity(2); local src={entity=s,unit_number=1,tier="yellow",dir="east",settings=c.default_settings(),stores={"a","b"},invs={inv({{name="iron",count=4,quality="rare"}}),inv()}}; storage.boxes[1]=src
@@ -90,5 +93,13 @@ describe("lifecycle arms", function()
   end)
   it("stale stash cleans its parts", function()
     local r, _, a, _, entity, inv = setup(); local e=entity(1); local rec={entity=e,unit_number=1,invs={inv({{name="iron",count=2}}),inv()}}; storage.upgrade_stash={stale={rec=rec,tick=99,force=1,surface=e.surface,position=e.position}}; game.tick=100; r.take_stash(entity(2)); eq(#a.destroys,1); eq(#e.surface.spilled,1)
+  end)
+end)
+
+describe("lifecycle v17", function()
+  it("mined body returns hands", function()
+    local r, _, a, _, entity = setup(); local e=entity(1); e.name="sushi-packer-body"; local rec=r.new_rec(e); a.hand_items={{name="iron-plate",quality="normal",count=3,lane=1}}; local got={}
+    r.on_removed({entity=e,buffer={insert=function(s) got[#got+1]=s end}})
+    eq(got[1].name,"iron-plate"); eq(got[1].count,3)
   end)
 end)

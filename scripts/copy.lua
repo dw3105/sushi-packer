@@ -3,6 +3,7 @@ local N = require("scripts.names")
 local led = require("scripts.led")
 local ledger = require("scripts.ledger")
 local arms = require("scripts.arms")
+local circuit = require("scripts.circuit")
 
 local function get_rec(entity)
   if not entity or not entity.valid or not entity.unit_number then return nil end
@@ -18,7 +19,7 @@ end
 
 function M.default_settings()
   return { timeout_mode = "global", timeout_s = 0, filters = {},
-    circuit = { enable = false, cond = { comparator = ">", constant = 0 }, flush = false } }
+    circuit = { enable = false, cond = { comparator = ">", constant = 0 }, read = true, flush = false } }
 end
 
 function M.export(rec) return clone(rec.settings) end
@@ -49,12 +50,10 @@ function M.on_setup_blueprint(e)
   if not entities then return end
   local mapping = e.mapping and e.mapping.get and e.mapping.get() or {}
   for _, ent in ipairs(entities) do
-    local v = N and N.VARIANTS[ent.name]
-    if v then
+    local tier = N.BODIES[ent.name]
+    if tier then
       local index = ent.entity_number
       local rec = mapping[index] and get_rec(mapping[index])
-      ent.name = N.placer(v.tier)
-      ent.direction = defines.direction[v.dir]
       if rec then
         ent.tags = ent.tags or {}
         ent.tags.sushi_packer = M.export(rec)
@@ -66,21 +65,22 @@ end
 
 function M.on_settings_pasted(e)
   local src, dst = get_rec(e.source), get_rec(e.destination)
-  if src and dst then M.import(dst, M.export(src)) end
+  if src and dst then M.import(dst, M.export(src)); circuit.sync(dst); arms.wire(dst,dst.settings.circuit.read ~= false) end
 end
 
 function M.on_cloned(e)
   local src, dst = get_rec(e.source), e.destination
   if not src or not dst then return end
-  if not dst or not dst.valid or not N.VARIANTS[dst.name] then return end
+  if not dst or not dst.valid or not N.BODIES[dst.name] then return end
   storage.boxes = storage.boxes or {}
-  local variant = N.VARIANTS[dst.name]
-  local rec = { entity = dst, unit_number = dst.unit_number, tier = variant.tier, dir = variant.dir,
+  local tier = N.BODIES[dst.name]
+  local rec = { entity = dst, unit_number = dst.unit_number, tier = tier, dir = N.dir_name(dst.direction),
     ledger = ledger.new(), settings = M.default_settings(), enabled = true,
     circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0 }
   storage.boxes[dst.unit_number] = rec; storage.sched = nil  -- tick schedule rebuilt
   M.import(rec, M.export(src))
   arms.create(rec)
+  circuit.sync(rec)
   for lane = 1, 2 do
     local source = src.invs and src.invs[lane]
     local destination = rec.invs and rec.invs[lane]
