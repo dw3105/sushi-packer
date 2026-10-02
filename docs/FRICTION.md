@@ -226,3 +226,11 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0053 - Migration tested on 3 packers; table walked while re-keyed
 
 **2026-10-02.** `registry.on_configuration_changed` added keys to `storage.boxes` inside `pairs`; crash depends on table size and unit numbers; harness saves held 3 packers, a 120-packer test passed by luck; v1.17 and v1.18 public with it; author's save crashed (FND-0051). **Rule:** never change keys of a table inside `pairs` over it (walk a list made first); migration tests sweep many entity counts in one run.
+
+## FRC-0054 - Keep-green list not rebuilt after integrator removed tests
+
+**2026-10-02.** `tests/offline/fixtures/v17_keep_green.txt` still named tests removed at v1.17 INT; lanes 057 and 058 got verdict FAIL (check-exit-mismatch) though their work was right; found by running each check by hand. **Rule:** rebuild keep-green list from a real run right before tagging a lanes base.
+
+## FRC-0055 - No test ever fed more than one quality
+
+**2026-10-02.** Every rate and jam test used normal quality and at most 16 kinds once; author's factory feeds the same items in several qualities as a steady trickle; v1.16..v1.19 piled up there (FND-0052). **Rule:** rate tests include a steady trickle of many rare kinds; quality is part of "kind" in every feed helper.

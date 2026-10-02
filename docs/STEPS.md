@@ -64,3 +64,7 @@ v1.18, 2026-10-02, dev-vm: fix of FND-0050 (script push onto belt running across
 Published v1.18 2026-10-02: tag `v1.18` = `cb8e0d3` pushed by author; GitHub `main` = `cb8e0d3` (`git ls-remote` from dev-vm). Release zips 2950534 / 2950536 B, `sha256sum -c SHA256SUMS.txt` OK, identical to dev-vm build of `cb8e0d3` (292 files each). Known in v1.17 and v1.18 (author's save, FND-0051): load of a save with chest packers may fail with `invalid key to 'next'`.
 
 v1.19, 2026-10-02, dev-vm: fix of FND-0051 + count-sweep test. Code `2f20087`: both full suites 153 passed, mod sets 13 + 8 ok, load checks ok, old saves v1.14..v1.17 ok on both versions, zips 0.1.19 / 0.2.19 (2950749 / 2950751 B).
+
+Published v1.19 2026-10-02: tag `v1.19` = `d0d32e3` pushed by author (author: "1.19 is public"; `git ls-remote` from dev-vm).
+
+v1.20, 2026-10-02, dev-vm: author found three bugs on v1.19 (FND-0052): items pile up with many kinds / qualities, window shows no quality, blueprint shows bare belt with wire frame. S0: piling red on author's layout; lanes 057 gui, 058 data (own checks green; lane tool FAIL from a stale keep-green list of integrator); piling fix by integrator (needs game runs): steering (V20-1). Cheap speed check caught two too-costly versions of the fix before any long round.

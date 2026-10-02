@@ -19,3 +19,5 @@ Speed is the same as 0.1.16 on vanilla belts. On one very fast modded belt (270 
 0.1.18 / 0.2.18 (same day): fixes one case of 0.1.17 - with a belt running across in front of the packer, a few leftover items could stay inside for good.
 
 0.1.19 / 0.2.19 (same day): fixes a load error ("invalid key to 'next'") that 0.1.17 and 0.1.18 could give on saves made with earlier versions. If you hit it: update, then load the same save again; the save itself is fine.
+
+0.1.20 / 0.2.20: fixes items piling up inside the packer when many kinds arrive (for example the same items in several qualities); the window shows item quality; blueprints and ghosts show the packer with its hood.

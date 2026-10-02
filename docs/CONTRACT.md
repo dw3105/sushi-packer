@@ -411,3 +411,11 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 - `registry`: on_built order (V17-9); `on_rotated` clears `rec.belt`, `rec.front_was`; `migrate`: items named by `rec.extra` go to their lane once (never also as chest contents), overflow to `rec.spare` (V17-6), `arms.create` before `circuit.apply`; removal paths return and destroy spare stores.
 - `tick`: `rec.front_was` holds front kind; `arms.aim_out(rec, front)` at every look; `refill(rec, lane)` while `rec.spare`; merge rest that store refuses is spilled at packer.
 - `gui`: frame carries `tags.sushi_packer = unit`; `gui._refresh_open(player)`.
+
+### v20 amendments (V20-1..3)
+
+- `ledger.steer(state, lane) -> kinds | nil`; `ledger.scan` keeps `state.steer`, flushes several oldest leftovers on a steered lane (3 slots free); `ledger.hands` switches steering on at a jam with six or more leftover kinds in hands.
+- `arms.steer(rec, lane, kinds) -> changed`; `rec.steer[lane]` = signature of list; `arms.create` clears it.
+- `belt_io.push(rec, lane, item, bss, spot)`: `spot` 1..3 = further belt spots of front tile (ahead only).
+- `tier._hood_layer(tier, set)`; body `connector_frame_sprites = nil`.
+- gui lane slots: `quality`, `elem_tooltip`.
