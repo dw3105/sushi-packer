@@ -83,11 +83,22 @@ function N.out_count(speed)
   if speed > N.OUT_FAST.speed then return N.OUT_FAST.n end
   return N.OUT_ARMS
 end
--- Engine way: packer with a steered lane that has fewer than HOT_FREE free store slots is looked at every HOT_LOOK
--- ticks (leftovers leave only at looks). HOT_FREE is twice the 3 slots a steered lane keeps free: with 3 a lane
--- dropped out of extra looks whenever one slot more was free at a look, store filled in the 30 ticks after. Script way: lane store full and a new kind waiting -> PRESS oldest leftovers
--- leave first, also while full stacks wait (F-1 amended by author 2026-10-02).
-N.HOT_LOOK = 5
+-- Engine way: packer with a steered lane that has fewer than HOT_FREE free store slots gets extra looks (leftovers
+-- leave only at looks), on belts faster than HOT.above tiles per tick only, every floor(HOT.k / speed) ticks
+-- (270/s belt: 5). Pressured bench 2026-10-02, 100 turbo packers, 60 rare kinds: looks every 5 ticks doubled script
+-- time (3.7 -> 8.1 ms) and intake was 0.997 without them: belts up to turbo speed get none.
+-- HOT_FREE is twice the 3 slots a steered lane keeps free: with 3 a lane dropped out of extra looks whenever one
+-- slot more was free at a look, store filled in the 30 ticks after.
+-- Script way: lane store full and a new kind waiting -> PRESS oldest leftovers leave first, also while full stacks
+-- wait (F-1 as written; v15 "never competes with a full flush" dropped).
+N.HOT = { above = 0.125, k = 3, min = 2 }
+function N.hot_look(speed)
+  if speed <= N.HOT.above then return nil end
+  local n = math.floor(N.HOT.k / speed)
+  if n < N.HOT.min then n = N.HOT.min end
+  if n >= N.LOOK then return nil end
+  return n
+end
 N.HOT_FREE = 6
 N.PRESS = 1
 -- Shut: belt connected to logistic network with a condition that is never true is disabled with and without a

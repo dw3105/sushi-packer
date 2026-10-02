@@ -9,8 +9,8 @@ local gui = require("scripts.gui")
 local M = {}
 -- Visit gap per tier = ticks between two belt items on one lane (0.25 tile / belt speed) when that is a whole number
 -- of ticks >= 2 (yellow 8, red 4, turbo 2); any other speed -> every tick (blue 2.67: gap 2 lost rate, 200 of 225).
-local intervals, naps = {}, {}
-function M._reset_intervals() intervals, naps = {}, {} end  -- tests only: mocks swap prototypes
+local intervals, naps, hot_looks = {}, {}, {}
+function M._reset_intervals() intervals, naps, hot_looks = {}, {}, {} end  -- tests only: mocks swap prototypes
 -- Idle box sleeps about one belt tile of travel (blue 9, turbo 7 ticks), 2..15: first item after a pause is not held long.
 function M._nap(tier)
   local n = naps[tier]
@@ -22,6 +22,16 @@ function M._nap(tier)
     naps[tier] = n
   end
   return n
+end
+-- v21: ticks between extra looks of a pressured packer of this tier, nil = none (belt not faster than turbo)
+function M._hot_look(tier)
+  local n = hot_looks[tier]
+  if n == nil then
+    local proto = prototypes.entity[N.TIER[tier].belt]
+    n = proto and N.hot_look(proto.belt_speed) or false
+    hot_looks[tier] = n
+  end
+  return n or nil
 end
 function M._interval(tier)
   local n = intervals[tier]
@@ -308,7 +318,7 @@ local function engine_look(rec, tick, bss, flush_all)
       end
     end
   end
-  rec.hot = (not stopped and hot) and true or nil
+  rec.hot = (not stopped and hot and M._hot_look(rec.tier) ~= nil) and true or nil
 end
 
 local function update_led(rec)
@@ -440,8 +450,9 @@ function M.on_tick(e)
   for unit in pairs(hot) do
     if storage.sched ~= sched then break end
     local rec = boxes[unit]
-    if not rec or not rec.stores or rec.hot ~= true or fast[unit] then hot[unit] = nil
-    elseif (tick + unit) % N.HOT_LOOK == 0 and (tick + unit) % LOOK ~= 0 then visit(rec, tick, false, nil, counters) end
+    local every = rec and rec.stores and rec.hot == true and not fast[unit] and M._hot_look(rec.tier)
+    if not every then hot[unit] = nil
+    elseif (tick + unit) % every == 0 and (tick + unit) % LOOK ~= 0 then visit(rec, tick, false, nil, counters) end
   end
   local list = sched.buckets[tick % (2 * LOOK) + 1]
   for i = 1, #list do

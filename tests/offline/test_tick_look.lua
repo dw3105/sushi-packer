@@ -210,7 +210,8 @@ describe("tick v21",function()
   local function hot_fixture(contents, steer)
     local f=fixture(); f.rec.invs[1]=inv(contents); f.rec.invs[1].count_empty_stacks=function() return 24-#contents end
     local old=ledger.steer; ledger.steer=function(_,lane) return steer and lane==1 and {} or nil end
-    return f,function() ledger.steer=old; f.restore() end
+    local old_look=tick._hot_look; tick._hot_look=function() return 5 end  -- belt faster than turbo: extra look every 5 ticks
+    return f,function() ledger.steer=old; tick._hot_look=old_look; f.restore() end
   end
   it("pressured steered packer gets extra looks",function()
     local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
@@ -228,6 +229,16 @@ describe("tick v21",function()
   end)
   it("script way packer never gets extra looks",function()
     local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.run(30); eq(f.rec.hot,nil); ok(type(storage.sched.hot)=="table"); eq(storage.sched.hot[30],nil); f.restore()
+  end)
+  it("no extra looks on belts up to turbo speed",function()
+    -- pressured bench 2026-10-02: 100 turbo packers, 60 rare kinds: extra looks doubled script time, intake 0.997 without
+    local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(x,true); tick._hot_look=function() return nil end
+    f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot[30],nil); f.evals=0; for t=31,60 do f.run(t) end; eq(f.evals,1); done()
+  end)
+  it("extra look period follows belt speed",function()
+    eq(N.hot_look(0.03125),nil); eq(N.hot_look(0.125),nil); eq(N.hot_look(0.15625),19); eq(N.hot_look(0.1875),16)
+    eq(N.hot_look(0.21875),13); eq(N.hot_look(0.5625),5); eq(N.hot_look(3),2)
   end)
   it("schedule rebuild keeps hot packers",function()
     local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
