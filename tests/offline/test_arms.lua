@@ -200,7 +200,7 @@ describe("arms v17", function()
     for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2); eq(a.inserter_stack_size_override,4) end end
     arms.hand(rec,4); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,2) end end
     arms.hand(rec,2); for lane=1,2 do for _,a in ipairs(rec.out[lane]) do eq(a.writes.inserter_stack_size_override,3); eq(a.inserter_stack_size_override,2) end end
-    eq(rec.arms[1][1].inserter_stack_size_override,nil)
+    eq(rec.arms[1][1].inserter_stack_size_override,1, "hand updates do not change in hand sizing")
     rec.out[1][1].valid=false; arms.hand(rec,3)
   end)
   it("held lists out arm hands", function()
@@ -307,6 +307,72 @@ describe("arms v17", function()
       local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.mop[1][1],"iron-plate",1)
       eq(arms.need_slot(rec,1,{}),true)
     end)
+end)
+
+describe("arms v21", function()
+  it("in hands get sizes by pattern", function()
+    local rec, s = setup(0.0625); rec.entity.surface = s; arms.create(rec)
+    for lane = 1, 2 do
+      eq({rec.arms[lane][1].inserter_stack_size_override, rec.arms[lane][2].inserter_stack_size_override,
+          rec.arms[lane][3].inserter_stack_size_override, rec.arms[lane][4].inserter_stack_size_override}, {1,4,4,4})
+    end
+    eq(rec.in_hands, table.concat(N.ARM_HANDS, ","))
+    rec, s = setup(0.3); rec.entity.surface = s; arms.create(rec)
+    eq({rec.arms[1][1].inserter_stack_size_override, rec.arms[1][2].inserter_stack_size_override,
+        rec.arms[1][3].inserter_stack_size_override, rec.arms[1][4].inserter_stack_size_override,
+        rec.arms[1][5].inserter_stack_size_override, rec.arms[1][6].inserter_stack_size_override,
+        rec.arms[1][7].inserter_stack_size_override, rec.arms[1][8].inserter_stack_size_override}, {1,4,4,4,1,4,4,4})
+    local previous = N.ARM_HANDS; N.ARM_HANDS = {2,9}
+    rec, s = setup(0.0625); rec.entity.surface = s; arms.create(rec)
+    eq({rec.arms[1][1].inserter_stack_size_override, rec.arms[1][2].inserter_stack_size_override,
+        rec.arms[1][3].inserter_stack_size_override, rec.arms[1][4].inserter_stack_size_override}, {2,4,2,4})
+    eq(rec.in_hands, "2,9"); N.ARM_HANDS = previous
+  end)
+
+  it("mop and out hands keep their size", function()
+    local rec, s = setup(0.0625); rec.entity.surface = s; rec.entity.force = {belt_stack_size_bonus=2}; arms.create(rec)
+    for lane=1,2 do
+      for _, a in ipairs(rec.mop[lane]) do eq(a.writes.inserter_stack_size_override, nil) end
+      for _, a in ipairs(rec.out[lane]) do eq(a.inserter_stack_size_override, 3) end
+    end
+  end)
+
+  it("out hand count follows belt speed", function()
+    for _, row in ipairs({{0.125,N.OUT_ARMS},{0.3,N.OUT_ARMS},{0.5625,N.OUT_FAST.n}}) do
+      local rec, s, created = setup(row[1]); rec.entity.surface=s
+      prototypes.entity[N.out_name(row[1])] = {}
+      arms.create(rec)
+      eq(#rec.out[1],row[2]); eq(#rec.out[2],row[2])
+      for lane=1,2 do for _, a in ipairs(rec.out[lane]) do eq(a.name,N.out_name(row[1]) or N.OUT) end end
+    end
+  end)
+
+  it("ensure sets hand sizes of old packer without rebuild", function()
+    local rec,s,created=setup(0.0625); rec.entity.surface=s; arms.create(rec)
+    local arms_before = {rec.arms[1][1], rec.arms[1][2], rec.arms[1][3], rec.arms[1][4]}
+    for lane=1,2 do for _,a in ipairs(rec.arms[lane]) do a._watched.inserter_stack_size_override=nil end end
+    rec.in_hands=nil; local n=#created
+    eq(arms.ensure(rec),false); eq(#created,n); eq(rec.arms[1][1],arms_before[1])
+    eq({rec.arms[1][1].inserter_stack_size_override,rec.arms[1][2].inserter_stack_size_override,
+        rec.arms[1][3].inserter_stack_size_override,rec.arms[1][4].inserter_stack_size_override},{1,4,4,4})
+    eq(rec.in_hands,table.concat(N.ARM_HANDS,","))
+  end)
+
+  it("ensure rebuilds when out hand count differs", function()
+    local rec,s=setup(0.5625); rec.entity.surface=s; arms.create(rec)
+    -- Model a save made before fast belts got twelve out hands.
+    for lane=1,2 do while #rec.out[lane] > N.OUT_ARMS do table.remove(rec.out[lane]) end end
+    local old=rec.arms[1][1]
+    old.held_stack={valid_for_read=true,name="iron-plate",count=2,quality={name="normal"}}
+    eq(arms.ensure(rec),true); eq(#rec.out[1],N.OUT_FAST.n); eq(#rec.out[2],N.OUT_FAST.n)
+    eq(old.valid,false); eq(rec.invs[1].insert_calls,1)
+  end)
+
+  it("ensure on current packer writes nothing", function()
+    local rec,s,created, writes=setup(0.0625); rec.entity.surface=s; arms.create(rec)
+    local before, n=#created, writes.inserter_stack_size_override or 0
+    eq(arms.ensure(rec),false); eq(#created,before); eq(writes.inserter_stack_size_override or 0,n)
+  end)
 end)
 
 describe("arms v20", function()
