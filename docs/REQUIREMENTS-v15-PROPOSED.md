@@ -1,5 +1,7 @@
 # REQUIREMENTS v15 — proposed wording (author decides)
 
+SUPERSEDED 2026-10-02: wording folded into `docs/REQUIREMENTS.md` v21 text (rows marked "(v21 text)"), on author's word. Kept as history.
+
 `docs/REQUIREMENTS.md` is still v14 text: only author amends it. v1.15 code and tests follow author decisions V14-9, V14-10, V14-11 (grill 2026-10-01) and integrator decisions V15-1..V15-4 made under ruling 2026-10-01 ("no more questions until everything is coded and tested"). Rows below: what v14 text says, what v1.15 does, proposed new text. Approve, change or reject each.
 
 | ID | v14 text says | v1.15 does | Proposed v15 text |

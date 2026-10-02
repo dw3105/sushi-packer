@@ -1,5 +1,7 @@
 # REQUIREMENTS v16 — proposed wording (author decides)
 
+SUPERSEDED 2026-10-02: wording folded into `docs/REQUIREMENTS.md` v21 text (rows marked "(v21 text)"), on author's word. Kept as history.
+
 `docs/REQUIREMENTS.md` is still v14 text: only author amends it. v1.16 follows author decisions of grill 2026-10-01 (bar x10; hoarding rule, exact tier cap, order of leaving may go) and integrator decisions V16-1..13. Read after `docs/REQUIREMENTS-v15-PROPOSED.md`: rows below replace or add to it.
 
 | ID | v1.16 does | Proposed text |

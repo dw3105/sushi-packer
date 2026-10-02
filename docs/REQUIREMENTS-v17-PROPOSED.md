@@ -1,5 +1,7 @@
 # REQUIREMENTS v17 — proposed wording (author decides)
 
+SUPERSEDED 2026-10-02: wording folded into `docs/REQUIREMENTS.md` v21 text (rows marked "(v21 text)"), on author's word. Kept as history.
+
 `docs/REQUIREMENTS.md` is still v14 text: only author amends it. v1.17 follows author decisions of grill 2026-10-02 (V17-1, V17-2, V17-4) and integrator decisions V17-3, V17-5..10. Read after `docs/REQUIREMENTS-v16-PROPOSED.md`: rows below replace or add to it.
 
 | ID | v1.17 does | Proposed text |
