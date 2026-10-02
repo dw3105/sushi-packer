@@ -187,7 +187,7 @@ describe("gui lanes", function()
     ok(f.lanes_section ~= nil)
     for lane = 1, 2 do
       local row = f.lanes_section["lane_" .. lane]; ok(row ~= nil)
-      eq(row.type, "flow")
+      eq(row.type, "table"); eq(row.column_count, 12)
       eq(#row.children, slots)
       for slot = 1, slots do
         local b = row.children[slot]; eq(b.type, "sprite-button")
