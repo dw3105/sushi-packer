@@ -234,3 +234,24 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 ## FRC-0055 - No test ever fed more than one quality
 
 **2026-10-02.** Every rate and jam test used normal quality and at most 16 kinds once; author's factory feeds the same items in several qualities as a steady trickle; v1.16..v1.19 piled up there (FND-0052). **Rule:** rate tests include a steady trickle of many rare kinds; quality is part of "kind" in every feed helper.
+
+## FRC-0056 - Test bar set from measured value hid the defect
+
+**2026-10-02.** v1.20 trickle tests carried bars 85 % and 75 % because code measured 89 % and 80 %; suite was green while author saw belt jerk (FND-0053). **Rule:** bar of a rate test comes from requirement (what player must see), never from what code reaches; shortfall stays a red test or a named known issue.
+
+## FRC-0057 - Blamed turn speed without printing hand states
+
+**2026-10-02.** v1.20 note said "4 in arms spend a swing on each single"; one sampled run showed hands hold a single 22 ticks waiting to fill (turn itself 1 tick). Fix by hand size cost nothing; v1.20 dropped "more arms" for cost. **Rule:** before choosing between costly fixes, print per-part state over time (status, hold time by load) once.
+
+## FRC-0058 - Saved table got new field; update path not walked
+
+**2026-10-02.** Lane 061 added `sched.hot`; saves of v1.20 keep `storage.sched` without it -> `pairs(nil)` on first tick. Lane tests and keep-green could not see it; found in review. **Rule:** any new field in a table kept in `storage` needs a game test that loads old shape (field removed, then one tick).
+
+## FRC-0059 - Gate numbers from scratch code did not all hold on final code
+
+**2026-10-02.** Gate table: fastest mod belt "+7 %", hot margin 3 slots passing. Final code: +12 %, margin 3 gave 0.973. Had to go back to author once more. **Rule:** numbers shown at a gate say "scratch code" and which of them sit near the bar; near-bar ones are re-measured on final code before release and reported again.
+
+## FRC-0060 - Game test pinning old slot count found only by full suite
+
+**2026-10-02.** Seam changed `N.STORE_SLOTS`; offline reds were listed for lanes, game tests were not grepped; one full round was spent to find `assert.are_equal(12, SLOTS)`. **Rule:** when a seam constant changes, grep `tests/game` for old value and run those files before any long round.
+

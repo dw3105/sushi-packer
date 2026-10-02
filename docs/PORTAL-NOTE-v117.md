@@ -21,3 +21,6 @@ Speed is the same as 0.1.16 on vanilla belts. On one very fast modded belt (270 
 0.1.19 / 0.2.19 (same day): fixes a load error ("invalid key to 'next'") that 0.1.17 and 0.1.18 could give on saves made with earlier versions. If you hit it: update, then load the same save again; the save itself is fine.
 
 0.1.20 / 0.2.20: fixes items piling up inside the packer when many kinds arrive (for example the same items in several qualities); the window shows item quality; blueprints and ghosts show the packer with its hood.
+
+0.1.21 / 0.2.21: fixes the belt in front of the packer moving in jerks when it carries many item kinds or single, unstacked items. A lane now holds 24 kinds (was 12); the window shows them in rows of 12. Speed on vanilla belts is unchanged; on modded belts above 144 items/s packers cost about 12 % more (4 more hidden output inserters per lane).
+
