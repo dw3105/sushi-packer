@@ -13,6 +13,21 @@ local function _valid(part)
   return part ~= nil and part.valid == true  -- engine objects are userdata (2.0+), never tables
 end
 
+local function _in_hands(rec)
+  local pattern = N.ARM_HANDS
+  local n = #pattern
+  for lane = 1, 2 do
+    for i, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do
+      if _valid(arm) then
+        local size = pattern[(i - 1) % n + 1]
+        if size > N.ARM_HAND then size = N.ARM_HAND end
+        arm.inserter_stack_size_override = size
+      end
+    end
+  end
+  rec.in_hands = table.concat(pattern, ",")
+end
+
 local function _opposite(dir)
   if dir == "north" then return "south" end
   if dir == "east" then return "west" end
@@ -115,7 +130,7 @@ function M.create(rec)
     end
     local out_name = N.out_name(speed)
     if not prototypes.entity[out_name] then out_name = N.OUT end  -- belt of tier changed after data stage: fast arm
-    for _ = 1, N.OUT_ARMS do
+    for _ = 1, N.out_count(speed) do
       local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
       arm.inserter_stack_size_override = bss  -- before it can take anything: hand = belt stack from first tick
@@ -126,6 +141,7 @@ function M.create(rec)
       rec.out[lane][#rec.out[lane] + 1] = arm
     end
   end
+  _in_hands(rec)
   rec.paused = { false, false }
   rec.skip = { "", "" }
   rec.out_paused = { true, true }
@@ -369,7 +385,9 @@ function M.shut(entity)
 end
 
 function M.ensure(rec)
-  local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
+  local speed = prototypes.entity[N.TIER[rec.tier].belt].belt_speed
+  local expected = M.count(speed)
+  local expected_out = N.out_count(speed)
   local broken = false
   for lane = 1, 2 do
     if not _valid(rec.stores and rec.stores[lane]) then broken = true end
@@ -380,7 +398,7 @@ function M.ensure(rec)
       for _, arm in ipairs(lane_arms) do if not _valid(arm) then broken = true; break end end
     end
     local outs = rec.out and rec.out[lane]
-    if not outs or #outs ~= N.OUT_ARMS then
+    if not outs or #outs ~= expected_out then
       broken = true
     else
       for _, arm in ipairs(outs) do if not _valid(arm) then broken = true; break end end
@@ -391,6 +409,7 @@ function M.ensure(rec)
   end
   if not _valid(rec.hood) then broken = true end
   if broken then M.create(rec); return true end
+  if rec.in_hands ~= table.concat(N.ARM_HANDS, ",") then _in_hands(rec) end
   return false
 end
 
