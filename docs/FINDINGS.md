@@ -601,4 +601,4 @@ Reading: 8 of 9 rows inside noise or lower (blue: script -12 %, whole tick -23 %
 
 Not proven headless: click on packer opens window (custom input on game control `open-gui`); smart belt dragging across a packer; look of ghosts.
 
-Verified-by: `~/.cache/sushi-packer/v17/logs/` (`full-2.0-r4.log`, `full-2.1-r2.log`, `modsets-2.0-r2.log`, `modsets-2.1-r2.log`, `load-2.0*.log`, `load-2.1.log`, `pairs-v17.txt`, `pairs-v17-cheap.txt`), `~/.cache/sushi-packer/v17/oldsave/run.sh 2.0`, `... 2.1`
+Verified-by: `~/.cache/sushi-packer/v17/logs/` (`full-2.0-r5.log`, `full-2.1-r3.log` on final code `af27dd7`; `modsets-2.0-r2.log`, `modsets-2.1-r2.log`, `load-2.0*.log`, `load-2.1.log`, `pairs-v17.txt`, `pairs-v17-cheap.txt`), `~/.cache/sushi-packer/v17/oldsave/run.sh 2.0`, `... 2.1`
