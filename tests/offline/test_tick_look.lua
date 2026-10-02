@@ -218,15 +218,16 @@ describe("tick v21",function()
   end)
   it("extra looks stop when pressure is gone",function()
     local x={}; for i=1,10 do x[i]={name="iron",quality="q"..i,count=1} end
-    local f,done=hot_fixture(x,true); f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot[30],nil); f.run(31); eq(f.evals,1); done()
+    local pressured={}; for i=1,22 do pressured[i]={name="iron",quality="q"..i,count=1} end
+    local f,done=hot_fixture(pressured,true); f.run(30); eq(f.rec.hot,true); f.rec.invs[1]=inv(x); f.rec.invs[1].count_empty_stacks=function() return 14 end; f.run(35); eq(f.rec.hot,nil); eq(storage.sched.hot[30],nil); f.run(40); eq(f.evals,2); done()
     local g,done2=hot_fixture(x,false); g.run(30); eq(g.rec.hot,nil); eq(storage.sched.hot[30],nil); done2()
   end)
   it("no extra look on own look tick",function()
     local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
-    local f,done=hot_fixture(x,true); f.run(30); eq(f.evals,1); done()
+    local f,done=hot_fixture(x,true); f.run(30); eq(f.rec.hot,true); f.evals=0; f.run(60); eq(f.evals,1); done()
   end)
   it("script way packer never gets extra looks",function()
-    local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot[30],nil); f.restore()
+    local f=fixture(); f.rec.settings.filters={{name="iron"}}; f.run(30); eq(f.rec.hot,nil); ok(type(storage.sched.hot)=="table"); eq(storage.sched.hot[30],nil); f.restore()
   end)
   it("schedule rebuild keeps hot packers",function()
     local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end
