@@ -31,14 +31,18 @@ local function _destroy(part)
   if _valid(part) then part.destroy() end
 end
 
+local _out_positions
+local _apply_aim
+
 function M.create(rec)
   local entity = rec.entity
   local surface, pos, force = entity.surface, entity.position, entity.force
   local old_arms = rec.arms or {}
   local old_out = rec.out or {}
+  local old_mop = rec.mop or {}
   -- Preserve every item in an inserter hand before replacing that inserter.
   for lane = 1, 2 do
-    for _, group in ipairs({ old_arms[lane] or {}, old_out[lane] or {} }) do
+    for _, group in ipairs({ old_arms[lane] or {}, old_out[lane] or {}, old_mop[lane] or {} }) do
       for _, arm in ipairs(group) do
         if _valid(arm) then
           local held = arm.held_stack
@@ -48,12 +52,6 @@ function M.create(rec)
             local inv = rec.invs and rec.invs[lane]
             if _valid(rec.stores and rec.stores[lane]) and inv then
               local inserted = inv.insert(stack)
-              remaining = remaining - inserted
-            end
-            if remaining > 0 then
-              stack.count = remaining
-              local box_inv = entity.get_inventory(defines.inventory.chest)
-              local inserted = box_inv.insert(stack)
               remaining = remaining - inserted
             end
             if remaining > 0 then
@@ -68,6 +66,7 @@ function M.create(rec)
   for lane = 1, 2 do
     for _, arm in ipairs(old_arms[lane] or {}) do _destroy(arm) end
     for _, arm in ipairs(old_out[lane] or {}) do _destroy(arm) end
+    for _, arm in ipairs(old_mop[lane] or {}) do _destroy(arm) end
   end
 
   rec.stores = rec.stores or {}
@@ -86,6 +85,7 @@ function M.create(rec)
   local pickup = { x = pos.x + dx, y = pos.y + dy }
   rec.arms = { {}, {} }
   rec.out = { {}, {} }
+  rec.mop = { {}, {} }
   -- hand size = force belt stack now (tick writes it again when research changes it)
   local uc = prototypes.utility_constants
   local bss = 1 + (force.belt_stack_size_bonus or 0)
@@ -102,43 +102,55 @@ function M.create(rec)
       arm.drop_target = rec.stores[lane]
       rec.arms[lane][#rec.arms[lane] + 1] = arm
     end
-    local fx, fy = _delta(rec.dir)
-    local s = lane == 1 and 0.25 or -0.25
-    local ddx, ddy = fx + fy * s, fy - fx * s
-    local drop = { x = pos.x + ddx, y = pos.y + ddy }
-    -- pickup opposite to drop (still on box tile): half a circle per swing in every box direction (V16-9)
-    local pick = { x = pos.x - 0.3 * ddx, y = pos.y - 0.3 * ddy }
+    for _ = 1, N.MOP_ARMS do
+      local arm = surface.create_entity { name = N.ARM, position = pos, force = force }
+      arm.destructible = false
+      arm.pickup_position = pos
+      arm.drop_position = pos
+      arm.pickup_from_left_lane = lane == 1
+      arm.pickup_from_right_lane = lane == 2
+      arm.pickup_target = entity
+      arm.drop_target = rec.stores[lane]
+      rec.mop[lane][#rec.mop[lane] + 1] = arm
+    end
     local out_name = N.out_name(speed)
     if not prototypes.entity[out_name] then out_name = N.OUT end  -- belt of tier changed after data stage: fast arm
     for _ = 1, N.OUT_ARMS do
       local arm = surface.create_entity { name = out_name, position = pos, force = force }
       arm.destructible = false
       arm.inserter_stack_size_override = bss  -- before it can take anything: hand = belt stack from first tick
-      arm.pickup_position = pick
       arm.pickup_target = rec.stores[lane]
-      arm.drop_position = drop
       rec.out[lane][#rec.out[lane] + 1] = arm
-    end
-  end
-  for _, id in ipairs({ defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green }) do
-    local box_connector = entity.get_wire_connector(id, true)
-    for lane = 1, 2 do
-      rec.stores[lane].get_wire_connector(id, true).connect_to(box_connector, false, defines.wire_origin.script)
     end
   end
   rec.paused = { false, false }
   rec.skip = { "", "" }
   rec.out_paused = { false, false }
   rec.hand = bss
+  if not _valid(rec.hood) then
+    rec.hood = surface.create_entity { name = N.hood(rec.tier), position = pos, force = force }
+    rec.hood.destructible = false
+  end
+  local hood_direction = defines.direction[rec.dir]
+  if rec.hood.direction ~= hood_direction then rec.hood.direction = hood_direction end
+  M.shut(entity)
+  rec.aim = nil
+  _apply_aim(rec, "ahead")
+  rec.wired = nil
+  M.wire(rec, not (rec.settings and rec.settings.circuit and rec.settings.circuit.read == false))
 end
 
 function M.destroy(rec, keep_stores)
   for lane = 1, 2 do
     for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do _destroy(arm) end
     for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do _destroy(arm) end
+    for _, arm in ipairs((rec.mop and rec.mop[lane]) or {}) do _destroy(arm) end
   end
   rec.arms = nil
   rec.out, rec.out_paused, rec.hand = nil, nil, nil
+  rec.mop = nil
+  _destroy(rec.hood)
+  rec.hood, rec.aim, rec.wired = nil, nil, nil
   if not keep_stores then
     for lane = 1, 2 do _destroy(rec.stores and rec.stores[lane]) end
     rec.stores, rec.invs = nil, nil
@@ -149,6 +161,9 @@ function M.pause(rec, lane, paused)
   rec.paused = rec.paused or {}
   if rec.paused[lane] == paused then return end
   for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do
+    if _valid(arm) then arm.disabled_by_script = paused end
+  end
+  for _, arm in ipairs((rec.mop and rec.mop[lane]) or {}) do
     if _valid(arm) then arm.disabled_by_script = paused end
   end
   rec.paused[lane] = paused
@@ -182,16 +197,18 @@ end
 
 -- F-1: does an arm of this lane hold an item whose kind has no slot in the lane store yet?
 function M.need_slot(rec, lane, contents)
-  for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do
-    if _valid(arm) then
-      local held = arm.held_stack
-      if held and held.valid_for_read then
-        local name, quality, found = held.name, held.quality.name, false
-        for i = 1, #contents do
-          local c = contents[i]
-          if c.name == name and c.quality == quality then found = true; break end
+  for _, group in ipairs({ (rec.arms and rec.arms[lane]) or {}, (rec.mop and rec.mop[lane]) or {} }) do
+    for _, arm in ipairs(group) do
+      if _valid(arm) then
+        local held = arm.held_stack
+        if held and held.valid_for_read then
+          local name, quality, found = held.name, held.quality.name, false
+          for i = 1, #contents do
+            local c = contents[i]
+            if c.name == name and c.quality == quality then found = true; break end
+          end
+          if not found then return true end
         end
-        if not found then return true end
       end
     end
   end
@@ -247,7 +264,7 @@ end
 function M.drain_hands(rec)
   local items = {}
   for lane = 1, 2 do
-    for _, group in ipairs({ (rec.arms and rec.arms[lane]) or {}, (rec.out and rec.out[lane]) or {} }) do
+    for _, group in ipairs({ (rec.arms and rec.arms[lane]) or {}, (rec.out and rec.out[lane]) or {}, (rec.mop and rec.mop[lane]) or {} }) do
       for _, arm in ipairs(group) do
         if _valid(arm) then
           local held = arm.held_stack
@@ -262,10 +279,57 @@ function M.drain_hands(rec)
   return items
 end
 
--- v17 seam stubs (lane 053)
-function M.aim_out(rec, kind) error("stub: arms.aim_out") end
-function M.wire(rec, on) error("stub: arms.wire") end
-function M.shut(entity) error("stub: arms.shut") end
+_out_positions = function(pos, dir, lane, kind)
+  local fx, fy = _delta(dir)
+  local s = lane == 1 and 0.25 or -0.25
+  local forward, side = 1, s
+  if kind == "across" then forward, side = 0.75, 0.4 * s end
+  local ddx, ddy = forward * fx + side * fy, forward * fy - side * fx
+  return { x = pos.x + ddx, y = pos.y + ddy },
+    { x = pos.x - 0.3 * ddx, y = pos.y - 0.3 * ddy }
+end
+
+function M.aim_out(rec, kind)
+  if rec.aim == kind then return end
+  _apply_aim(rec, kind)
+end
+
+_apply_aim = function(rec, kind)
+  local pos = rec.entity.position
+  for lane = 1, 2 do
+    for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do
+      if _valid(arm) then
+        local drop, pick = _out_positions(pos, rec.dir, lane, kind)
+        arm.drop_position = drop
+        arm.pickup_position = pick
+      end
+    end
+  end
+  rec.aim = kind
+end
+
+function M.wire(rec, on)
+  if rec.wired == on then return end
+  local entity = rec.entity
+  for _, id in ipairs({ defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green }) do
+    local body = entity.get_wire_connector(id, true)
+    for lane = 1, 2 do
+      local store = rec.stores and rec.stores[lane]
+      if _valid(store) then
+        local connector = store.get_wire_connector(id, true)
+        if on then connector.connect_to(body, false, defines.wire_origin.script)
+        else connector.disconnect_from(body, defines.wire_origin.script) end
+      end
+    end
+  end
+  rec.wired = on
+end
+
+function M.shut(entity)
+  local cb = entity.get_or_create_control_behavior()
+  cb.connect_to_logistic_network = true
+  cb.logistic_condition = N.SHUT
+end
 
 function M.ensure(rec)
   local expected = M.count(prototypes.entity[N.TIER[rec.tier].belt].belt_speed)
@@ -284,7 +348,11 @@ function M.ensure(rec)
     else
       for _, arm in ipairs(outs) do if not _valid(arm) then broken = true; break end end
     end
+    local mops = rec.mop and rec.mop[lane]
+    if not mops or #mops ~= N.MOP_ARMS then broken = true
+    else for _, arm in ipairs(mops) do if not _valid(arm) then broken = true; break end end end
   end
+  if not _valid(rec.hood) then broken = true end
   if broken then M.create(rec); return true end
   return false
 end

@@ -7,7 +7,7 @@ local function setup(speed)
   local function entity(spec)
     local e = { valid = true, name = spec.name, position = spec.position, force = spec.force, writes = {}, filters = {}, links = {} }
     setmetatable(e, { __index = function(t, k) local w = rawget(t, "_watched"); return w and w[k] end, __newindex = function(t, k, v)
-      if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" or k == "inserter_stack_size_override" then
+      if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" or k == "inserter_stack_size_override" or k == "pickup_position" or k == "drop_position" then
         writes[k] = (writes[k] or 0) + 1; e.writes[k] = (e.writes[k] or 0) + 1
         e._watched = e._watched or {}; e._watched[k] = v
       else
@@ -21,7 +21,8 @@ local function setup(speed)
     function e.get_wire_connector(id, create)
       if e.wire_connectors[id] then return e.wire_connectors[id] end
       local c = { id = id, create = create, connections = {} }
-      function c.connect_to(other, a, origin) c.connections[#c.connections+1] = { other=other, a=a, origin=origin } end
+      function c.connect_to(other, a, origin) c.connections[#c.connections+1] = { other=other, a=a, origin=origin }; c.connect_calls=(c.connect_calls or 0)+1; c.last_origin=origin end
+      function c.disconnect_from(other, origin) c.disconnects=(c.disconnects or 0)+1; c.last_other=other; c.last_origin=origin end
       connectors[#connectors+1] = c; e.wire_connectors[id] = c; return c
     end
     e.inventory = { tag = spec.name, insert_calls = 0, room = math.huge }
@@ -30,6 +31,8 @@ local function setup(speed)
       local n=math.min(stack.count,e.inventory.room); e.inventory.room=e.inventory.room-n; return n
     end
     e.held_stack={ valid_for_read=false, clear=function() e.held_stack.valid_for_read=false end }
+    e.behavior={}
+    function e.get_or_create_control_behavior() return e.behavior end
     e.pickup_target=nil
     created[#created+1] = { spec=spec, entity=e }
     return e
@@ -40,11 +43,11 @@ local function setup(speed)
   box.get_inventory=function() return box.inventory end
   local rec = { entity=box, tier="turbo", dir="north" }
   prototypes = { entity = { [N.TIER.turbo.belt] = { belt_speed=speed or 0.125 } } }
-  defines = { inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={script=3} }
+  defines = { direction={north=0,east=4,south=8,west=12}, inventory={chest=1}, wire_connector_id={circuit_red=1,circuit_green=2}, wire_origin={script=3} }
   return rec, surface, created, writes, connectors, entity
 end
 
-describe("arms", function()
+describe("arms v17", function()
   it("count from speed table", function()
     eq(arms.count(0.03125),4); eq(arms.count(0.0625),4); eq(arms.count(0.125),4)
     eq(arms.count(0.15625),8); eq(arms.count(0.3),8); eq(arms.count(0.3125),12); eq(arms.count(0.5625),12)
@@ -53,7 +56,7 @@ describe("arms", function()
     local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec)
     local stores, inserters=0,0
     for _,v in ipairs(created) do if v.spec.name==N.STORE then stores=stores+1 elseif v.spec.name==N.ARM then inserters=inserters+1 end end
-    eq(stores,2); eq(inserters,8); eq(#rec.stores,2); eq(#rec.invs,2); eq(#rec.arms[1],4); eq(#rec.arms[2],4)
+    eq(stores,2); eq(inserters,8+N.MOP_ARMS*2); eq(#rec.stores,2); eq(#rec.invs,2); eq(#rec.arms[1],4); eq(#rec.arms[2],4)
     for _,v in ipairs(created) do if v.spec.name==N.STORE or v.spec.name==N.ARM then eq(v.entity.destructible,false); eq(v.spec.position,{x=10,y=20}); eq(v.spec.force,"force") end end
   end)
   it("arm setup per lane and direction", function()
@@ -89,7 +92,7 @@ describe("arms", function()
   end)
   it("pause writes only on change", function()
     local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec); arms.pause(rec,1,true); local n=writes.disabled_by_script
-    arms.pause(rec,1,true); eq(writes.disabled_by_script,n); eq(n,#rec.arms[1]); eq(rec.arms[2][1].disabled_by_script,nil)
+    arms.pause(rec,1,true); eq(writes.disabled_by_script,n); eq(n,#rec.arms[1]+N.MOP_ARMS); eq(rec.arms[2][1].disabled_by_script,nil)
     arms.pause(rec,1,false); eq(writes.disabled_by_script,2*n)
   end)
   it("skip sets blacklist only on change", function()
@@ -169,11 +172,11 @@ describe("arms", function()
   it("create saves hands of old arms", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
     set_hand(rec.arms[1][1],"iron-plate",3); rec.invs[1].room=1
-    set_hand(rec.out[2][1],"copper-plate",2); rec.invs[2].room=2; rec.entity.inventory.room=0
+    set_hand(rec.out[2][1],"copper-plate",2); rec.invs[2].room=2; rec.entity.get_inventory=nil
     local oldin,oldout=rec.arms[1][1],rec.out[2][1]; arms.create(rec)
     eq(oldin.valid,false); eq(oldout.valid,false); eq(rec.invs[1].insert_calls,1); eq(rec.invs[2].insert_calls,1)
-    eq(rec.entity.inventory.insert_calls,1); eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position); eq(s.spills[1].stack,{name="iron-plate",count=2,quality="normal"})
-    local r,s2=setup(); r.entity.surface=s2; arms.create(r); arms.create(r); eq(r.invs[1].insert_calls,0); eq(r.entity.inventory.insert_calls,0); eq(#s2.spills,0)
+    eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position); eq(s.spills[1].stack,{name="iron-plate",count=2,quality="normal"})
+    local r,s2=setup(); r.entity.surface=s2; arms.create(r); arms.create(r); eq(r.invs[1].insert_calls,0); eq(#s2.spills,0)
   end)
   it("destroy removes out arms", function()
     for _,keep in ipairs({false,true}) do local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local a=rec.out[1][1]; arms.destroy(rec,keep); eq(a.valid,false); eq(rec.out,nil); eq(rec.out_paused,nil); eq(rec.hand,nil) end
@@ -213,4 +216,74 @@ describe("arms", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec); rec.out=nil; eq(arms.ensure(rec),true); eq(#rec.out[1],N.OUT_ARMS); eq(arms.ensure(rec),false)
     rec.out[1][1].valid=false; eq(arms.ensure(rec),true); rec.out[1]={}; eq(arms.ensure(rec),true)
   end)
+
+    it("create never reads chest inventory", function()
+      local rec, s = setup(); rec.entity.surface = s; arms.create(rec); set_hand(rec.arms[1][1],"iron-plate",3)
+      rec.invs[1].room=1; rec.entity.get_inventory = nil; arms.create(rec)
+      eq(#s.spills,1); eq(s.spills[1].position,rec.entity.position)
+      eq(s.spills[1].stack,{name="iron-plate",count=2,quality="normal"})
+    end)
+    it("create makes mop arms", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec)
+      eq(#rec.mop[1],N.MOP_ARMS); eq(#rec.mop[2],N.MOP_ARMS)
+      for lane=1,2 do for _,a in ipairs(rec.mop[lane]) do
+        eq(a.name,N.ARM); eq(a.pickup_position,rec.entity.position); eq(a.drop_position,rec.entity.position)
+        eq(a.pickup_from_left_lane,lane==1); eq(a.pickup_from_right_lane,lane==2)
+        eq(a.pickup_target,rec.entity); eq(a.drop_target,rec.stores[lane]); eq(a.destructible,false)
+      end end
+    end)
+    it("create saves mop hands before replacing", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local old=rec.mop[1][1]
+      set_hand(old,"iron-plate",3); arms.create(rec)
+      eq(rec.invs[1].insert_calls,1); eq(old.valid,false)
+    end)
+    it("create makes hood once and turns it", function()
+      local rec,s,created=setup(); rec.entity.surface=s; arms.create(rec); local hood=rec.hood
+      eq(hood.name,N.hood(rec.tier)); eq(hood.direction,defines.direction.north); eq(hood.destructible,false)
+      rec.dir="east"; arms.create(rec); eq(rec.hood,hood); eq(hood.direction,defines.direction.east)
+      local n=0; for _,v in ipairs(created) do if v.spec.name==N.hood(rec.tier) then n=n+1 end end; eq(n,1)
+    end)
+    it("shut writes logistic condition", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); local cb=rec.entity.behavior
+      eq(cb.connect_to_logistic_network,true); eq(cb.logistic_condition,N.SHUT); eq(cb.circuit_condition,nil)
+    end)
+    it("aim ahead and across", function()
+      local expected={north={ahead={{9.75,19},{10.25,19}},across={{9.9,19.25},{10.1,19.25}}},east={ahead={{11,19.75},{11,20.25}},across={{10.75,19.9},{10.75,20.1}}},south={ahead={{10.25,21},{9.75,21}},across={{10.1,20.75},{9.9,20.75}}},west={ahead={{9,20.25},{9,19.75}},across={{9.25,20.1},{9.25,19.9}}}}
+      for _,dir in ipairs(N.DIRS) do for _,kind in ipairs({"ahead","across"}) do
+        local rec,s=setup(); rec.entity.surface=s; rec.dir=dir; arms.create(rec); arms.aim_out(rec,kind)
+        for lane=1,2 do local a=rec.out[lane][1]; local d=expected[dir][kind][lane]
+          eq(a.drop_position,{x=d[1],y=d[2]}); eq(a.pickup_position,{x=10-0.3*(d[1]-10),y=20-0.3*(d[2]-20)})
+        end
+      end end
+    end)
+    it("aim unchanged writes nothing", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.aim_out(rec,"across")
+      local a=rec.out[1][1]; local n=a.writes.drop_position+a.writes.pickup_position
+      arms.aim_out(rec,"across"); eq(a.writes.drop_position+a.writes.pickup_position,n)
+    end)
+    it("wire on off", function()
+      local rec,s,_,_,connectors=setup(); rec.entity.surface=s; arms.create(rec)
+      local calls=0; for _,c in ipairs(connectors) do calls=calls+(c.connect_calls or 0) end; eq(calls,4)
+      arms.wire(rec,true); local n=0; for _,c in ipairs(connectors) do n=n+(c.connect_calls or 0) end; eq(n,calls)
+      arms.wire(rec,false); local disconnected=0; for _,c in ipairs(connectors) do disconnected=disconnected+(c.disconnects or 0) end
+      eq(disconnected,4); eq(rec.wired,false)
+    end)
+    it("pause covers mop arms", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); arms.pause(rec,1,true)
+      for _,a in ipairs(rec.mop[1]) do eq(a.disabled_by_script,true) end; eq(rec.mop[2][1].disabled_by_script,nil)
+    end)
+    it("destroy and drain cover mop arms and hood", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.mop[1][1],"iron-plate",2)
+      eq(arms.drain_hands(rec),{{name="iron-plate",quality="normal",count=2,lane=1}})
+      local mop,hood=rec.mop[1][1],rec.hood; arms.destroy(rec)
+      eq(mop.valid,false); eq(hood.valid,false); eq(rec.mop,nil); eq(rec.hood,nil); eq(rec.aim,nil); eq(rec.wired,nil)
+    end)
+    it("ensure sees missing mop arms or hood", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); rec.mop=nil; eq(arms.ensure(rec),true)
+      rec.hood.valid=false; eq(arms.ensure(rec),true); eq(arms.ensure(rec),false)
+    end)
+    it("need_slot sees mop hand", function()
+      local rec,s=setup(); rec.entity.surface=s; arms.create(rec); set_hand(rec.mop[1][1],"iron-plate",1)
+      eq(arms.need_slot(rec,1,{}),true)
+    end)
 end)
