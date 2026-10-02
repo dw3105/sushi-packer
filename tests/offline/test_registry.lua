@@ -139,7 +139,24 @@ describe("registry v17", function()
   it("rotated updates dir and parts", function() local r,N,a,l,ent=setup(); local e=ent(N.body("red")); local rec=r.new_rec(e); e.direction=0; r.on_rotated({entity=e}); eq(rec.dir,"north"); eq(l[1],"arms.create") end)
   it("removal never reads chest inventory", function() local r,N,_,_,ent=setup(); local e=ent(N.body("yellow")); e.get_inventory=nil; local rec=r.new_rec(e); rec.invs={}; r.on_removed({entity=e}); r.on_died({entity=e}) end)
   it("migrate chest to body", function() local r,N,a,log,ent,m=setup(); local e=ent(N.variant("yellow","east")); e.get_inventory=function() return {valid=true,get_contents=function() return {{name="plate",count=5}} end} end; local pole=ent("pole"); local store=ent("store"); local red= e.get_wire_connector(1,true); red.connections={{target={owner=pole,wire_connector_id=7},origin=defines.wire_origin.player},{target={owner=store,wire_connector_id=8},origin=defines.wire_origin.script}}; local inv={items={}}; inv.insert=function(x) inv.items[#inv.items+1]=x; return x.count end; local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",settings={circuit={read=false}},invs={inv,{insert=function() return 0 end}}}; storage.boxes[e.unit_number]=rec; local got=r.migrate(rec); eq(got,rec); eq(m[1].name,N.body("yellow")); eq(e.valid,false); eq(rec.extra,nil); eq(rec.invs[1].items[1].count,5); eq(#rec.entity.connectors[1].connected,1); eq(rec.entity.connectors[1].connected[1].origin,defines.wire_origin.player); eq(log[1],"arms.destroy"); local ic,ia; for i,x in ipairs(log) do if x=="arms.create" then ic=i elseif x=="circuit.apply" then ia=i end end; ok(ic and ia and ic<ia,"apply after create: body gets control behaviour in arms.create") end)
-  it("migrate overflow is spilled", function() local r,N,_,_,ent=setup(); local e=ent(N.variant("yellow","east")); e.get_inventory=function() return {valid=true,get_contents=function() return {{name="coal",count=3}} end} end; local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",settings={circuit={}},invs={{insert=function() return 1 end},{insert=function() return 0 end}}}; storage.boxes[e.unit_number]=rec; rec.extra={{name="coal",count=3,lane=1}}; r.migrate(rec); ok(#e.surface.spilled>=1) end)
+  it("migrate overflow goes to hidden spare store, not on ground", function()
+    -- old-save run 2026-10-02: spilled overflow landed on belts nearby (wrong lane) and on ground
+    local r,N,_,_,ent,_,surf=setup(); local e=ent(N.variant("yellow","east"))
+    e.get_inventory=function() return {valid=true,get_contents=function() return {{name="coal",count=3}} end} end
+    local real=surf.create_entity; local spares={}
+    surf.create_entity=function(spec)
+      local made=real(spec)
+      if spec.name==N.STORE then
+        local got={}; made.got=got; spares[#spares+1]=made
+        made.get_inventory=function() return {valid=true,insert=function(x) got[#got+1]={name=x.name,count=x.count}; return x.count end,get_contents=function() return got end} end
+      end
+      return made
+    end
+    local rec={entity=e,unit_number=e.unit_number,tier="yellow",dir="east",settings={circuit={}},invs={{insert=function() return 1 end},{insert=function() return 0 end}}}
+    storage.boxes[e.unit_number]=rec; rec.extra={{name="coal",count=3,lane=1}}; r.migrate(rec)
+    eq(#spares,1); eq(spares[1].got,{{name="coal",count=2}}); eq(rec.spare[1][1],spares[1]); eq(#rec.spare[2],0)
+    eq(#(e.surface.spilled or {}),0)
+  end)
   it("migrate never doubles items named by extra", function()
     -- INT (review of lane 056): rec.extra names items that lie in the chest; both were inserted
     local r,N,_,_,ent=setup(); local e=ent(N.variant("yellow","east"))

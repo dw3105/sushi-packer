@@ -84,6 +84,28 @@ local function timeout_for(rec)
   return tick_timeout
 end
 
+-- v17: spare stores (made when an old save is swapped to belt body and lane store could not hold everything) give
+-- their items to the lane store as room comes. rec.spare is nil for every other packer.
+local function refill(rec, lane)
+  local list, inv = rec.spare[lane], rec.invs[lane]
+  for i = #list, 1, -1 do
+    local spare = list[i]
+    if spare.valid then
+      local sinv = spare.get_inventory(defines.inventory.chest)
+      local contents = sinv.get_contents()
+      for k = 1, #contents do
+        local c = contents[k]
+        local n = inv.insert({ name = c.name, quality = c.quality, count = c.count })
+        if n > 0 then sinv.remove({ name = c.name, quality = c.quality, count = n }) end
+      end
+      if sinv.is_empty() then spare.destroy(); table.remove(list, i) end
+    else
+      table.remove(list, i)
+    end
+  end
+  if #rec.spare[1] == 0 and #rec.spare[2] == 0 then rec.spare = nil end
+end
+
 local skip_filters
 local function skip_fn(name, quality) return filter.match(skip_filters, name, quality, levels()) end
 
@@ -102,6 +124,7 @@ local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counte
     return false  -- nothing can leave now; contents looked at again at slow tick
   end
   rec.slow[lane] = tick + SLOW
+  if rec.spare then refill(rec, lane) end
   local inv = rec.invs[lane]
   local contents = inv.get_contents()
   local n = #contents
@@ -179,6 +202,7 @@ local function engine_look(rec, tick, bss, flush_all)
     do
       arms.pause(rec, lane, rec.enabled == false or rec.decon == true)
       arms.pause_out(rec, lane, stopped)
+      if rec.spare then refill(rec, lane) end
       local inv = rec.invs[lane]
       local contents = inv.get_contents()
       local n = #contents

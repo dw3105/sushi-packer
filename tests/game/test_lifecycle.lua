@@ -408,6 +408,67 @@ describe("lifecycle", function()
     assert.is_true(rec.led and rec.led.sprite.valid)
   end)
 
+  it("old save with more items than lane stores hold loses nothing and spills nothing", function()
+    -- old-save run 2026-10-02 (v1.14 save): overflow was spilled, some of it onto belts on the wrong lane
+    local e = surface.create_entity({ name = N.variant("yellow", "north"), position = { 0.5, 0.5 }, force = force })
+    for i = 1, 3 do surface.create_entity({ name = "transport-belt", position = { 0.5, 0.5 + i }, direction = defines.direction.north, force = force }) end
+    local names = {}
+    for name, p in pairs(prototypes.item) do
+      if p.type == "item" and p.stack_size >= 50 and not p.hidden and not p.parameter then names[#names + 1] = name end
+    end
+    table.sort(names)
+    local chest, extra, fed = e.get_inventory(defines.inventory.chest), {}, 0
+    for i = 1, 30 do  -- 30 kinds, 15 per lane: more than 12 slots of a lane store
+      chest.insert({ name = names[i], count = 3 }); fed = fed + 3
+      extra[#extra + 1] = { name = names[i], quality = "normal", count = 3, lane = i % 2 + 1 }
+    end
+    local settings = copy.default_settings(); settings.circuit.read = nil
+    local rec = { entity = e, unit_number = e.unit_number, tier = "yellow", dir = "north", ledger = ledger.new(), settings = settings, enabled = true,
+      circuit_state = { last_flush = false }, out_credit = { 0, 0 }, in_credit = { 0, 0 }, next_poll = 0, extra = extra }
+    storage.boxes[e.unit_number] = rec
+    registry.on_configuration_changed({})
+    local function inside()
+      local n = rec.invs[1].get_item_count() + rec.invs[2].get_item_count()
+      for lane = 1, 2 do
+        for _, sp in ipairs(rec.spare and rec.spare[lane] or {}) do n = n + sp.get_inventory(defines.inventory.chest).get_item_count() end
+        for _, group in ipairs({ rec.arms[lane], rec.out[lane], rec.mop[lane] }) do
+          for _, arm in ipairs(group) do if arm.held_stack.valid_for_read then n = n + arm.held_stack.count end end
+        end
+      end
+      return n
+    end
+    assert.is_not_nil(rec.spare, "overflow sits in spare stores")
+    assert.are_equal(fed, inside(), "nothing lost at swap")
+    assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
+    local front = {}
+    for i = 1, 30 do front[i] = surface.create_entity({ name = "transport-belt", position = { 0.5, 0.5 - i }, direction = defines.direction.north, force = force }) end
+    local sink, out = front[#front], { {}, {} }
+    local t = 0
+    on_tick(function()
+      t = t + 1
+      for lane = 1, 2 do
+        local line = sink.get_transport_line(lane)
+        for _, c in ipairs(line.get_contents()) do out[lane][c.name] = (out[lane][c.name] or 0) + c.count end
+        line.clear()
+      end
+      if t < 3000 then return end
+      local on_belts, total_out, cross = 0, 0, 0
+      for _, b in ipairs(front) do on_belts = on_belts + b.get_transport_line(1).get_item_count() + b.get_transport_line(2).get_item_count() end
+      for lane = 1, 2 do
+        for name, c in pairs(out[lane]) do
+          total_out = total_out + c
+          for _, x in ipairs(extra) do if x.name == name and x.lane ~= lane then cross = cross + c end end
+        end
+      end
+      local msg = string.format("out=%d on_belts=%d inside=%d spare=%s", total_out, on_belts, inside(), tostring(rec.spare ~= nil))
+      assert.are_equal(fed, total_out + on_belts + inside(), "nothing lost: " .. msg)
+      assert.are_equal(0, cross, "lanes kept: " .. msg)
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground: " .. msg)
+      assert.is_nil(rec.spare, "spare stores emptied and gone: " .. msg)
+      done()
+    end)
+  end)
+
   it("ghost of old blueprint builds belt body", function()
     -- built legacy chest is swapped inside the build event
     surface.create_entity({ name = N.variant("red", "south"), position = { 0.5, 0.5 }, force = force, raise_built = true })

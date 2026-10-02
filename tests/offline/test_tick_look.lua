@@ -117,6 +117,25 @@ describe("tick look",function()
     f.hand_merges[1]={{name="iron",quality="normal",total=6,arms={1,3}}}
     f.run(30); eq(spilled,{{x=3.5,name="iron",quality="normal",count=2}}); f.restore()
   end)
+  it("spare store gives its items to lane store and goes away",function()
+    local f=fixture(); local destroyed=false
+    local sinv=inv({{name="iron",quality="normal",count=5}})
+    function sinv.remove(v) sinv.removed[#sinv.removed+1]=v.count; sinv.items={}; return v.count end
+    f.rec.spare={{ {valid=true,get_inventory=function() return sinv end,destroy=function() destroyed=true end} },{}}
+    f.run(30)
+    eq(f.rec.invs[1].inserted[1],{name="iron",quality="normal",count=5}); eq(sinv.removed,{5}); eq(destroyed,true); eq(f.rec.spare,nil)
+    f.restore()
+  end)
+  it("spare store keeps what lane store can not take yet",function()
+    local f=fixture(); local destroyed=false
+    local sinv=inv({{name="iron",quality="normal",count=5}})
+    function sinv.remove(v) sinv.removed[#sinv.removed+1]=v.count; sinv.items[1].count=sinv.items[1].count-v.count; return v.count end
+    f.rec.invs[1].room=2
+    f.rec.spare={{ {valid=true,get_inventory=function() return sinv end,destroy=function() destroyed=true end} },{}}
+    f.run(30)
+    eq(sinv.removed,{2}); eq(sinv.items[1].count,3); eq(destroyed,false); ok(f.rec.spare ~= nil)
+    f.restore()
+  end)
   it("front kind is given to out arms at every look",function()
     local f=fixture(); f.front="across"; f.run(30); eq(f.aims,{"across"}); f.front=true; f.rec.front_at=nil; f.run(60); eq(f.aims,{"across","ahead"})
     f.front=false; f.rec.front_at=nil; f.run(90); eq(#f.aims,2,"no front: no aim"); eq(f.outs[#f.outs],{2,true}); f.restore()

@@ -16,7 +16,7 @@ local function spill_at(surface, position, items)
   for _, item in ipairs(items or {}) do
     if item.name and item.count and item.count > 0 then
       surface.spill_item_stack({ position = position,
-        stack = { name = item.name, count = item.count, quality = item.quality }, enable_looted = true })
+        stack = { name = item.name, count = item.count, quality = item.quality }, enable_looted = true, allow_belts = false })
     end
   end
 end
@@ -39,18 +39,32 @@ local function contents_as_array(contents)
   end
   return items
 end
+-- v17: rec.spare = { { store, ... }, { store, ... } } hidden spare stores per lane, made by migrate for items the lane
+-- store can not hold (old chest had 48 slots; hands of arms). Tick moves them into the lane store as room comes.
 local function store_items(rec)
   local items = {}
-  for lane = 1, 2 do
-    local inv = rec.invs and rec.invs[lane]
+  local function take(inv)
     if inv and inv.valid ~= false then
       for _, item in ipairs(contents_as_array(inv.get_contents())) do
         if item.name and item.count and item.count > 0 then items[#items + 1] = item end
       end
     end
   end
+  for lane = 1, 2 do
+    take(rec.invs and rec.invs[lane])
+    for _, spare in ipairs(rec.spare and rec.spare[lane] or {}) do
+      if valid(spare) then take(spare.get_inventory(defines.inventory.chest)) end
+    end
+  end
   return items
 end
+local function destroy_spare(rec)
+  for lane = 1, 2 do
+    for _, spare in ipairs(rec.spare and rec.spare[lane] or {}) do if valid(spare) then spare.destroy() end end
+  end
+  rec.spare = nil
+end
+local SPARE_MAX = 8  -- 8 x 12 slots per lane: more than an old 48-slot chest plus every arm hand
 local function migrate_old_box(rec)
   if not rec.box or rec.stores then return end
   local old, merged, order = rec.box, {}, {}
@@ -145,7 +159,7 @@ function M.on_removed(e)
     spill(entity, store_items(rec))
     spill(entity, held)
   end
-  arms.destroy(rec)
+  arms.destroy(rec); destroy_spare(rec)
   led.destroy(rec)
   boxes()[rec.unit_number] = nil; storage.sched = nil
 end
@@ -157,7 +171,7 @@ function M.on_died(e)
   local held = arms.drain_hands and arms.drain_hands(rec) or {}
   spill(entity, store_items(rec))
   spill(entity, held)
-  arms.destroy(rec)
+  arms.destroy(rec); destroy_spare(rec)
   led.destroy(rec)
   boxes()[rec.unit_number] = nil; storage.sched = nil
 end
@@ -180,7 +194,7 @@ local function prune_stash()
     if entry.tick < game.tick then
       local rec = entry.rec
       spill_at(entry.surface, entry.position, store_items(rec))
-      arms.destroy(rec)
+      arms.destroy(rec); destroy_spare(rec)
       storage.upgrade_stash[key] = nil
     end
   end
@@ -256,9 +270,25 @@ function M.on_configuration_changed(data)
 end
 
 local function insert_or_spill(rec, lane, item)
-  local inv=rec.invs and rec.invs[lane]; local n=0
-  if inv and inv.valid ~= false then n=inv.insert({name=item.name,count=item.count,quality=item.quality}) or 0 end
-  if n < item.count then spill(rec.entity,{{name=item.name,count=item.count-n,quality=item.quality}}) end
+  local inv=rec.invs and rec.invs[lane]; local left=item.count
+  if inv and inv.valid ~= false then left=left-(inv.insert({name=item.name,count=left,quality=item.quality}) or 0) end
+  if left <= 0 then return end
+  -- lane store full: hidden spare stores keep the rest (never on ground: spilled items can land on belts)
+  local entity=rec.entity
+  rec.spare=rec.spare or {{},{}}
+  local list=rec.spare[lane]
+  local k=1
+  while left > 0 and k <= SPARE_MAX do
+    local spare=list[k]
+    if not valid(spare) then
+      spare=entity.surface.create_entity({name=N.STORE,position=entity.position,force=entity.force})
+      if not valid(spare) then break end
+      spare.destructible=false; list[k]=spare
+    end
+    left=left-(spare.get_inventory(defines.inventory.chest).insert({name=item.name,count=left,quality=item.quality}) or 0)
+    k=k+1
+  end
+  if left > 0 then spill(entity,{{name=item.name,count=left,quality=item.quality}}) end
 end
 function M.migrate(rec)
   if not rec or not valid(rec.entity) or not N.VARIANTS[rec.entity.name] then return rec end
@@ -275,7 +305,7 @@ function M.migrate(rec)
   if not valid(body) then
     for _,it in ipairs(contents) do spill(old,{it}) end; for _,it in ipairs(store_items(rec)) do spill(old,{it}) end
     for _,it in ipairs(held) do spill(old,{it}) end
-    arms.destroy(rec); led.destroy(rec); old.destroy(); boxes()[unit]=nil; storage.sched=nil; return nil
+    arms.destroy(rec); destroy_spare(rec); led.destroy(rec); old.destroy(); boxes()[unit]=nil; storage.sched=nil; return nil
   end
   rec.entity,rec.unit_number=body,body.unit_number; boxes()[unit]=nil; boxes()[body.unit_number]=rec; storage.sched=nil
   -- rec.extra (v1.14 saves, items put in from outside) names items that lie in the chest, with their lane: those go
