@@ -14,6 +14,6 @@ Post after 0.1.17 / 0.2.17 is live on portal. Author posts. English. Numbers: de
 - Packers in existing saves and blueprints are converted on load: items, settings and wires are kept.
 - Fixed: a packer rotated or upgraded with nothing in front could drop a few stored items on the ground.
 
-Speed is the same as 0.1.16 on vanilla belts (blue belt a bit better). On one very fast modded belt (270 items/s) script time per 200 packers went from 0.38 ms to 0.45 ms.
+Speed is the same as 0.1.16 on vanilla belts. On one very fast modded belt (270 items/s) script time per 200 packers went from 0.38 ms to 0.45 ms.
 
 0.1.18 / 0.2.18 (same day): fixes one case of 0.1.17 - with a belt running across in front of the packer, a few leftover items could stay inside for good.
