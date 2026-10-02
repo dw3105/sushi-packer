@@ -302,6 +302,9 @@ _apply_aim = function(rec, kind)
         local drop, pick = _out_positions(pos, rec.dir, lane, kind)
         arm.drop_position = drop
         arm.pickup_position = pick
+        -- writing pickup_position makes engine pick a new target at that spot (belt body): name lane store again
+        -- (seen in game 2026-10-02: out arms waited on body, nothing left packer)
+        arm.pickup_target = rec.stores[lane]
       end
     end
   end

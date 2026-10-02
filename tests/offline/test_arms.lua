@@ -10,6 +10,8 @@ local function setup(speed)
       if k == "disabled_by_script" or k == "use_filters" or k == "inserter_filter_mode" or k == "inserter_stack_size_override" or k == "pickup_position" or k == "drop_position" then
         writes[k] = (writes[k] or 0) + 1; e.writes[k] = (e.writes[k] or 0) + 1
         e._watched = e._watched or {}; e._watched[k] = v
+        -- engine: writing pickup_position re-picks the target at that spot (seen in game 2026-10-02)
+        if k == "pickup_position" then rawset(t, "pickup_target", "picked-by-engine") end
       else
         rawset(t, k, v)
       end
