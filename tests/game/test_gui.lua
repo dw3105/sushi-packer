@@ -49,7 +49,7 @@ describe("gui", function()
     local lanes = f.lanes_section
     for lane = 1, 2 do
       assert.is_not_nil(lanes["lane_" .. lane], "lane row " .. lane)
-      assert.is_not_nil(lanes["lane_" .. lane]["lane_slot_" .. N.STORE_SLOTS], "lane row " .. lane .. " has 12 slots")
+      assert.is_not_nil(lanes["lane_" .. lane]["lane_slot_" .. N.STORE_SLOTS], "lane " .. lane .. " has a button for every store slot")
     end
   end)
 

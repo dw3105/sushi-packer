@@ -249,11 +249,11 @@ describe("tick", function()
     end)
   end)
   it("full box flushes oldest partial and loses nothing", function()
-    -- F-1, F-3 on v15 lane stores (V14-10: 12 slots per lane, was 24): no front belt -> nothing leaves; 12 distinct
-    -- partials per lane fill every slot, the 13th kind of left lane must wait on the belt. Front belt appears ->
-    -- oldest partial of each lane leaves first, as one smaller belt item; waiting kind gets its slot; nothing lost.
+    -- F-1, F-3 on lane stores (24 slots per lane since v1.21, V21-2; 12 in v1.15..v1.20): no front belt -> nothing
+    -- leaves; one distinct partial per slot fills every slot, one kind more on left lane must wait on the belt. Front
+    -- belt appears -> oldest partial of each lane leaves first, as one smaller belt item; waiting kind gets its slot.
     local SLOTS = N.STORE_SLOTS
-    assert.are_equal(12, SLOTS)
+    assert.are_equal(24, SLOTS)
     local box, rec, feed = build(surface, force, { front = 0 })
     local names = {}
     for name, p in pairs(prototypes.item) do

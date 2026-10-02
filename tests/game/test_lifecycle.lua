@@ -419,9 +419,9 @@ describe("lifecycle", function()
     end
     table.sort(names)
     local chest, extra, fed = e.get_inventory(defines.inventory.chest), {}, 0
-    for i = 1, 30 do  -- 30 kinds, 15 per lane: more than 12 slots of a lane store
+    for i = 1, 40 do  -- 40 kinds, 28 of them on lane 1: more than the 24 slots of a lane store (12 slots until v1.20)
       chest.insert({ name = names[i], count = 3 }); fed = fed + 3
-      extra[#extra + 1] = { name = names[i], quality = "normal", count = 3, lane = i % 2 + 1 }
+      extra[#extra + 1] = { name = names[i], quality = "normal", count = 3, lane = (i % 10 < 7) and 1 or 2 }
     end
     local settings = copy.default_settings(); settings.circuit.read = nil
     local rec = { entity = e, unit_number = e.unit_number, tier = "yellow", dir = "north", ledger = ledger.new(), settings = settings, enabled = true,
