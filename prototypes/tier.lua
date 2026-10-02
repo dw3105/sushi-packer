@@ -164,6 +164,7 @@ function M.make(tier, opts)
   protos[#protos + 1] = {
     type = "simple-entity-with-owner",
     name = N.hood(tier),
+    icon = icon(tier), icon_size = 64,  -- engine asks icon of every entity (load error without)
     flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral" },
     picture = placer.picture,
     collision_mask = { layers = {} },

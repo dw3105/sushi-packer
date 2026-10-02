@@ -66,6 +66,7 @@ describe("data v17", function()
     local placer = raw["simple-entity-with-owner"][N.placer("yellow")]
     ok(hood ~= nil, "yellow hood missing")
     eq(hood.type, "simple-entity-with-owner"); eq(hood.picture, placer.picture)
+    eq(hood.icon, placer.icon); eq(hood.icon_size, 64)  -- INT: engine refuses entity without icon (load error 2026-10-02)
     eq(hood.collision_mask, { layers = {} }); eq(hood.selectable_in_game, false)
     eq(hood.hidden, true); eq(hood.hidden_in_factoriopedia, true)
     eq(hood.flags, { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral" })
