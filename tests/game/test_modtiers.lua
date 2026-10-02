@@ -102,11 +102,10 @@ describe("modtiers", function()
     for _, c in ipairs(chains()) do
     for i, key in ipairs(c) do
       local nxt = c[i + 1]
-      for _, dir in ipairs(N.DIRS) do
-        local p = prototypes.entity[N.variant(key, dir)]
-        if nxt then assert.are_equal(N.variant(nxt, dir), p.next_upgrade and p.next_upgrade.name, key .. " " .. dir)
-        else assert.is_nil(p.next_upgrade, key .. " last") end
-      end
+      -- v17: chain runs over belt bodies
+      local p = prototypes.entity[N.body(key)]
+      if nxt then assert.are_equal(N.body(nxt), p.next_upgrade and p.next_upgrade.name, key)
+      else assert.is_nil(p.next_upgrade, key .. " last") end
       if nxt then
         assert.is_true(prototypes.entity[N.TIER[nxt].belt].belt_speed >= prototypes.entity[N.TIER[key].belt].belt_speed, nxt .. " not slower")
         assert.is_true(prototypes.item[N.item(nxt)].order > prototypes.item[N.item(key)].order, nxt .. " sorts after " .. key)
@@ -240,19 +239,24 @@ describe("modtiers", function()
     local port = surface.create_entity({ name = "roboport", position = { 16, 22 }, force = force })
     port.insert({ name = "construction-robot", count = 4 })
     surface.create_entity({ name = "storage-chest", position = { 13, 20 }, force = force }).insert({ name = N.item(nxt), count = 1 })
-    local old = surface.create_entity({ name = N.variant(c[1], "east"), position = { 10.5, 18.5 }, force = force, raise_built = true })
+    local old = surface.create_entity({ name = N.body(c[1]), position = { 10.5, 18.5 }, direction = defines.direction.east, force = force, raise_built = true })
     local rec = registry.get(old)
     rec.settings.timeout_s = 33
-    old.get_inventory(defines.inventory.chest).insert({ name = "iron-plate", count = 7 })
-    assert.is_true(old.order_upgrade({ target = N.variant(nxt, "east"), force = force }))
+    rec.invs[1].insert({ name = "iron-plate", count = 7 })
+    assert.is_true(old.order_upgrade({ target = N.body(nxt), force = force }))
     after_ticks(1200, function()
-      local new = surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.variant(nxt, "east") })[1]
+      local new = surface.find_entities_filtered({ position = { 10.5, 18.5 }, radius = 0.4, name = N.body(nxt) })[1]
       assert.is_not_nil(new, "upgraded to " .. nxt)
       local nr = registry.get(new)
       assert.is_not_nil(nr, "rec carried")
       assert.are_equal(nxt, nr.tier); assert.are_equal("east", nr.dir)
       assert.are_equal(33, nr.settings.timeout_s)
-      assert.are_equal(7, new.get_inventory(defines.inventory.chest).get_item_count("iron-plate"))
+      local n = nr.invs[1].get_item_count("iron-plate")
+      for _, group in ipairs({ nr.arms[1], nr.out[1], nr.mop[1] }) do
+        for _, arm in ipairs(group) do local h = arm.held_stack; if h.valid_for_read and h.name == "iron-plate" then n = n + h.count end end
+      end
+      assert.are_equal(7, n, "stored plates kept (store + arm hands)")
+      assert.are_equal(0, #surface.find_entities_filtered({ type = "item-entity" }), "nothing on ground")
     end)
   end)
 
@@ -309,7 +313,9 @@ describe("modtiers", function()
     assert.is_false(s.can_place_entity({ name = "transport-belt", position = { 0.5, 0.5 }, force = force }), "control: plain belt blocked in space")
     assert.is_true(s.can_place_entity({ name = "se-space-transport-belt", position = { 0.5, 1.5 }, force = force }), "space belt allowed")
     for _, key in ipairs(N.active()) do
-      assert.is_true(s.can_place_entity({ name = N.variant(key, "north"), position = { 0.5, 0.5 }, force = force }), "box in space " .. key)
+      -- v17: item places placer, script swaps it to belt body: both must be allowed in space
+      assert.is_true(s.can_place_entity({ name = N.placer(key), position = { 0.5, 0.5 }, direction = defines.direction.north, force = force }), "placer in space " .. key)
+      assert.is_true(s.can_place_entity({ name = N.body(key), position = { 0.5, 0.5 }, direction = defines.direction.north, force = force }), "belt body in space " .. key)
     end
     game.delete_surface(s)
   end)
