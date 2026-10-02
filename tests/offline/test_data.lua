@@ -99,10 +99,11 @@ describe("data v20", function()
   it("body picture is belt plus hood", function()
     local raw = load()
     local source = raw["transport-belt"][N.TIER.yellow.belt].belt_animation_set.animation_set
+    local source_set = raw["transport-belt"][N.TIER.yellow.belt].belt_animation_set
     local body = raw["transport-belt"][N.body("yellow")]
     local layers = body.belt_animation_set.animation_set.layers
     eq(layers[1], source)
-    eq(layers[#layers], tier_builder._hood_layer("yellow", body.belt_animation_set))
+    eq(layers[#layers], tier_builder._hood_layer("yellow", source_set))
   end)
 end)
 

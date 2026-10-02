@@ -20,6 +20,56 @@ local function picture(tier, dir)
 end
 local function icon(tier) return G .. "icons/sushi-packer-" .. tier .. ".png" end
 
+local BELT_ROWS = {
+  { "east_index", "east", "east" }, { "west_index", "west", "west" },
+  { "north_index", "north", "north" }, { "south_index", "south", "south" },
+  { "east_to_north_index", "east_to_north", "north" }, { "north_to_east_index", "north_to_east", "east" },
+  { "west_to_north_index", "west_to_north", "north" }, { "north_to_west_index", "north_to_west", "west" },
+  { "south_to_east_index", "south_to_east", "east" }, { "east_to_south_index", "east_to_south", "south" },
+  { "south_to_west_index", "south_to_west", "west" }, { "west_to_south_index", "west_to_south", "south" },
+  { "starting_south_index", "starting_south", "south" }, { "ending_south_index", "ending_south", "south" },
+  { "starting_west_index", "starting_west", "west" }, { "ending_west_index", "ending_west", "west" },
+  { "starting_north_index", "starting_north", "north" }, { "ending_north_index", "ending_north", "north" },
+  { "starting_east_index", "starting_east", "east" }, { "ending_east_index", "ending_east", "east" },
+}
+
+function M._hood_layer(tier, set)
+  if not set or not set.animation_set then return nil end
+  local base = set.animation_set
+  local first = base.layers and base.layers[1]
+  local directions = base.direction_count or first and first.direction_count
+  if directions ~= 20 then return nil end
+
+  local rows = {}
+  for default_index, row in ipairs(BELT_ROWS) do
+    local index = set[row[1]]
+    if index == nil then index = default_index end
+    if index < 1 or index > 20 or index ~= math.floor(index) then return nil end
+    local old = rows[index]
+    if old and old ~= row[3] then return nil end
+    rows[index] = row[3]
+  end
+
+  local filenames = {}
+  for index = 1, 20 do
+    local dir = rows[index]
+    if not dir then return nil end
+    filenames[index] = G .. "entity/sushi-packer/" .. tier .. "/sushi-packer-" .. tier .. "-" .. dir .. ".png"
+  end
+  local frame_count = base.frame_count or first and first.frame_count or 1
+  return {
+    filenames = filenames,
+    lines_per_file = 1,
+    line_length = 1,
+    width = 128,
+    height = 128,
+    scale = 0.5,
+    frame_count = 1,
+    repeat_count = frame_count,
+    direction_count = 20,
+  }
+end
+
 function M.make(tier, opts)
   opts = opts or {}
   local T = N.TIER[tier]
@@ -145,6 +195,16 @@ function M.make(tier, opts)
   protos[#protos + 1] = placer
 
   local body = table.deepcopy(source_belt)
+  local hood_layer = M._hood_layer(tier, body.belt_animation_set)
+  if hood_layer then
+    local animation_set = body.belt_animation_set.animation_set
+    local old_layers = animation_set.layers or { animation_set }
+    local combined = {}
+    for _, old_layer in ipairs(old_layers) do combined[#combined + 1] = old_layer end
+    combined[#combined + 1] = hood_layer
+    body.belt_animation_set.animation_set = { layers = combined }
+  end
+  body.connector_frame_sprites = nil
   body.name = N.body(tier)
   body.icon, body.icon_size = icon(tier), 64
   body.icons = nil
