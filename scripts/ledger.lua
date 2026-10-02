@@ -335,7 +335,7 @@ function M.scan(state, lane, contents, opts)
   piles[lane] = piled
   -- v20 steering (V20-1): a jammed lane gets out arms that may take only kinds with a full belt stack in store, so no
   -- arm picks up a leftover again. state.steer[lane] = looks in a row without any leftover kind in store, nil = off.
-  -- Stays on while leftovers are around (rare kinds trickling in), goes off after STEER_OFF quiet looks.
+  -- Stays on while store holds leftovers and as many kinds as there are out arms, goes off after STEER_OFF quiet looks.
   local steer = state.steer
   if not steer then steer = {}; state.steer = steer end
   local sn = 0
@@ -352,7 +352,8 @@ function M.scan(state, lane, contents, opts)
         partial = true
       end
     end
-    if piled or partial then steer[lane] = 0 else steer[lane] = steer[lane] + 1 end
+    -- needed while leftover kinds could take every out arm: n_out kinds or more in store. Fewer kinds: count quiet looks.
+    if piled or (partial and n >= (opts.n_out or 8)) then steer[lane] = 0 else steer[lane] = steer[lane] + 1 end
     if steer[lane] > STEER_OFF then steer[lane] = nil end
   end
   for i = sn + 1, #STEER_OUT do STEER_OUT[i] = nil end

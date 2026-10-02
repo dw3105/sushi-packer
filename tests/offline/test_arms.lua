@@ -327,9 +327,9 @@ describe("arms v20", function()
   end)
   it("steer writes only when list changed", function()
     local rec,s,_,writes=setup(); rec.entity.surface=s; arms.create(rec)
-    arms.steer(rec,1,K("iron")); local n=writes.filters; local u=writes.use_filters
-    arms.steer(rec,1,K("iron")); eq(writes.filters,n); eq(writes.use_filters,u)
-    arms.steer(rec,1,K("gear")); ok(writes.filters>n)
+    eq(arms.steer(rec,1,K("iron")),true); local n=writes.filters; local u=writes.use_filters
+    eq(arms.steer(rec,1,K("iron")),false); eq(writes.filters,n); eq(writes.use_filters,u)
+    eq(arms.steer(rec,1,K("gear")),true); ok(writes.filters>n)
   end)
   it("steer with empty list lets arms take nothing", function()
     local rec,s=setup(); rec.entity.surface=s; arms.create(rec)

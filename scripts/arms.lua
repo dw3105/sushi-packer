@@ -221,19 +221,19 @@ function M.need_slot(rec, lane, contents)
 end
 
 -- v20 (V20-1): kinds out arms of a lane may take (whitelist), nil = anything (filters off). 5 filter slots per arm:
--- with more kinds each arm gets its own window of the list. Writes only when the list changed.
+-- with more kinds each arm gets its own window of the list. Writes only when the list changed; returns true then.
 function M.steer(rec, lane, kinds)
   rec.steer = rec.steer or {}
   if kinds == nil then
-    if rec.steer[lane] == nil then return end
+    if rec.steer[lane] == nil then return false end
     for _, arm in ipairs((rec.out and rec.out[lane]) or {}) do
       if _valid(arm) then arm.use_filters = false end
     end
     rec.steer[lane] = nil
-    return
+    return true
   end
   local signature = _signature(kinds)
-  if rec.steer[lane] == signature then return end
+  if rec.steer[lane] == signature then return false end
   local n = #kinds
   for j, arm in ipairs((rec.out and rec.out[lane]) or {}) do
     if _valid(arm) then
@@ -246,6 +246,7 @@ function M.steer(rec, lane, kinds)
     end
   end
   rec.steer[lane] = signature
+  return true
 end
 
 function M.pause_out(rec, lane, paused)

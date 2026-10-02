@@ -250,9 +250,9 @@ local function engine_look(rec, tick, bss, flush_all)
         -- v20 (V20-1): steered lane. Out arms take only kinds with a full stack; a partial hand of a kind that is
         -- not allowed any more (count fell below one stack between looks) goes back to the store.
         local allowed = ledger.steer(rec.ledger, lane)
-        arms.steer(rec, lane, allowed)
-        if allowed and not flush_all then
-          want = false
+        local changed = arms.steer(rec, lane, allowed)
+        if allowed and not flush_all then want = false end
+        if allowed and changed and not flush_all then  -- hands are read only when the allowed list changed
           local held = arms.held(rec, lane)
           rec.hands = rec.hands or { 0, 0 }
           rec.hands[lane] = 0

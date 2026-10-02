@@ -224,13 +224,14 @@ describe("ledger steer v20", function()
     L.scan(state,1,{c("iron",80),c("gear",3),c("cable",4,"rare"),c("cable",2)},opts{tick=60})
     eq(names(L.steer(state,1)),{"iron/normal","cable/rare"}); eq(L.steer(state,2),nil)
   end)
-  it("steering stays while leftovers are in store and ends after quiet looks", function()
+  it("steering stays while store holds leftovers and as many kinds as out arms; ends after quiet looks", function()
     local state=L.new(); jam(state)
-    for i=1,20 do L.scan(state,1,{c("iron",8),c("gear",1)},opts{tick=60+30*i}) end
-    ok(L.steer(state,1)~=nil,"leftover kind present: stays")
-    for i=1,10 do L.scan(state,1,{c("iron",8)},opts{tick=1000+30*i}) end
-    ok(L.steer(state,1)~=nil,"10 quiet looks: still on")
-    L.scan(state,1,{c("iron",8)},opts{tick=2000}); eq(L.steer(state,1),nil)
+    local many={c("iron",8)}; for i=1,7 do many[#many+1]=c("k"..i,1) end  -- 8 kinds, 7 leftovers
+    for i=1,20 do L.scan(state,1,many,opts{tick=60+30*i}) end
+    ok(L.steer(state,1)~=nil,"8 kinds with leftovers: stays")
+    for i=1,10 do L.scan(state,1,{c("iron",8),c("gear",1)},opts{tick=1000+30*i}) end
+    ok(L.steer(state,1)~=nil,"10 quiet looks (few kinds): still on")
+    L.scan(state,1,{c("iron",8),c("gear",1)},opts{tick=2000}); eq(L.steer(state,1),nil)
   end)
   it("empty store on steered lane gives empty list", function()
     local state=L.new(); jam(state); L.scan(state,1,{},opts{tick=60}); eq(#L.steer(state,1),0)

@@ -72,7 +72,7 @@ describe("tick look",function()
     local real_steer,real_asteer=ledger.steer,arms.steer
     local allowed={{name="iron",quality="normal"}}
     ledger.steer=function(state,lane) return lane==1 and allowed or nil end
-    arms.steer=function(r,l,k) steered[#steered+1]={l,k} end
+    arms.steer=function(r,l,k) steered[#steered+1]={l,k}; return l==1 end  -- true = list changed
     f.wants[1]=true  -- jam: without steering hands would be flushed out
     f.held_values[1]={{arm=2,name="gear",quality="normal",count=2},{arm=3,name="iron",quality="normal",count=3},{arm=5,name="gear",quality="rare",count=4}}
     f.run(30)
@@ -81,9 +81,16 @@ describe("tick look",function()
     eq(#f.hands,0,"ledger.hands not asked on steered lane"); eq(#f.pushes,0)
     ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
   end)
+  it("steered lane with unchanged list reads no hands",function()
+    local f=fixture(); local real_steer,real_asteer=ledger.steer,arms.steer
+    ledger.steer=function(state,lane) return lane==1 and {} or nil end; arms.steer=function() return false end
+    f.wants[1]=true; f.held_values[1]={{arm=2,name="gear",quality="normal",count=2}}
+    f.run(30); eq(#f.held_calls,0); eq(#f.hands,0)
+    ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
+  end)
   it("steered lane keeps hand when store has no room",function()
     local f=fixture(); local real_steer,real_asteer=ledger.steer,arms.steer
-    ledger.steer=function(state,lane) return lane==1 and {} or nil end; arms.steer=function() end
+    ledger.steer=function(state,lane) return lane==1 and {} or nil end; arms.steer=function() return true end
     f.rec.invs[1].room=0; f.held_values[1]={{arm=2,name="gear",quality="normal",count=2}}
     f.run(30); eq(#f.clears,0)
     ledger.steer,arms.steer=real_steer,real_asteer; f.restore()
