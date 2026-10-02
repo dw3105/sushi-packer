@@ -419,3 +419,12 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 - `belt_io.push(rec, lane, item, bss, spot)`: `spot` 1..3 = further belt spots of front tile (ahead only).
 - `tier._hood_layer(tier, set)`; body `connector_frame_sprites = nil`.
 - gui lane slots: `quality`, `elem_tooltip`.
+
+### v21 amendments (V21-1..5)
+
+- `scripts/names.lua`: `N.STORE_SLOTS = 24`, `N.ARM_HANDS`, `N.OUT_FAST`, `N.out_count(speed)`, `N.HOT_LOOK`, `N.HOT_FREE`, `N.PRESS`.
+- arms: in hand i of a lane gets `inserter_stack_size_override = N.ARM_HANDS[(i - 1) % #N.ARM_HANDS + 1]` (cap `N.ARM_HAND`); `rec.in_hands` = signature of pattern applied; `arms.ensure` applies pattern to packers of older versions without rebuild; out hands per lane = `N.out_count(belt speed)`.
+- tick: `rec.hot` (true | nil) after each engine look; `storage.sched.hot[unit]`; hot packer looked at when `(tick + unit) % N.HOT_LOOK == 0`.
+- ledger: `plan` / `plan_full` under store pressure put up to `N.PRESS` oldest leftovers at head of plan.
+- gui: lane slot buttons in a table of 12 columns per lane.
+- No public signature added or changed (`tests/offline/contract.lua` untouched).

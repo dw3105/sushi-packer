@@ -10,7 +10,7 @@ N.MAX_BELT_STACK = 4
 -- v15 arms box (V14-9..11, V15-1): hidden parts on box tile. One prototype each for all tiers.
 N.ARM = "sushi-packer-arm"                 -- hidden inserter, locked to one belt lane at runtime
 N.STORE = "sushi-packer-lane-store"        -- hidden chest, one per lane
-N.STORE_SLOTS = 12                         -- slots per lane store (author 2026-10-01)
+N.STORE_SLOTS = 24                         -- slots per lane store (12 until v1.20; V21-2, FND-0053: fewer slots than kinds chokes intake)
 N.ARM_FILTERS = 5                          -- skip-kind filter slots per arm (engine max)
 N.ARM_HAND = 4
 -- v16: out arms put belt stacks from lane store onto front belt lane (FND-0046). Same count on every tier.
@@ -70,6 +70,23 @@ function N.led(state, dir) return "sushi-packer-led-" .. state .. "-" .. dir end
 function N.body(tier) return N.item(tier) .. "-body" end   -- the entity player sees, selects, wires, rotates
 function N.hood(tier) return N.item(tier) .. "-hood" end   -- unselectable picture over body (belt kind has no picture)
 N.MOP_ARMS = 2                                             -- in arms per lane on own tile: take what lands on body
+-- v21 (V21-1..5, FND-0053, author pick 2026-10-02 "Full mix"): belt behind packer must not jerk.
+-- In hand i of a lane holds ARM_HANDS[(i - 1) % #ARM_HANDS + 1] items: an in hand holding fewer items than its size
+-- waits about 20 ticks over the belt for more of that kind; a hand of 1 never waits (but is slow on full stacks).
+N.ARM_HANDS = { 1, 4, 4, 4 }
+-- Out hands per lane: N.OUT_ARMS, more on belts faster than OUT_FAST.speed tiles per tick (8 pass 2.12 of 2.25
+-- stacks per tick on a 270/s belt). Swing time (N.out_swing) stays computed from N.OUT_ARMS.
+N.OUT_FAST = { speed = 0.3, n = 12 }
+function N.out_count(speed)
+  if speed > N.OUT_FAST.speed then return N.OUT_FAST.n end
+  return N.OUT_ARMS
+end
+-- Engine way: packer with a steered lane that has fewer than HOT_FREE free store slots is looked at every HOT_LOOK
+-- ticks (leftovers leave only at looks). Script way: lane store full and a new kind waiting -> PRESS oldest leftovers
+-- leave first, also while full stacks wait (F-1 amended by author 2026-10-02).
+N.HOT_LOOK = 5
+N.HOT_FREE = 3
+N.PRESS = 1
 -- Shut: belt connected to logistic network with a condition that is never true is disabled with and without a
 -- network (probe FND-0048); player's circuit condition stays free. Item of yellow tier exists in every game.
 N.SHUT = { first_signal = { type = "item", name = "sushi-packer" }, comparator = ">", constant = 2000000000 }
