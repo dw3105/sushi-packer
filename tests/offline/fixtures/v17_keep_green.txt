@@ -174,7 +174,7 @@ tests/offline/test_sim.lua::sim > belt box and sink
 tests/offline/test_sim.lua::sim > camera centered on box
 tests/offline/test_sim.lua::sim > unknown kind errors
 tests/offline/test_stage.lua::stage > release info has no test dependency
-tests/offline/test_stage.lua::stage > versions are 0.1.17 and 0.2.17
+tests/offline/test_stage.lua::stage > versions are 0.1.18 and 0.2.18
 tests/offline/test_stage.lua::stage > release ships thumbnail and changelog
 tests/offline/test_stage.lua::stage > thumbnail is 144 by 144 png
 tests/offline/test_stage.lua::stage > release stage needs no Factorio

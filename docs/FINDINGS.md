@@ -602,3 +602,19 @@ Reading: 8 of 9 rows inside noise or lower (blue: script -12 %, whole tick -23 %
 Not proven headless: click on packer opens window (custom input on game control `open-gui`); smart belt dragging across a packer; look of ghosts.
 
 Verified-by: `~/.cache/sushi-packer/v17/logs/` (`full-2.0-r5.log`, `full-2.1-r3.log` on final code `af27dd7`; `modsets-2.0-r2.log`, `modsets-2.1-r2.log`, `load-2.0*.log`, `load-2.1.log`, `pairs-v17.txt`, `pairs-v17-cheap.txt`), `~/.cache/sushi-packer/v17/oldsave/run.sh 2.0`, `... 2.1`
+
+## FND-0050 - v1.17 public: script push onto belt running across refused (curve); belt behaviours now tested on final code
+
+2026-10-02, dev-vm, 2.0.77, code `a84635b` (= public v1.17) + new game tests. Stop hook asked for safe work left: belt behaviours proven only by probes got game tests on final code.
+
+| Test (`tests/game/test_tick.lua`, describe `tick`) | Result on v1.17 code |
+|---|---|
+| `belt running east across in front gets both lanes on its near lane, stacked` | RED: `near=28 far=0 inside=4 store=0/0 ... arms[... 2:waiting_for_more_items:copper-orex1=1 2:waiting_for_more_items:copper-orex3=1 ...]`, same after 3300 ticks; `belt_io.can_push(rec, 2) = false` |
+| same, belt running west | green (no split leftover in that run) |
+| `belt pointing at packer flank puts nothing in` | green |
+| `outside inserters act as with belt: drop gets packed, take never reaches stored items` | green |
+| `packer feeding packer: nothing lost, lanes kept` | green |
+
+Cause (seen: `can_push` false while lane was empty): belt in front that is fed only by packer is laid as a curve; its inner lane (= near lane) is shorter than half a tile, so `can_insert_at(0.5)` is refused. Out arms are not affected (engine drops), only script pushes: joined leftovers (V16-8), flush, script-path boxes. Fix: script push uses back of near lane (`can_insert_at_back` / `insert_at_back`). After fix: all four across cases green (curve and straight belt passing by, both ways).
+
+Verified-by: `make test-one FV=2.0 T='tests/game/test_tick.lua::tick > <name>'` (names above)
