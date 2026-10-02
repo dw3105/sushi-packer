@@ -164,7 +164,7 @@ local function refresh_lane_buttons(frame, rec)
             set_if_changed(button, "number", stack.count)
             set_if_changed(button, "quality", quality)
             local tooltip = button.elem_tooltip
-            if not tooltip or tooltip.type ~= "item-with-quality" or tooltip.name ~= name or tooltip.quality ~= quality then
+            if not tooltip or tooltip.name ~= name or tooltip.quality ~= quality then  -- engine reads type back as "item"
               button.elem_tooltip = { type = "item-with-quality", name = name, quality = quality }
             end
           else

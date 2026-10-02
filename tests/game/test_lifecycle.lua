@@ -202,6 +202,7 @@ describe("lifecycle", function()
     assert.are_equal(defines.direction.east, be.direction)
     assert.are_equal(47, be.tags.sushi_packer.timeout_s)
     assert.is_true(be.control_behavior.connect_to_logistic_network, "shut travels with blueprint")
+    assert.is_nil(be.wires, "hidden wires to lane stores stay out of blueprint")
     inv.destroy()
   end)
 

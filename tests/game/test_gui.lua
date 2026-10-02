@@ -1,5 +1,6 @@
 -- v6 GUI (S-3, P-1, N-3, N-4): sections, 10-slot filter grid + editor, circuit section. Real LuaGuiElement API.
 local N = require("scripts.names")
+local require_arms = require("scripts.arms")
 local gui = require("scripts.gui")
 local registry = require("scripts.registry")
 
@@ -127,5 +128,33 @@ describe("gui", function()
     assert.is_true(c.enable); assert.are_equal("signal-A", c.cond.first_signal.name)
     assert.are_equal("<", c.cond.comparator); assert.are_equal(7, c.cond.constant)
     assert.is_true(c.flush); assert.are_equal("signal-F", c.flush_signal.name)
+  end)
+
+  it("lane slot shows quality of its item", function()
+    -- author 2026-10-02 (v1.19 screenshot): same item in several slots, no quality shown
+    local arms = require_arms
+    arms.create(rec)
+    rec.invs[1].insert({ name = "copper-cable", count = 114, quality = "rare" })
+    rec.invs[1].insert({ name = "copper-cable", count = 14, quality = "normal" })
+    local f = open()
+    local row = f.lanes_section.lane_1
+    local seen = {}
+    for slot = 1, N.STORE_SLOTS do
+      local b = row["lane_slot_" .. slot]
+      if b.sprite ~= "" then
+        local q = b.quality
+        seen[#seen + 1] = b.sprite .. ":" .. tostring(b.number) .. ":" .. tostring(q and q.name)
+        -- engine reads the tooltip back as type "item" + quality
+        assert.are_equal("copper-cable", b.elem_tooltip.name); assert.are_equal(q.name, b.elem_tooltip.quality, serpent.line(b.elem_tooltip))
+      end
+    end
+    table.sort(seen)
+    assert.are.same({ "item/copper-cable:114:rare", "item/copper-cable:14:normal" }, seen)
+    rec.invs[1].clear(); gui._refresh(player, rec)
+    for slot = 1, N.STORE_SLOTS do
+      local b = row["lane_slot_" .. slot]
+      assert.are_equal("", b.sprite); assert.is_nil(b.elem_tooltip)
+    end
+    arms.destroy(rec)
   end)
 end)

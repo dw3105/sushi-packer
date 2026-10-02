@@ -1,3 +1,86 @@
+tests/offline/test_arms.lua::arms v17 > count from speed table
+tests/offline/test_arms.lua::arms v17 > create makes two stores and n arms per lane
+tests/offline/test_arms.lua::arms v17 > arm setup per lane and direction
+tests/offline/test_arms.lua::arms v17 > wires join stores to box
+tests/offline/test_arms.lua::arms v17 > create reuses valid stores and replaces arms
+tests/offline/test_arms.lua::arms v17 > destroy
+tests/offline/test_arms.lua::arms v17 > pause writes only on change
+tests/offline/test_arms.lua::arms v17 > skip sets blacklist only on change
+tests/offline/test_arms.lua::arms v17 > ensure rebuilds broken box
+tests/offline/test_arms.lua::arms v17 > create resets pause and skip memory
+tests/offline/test_arms.lua::arms v17 > alive check does not ask for a table
+tests/offline/test_arms.lua::arms v17 > need slot when an arm holds a kind the store lacks
+tests/offline/test_arms.lua::arms v17 > create uses out arm of tier speed when that prototype exists
+tests/offline/test_arms.lua::arms v17 > create sets out arm hand to belt stack size at once
+tests/offline/test_arms.lua::arms v17 > create makes out arms per lane
+tests/offline/test_arms.lua::arms v17 > out arm setup per lane and direction
+tests/offline/test_arms.lua::arms v17 > create saves hands of old arms
+tests/offline/test_arms.lua::arms v17 > destroy removes out arms
+tests/offline/test_arms.lua::arms v17 > pause_out writes only on change
+tests/offline/test_arms.lua::arms v17 > hand writes only on change
+tests/offline/test_arms.lua::arms v17 > held lists out arm hands
+tests/offline/test_arms.lua::arms v17 > clear_held clears one hand
+tests/offline/test_arms.lua::arms v17 > drain_hands returns and clears all hands
+tests/offline/test_arms.lua::arms v17 > ensure rebuilds when out arms missing
+tests/offline/test_arms.lua::arms v17 > create never reads chest inventory
+tests/offline/test_arms.lua::arms v17 > create makes mop arms
+tests/offline/test_arms.lua::arms v17 > create saves mop hands before replacing
+tests/offline/test_arms.lua::arms v17 > create makes hood once and turns it
+tests/offline/test_arms.lua::arms v17 > shut writes logistic condition
+tests/offline/test_arms.lua::arms v17 > aim ahead and across
+tests/offline/test_arms.lua::arms v17 > out arms start paused until a look finds a front
+tests/offline/test_arms.lua::arms v17 > hood follows tier after upgrade
+tests/offline/test_arms.lua::arms v17 > aim unchanged writes nothing
+tests/offline/test_arms.lua::arms v17 > wire on off
+tests/offline/test_arms.lua::arms v17 > pause covers mop arms
+tests/offline/test_arms.lua::arms v17 > destroy and drain cover mop arms and hood
+tests/offline/test_arms.lua::arms v17 > ensure sees missing mop arms or hood
+tests/offline/test_arms.lua::arms v17 > need_slot sees mop hand
+tests/offline/test_arms.lua::arms v20 > steer whitelists kinds on out arms of that lane only
+tests/offline/test_arms.lua::arms v20 > steer with more kinds than slots gives each arm its own window
+tests/offline/test_arms.lua::arms v20 > steer writes only when list changed
+tests/offline/test_arms.lua::arms v20 > steer with empty list lets arms take nothing
+tests/offline/test_arms.lua::arms v20 > steer nil switches filters off once
+tests/offline/test_arms.lua::arms v20 > new arms forget steering
+tests/offline/test_belt_io.lua::belt_io > pull reports eta of front item per lane
+tests/offline/test_belt_io.lua::belt_io > eta zero when item at exit, nil when lane empty
+tests/offline/test_belt_io.lua::belt_io > eta computed when budget empty
+tests/offline/test_belt_io.lua::belt_io > no eta read on lane that took an item
+tests/offline/test_belt_io.lua::belt_io > belt stack follows research up to engine max
+tests/offline/test_belt_io.lua::belt_io > full box shares freed slot between lanes
+tests/offline/test_belt_io.lua::belt_io > full box shares slot freed every fourth poll
+tests/offline/test_belt_io.lua::belt_io > splitter behind feeds from its output half
+tests/offline/test_belt_io.lua::belt_io > splitter in front takes output into its input half
+tests/offline/test_belt_io.lua::belt_io > loaders and linked belts connect like belts
+tests/offline/test_belt_io.lua::belt_io > front accepts same direction belt
+tests/offline/test_belt_io.lua::belt_io > front refuses sideways belt
+tests/offline/test_belt_io.lua::belt_io > front refuses belt facing box
+tests/offline/test_belt_io.lua::belt_io > front accepts underground input same direction
+tests/offline/test_belt_io.lua::belt_io > behind still requires belt moving into box
+tests/offline/test_belt_io_cache.lua::belt_io cache > cached belt visit reads valid and direction only
+tests/offline/test_belt_io_cache.lua::belt_io cache > lines fetched once while belt cached
+tests/offline/test_belt_io_cache.lua::belt_io cache > push uses cached front lines
+tests/offline/test_belt_io_cache.lua::belt_io cache > moved belt dropped within 60 ticks
+tests/offline/test_belt_io_cache.lua::belt_io cache > rotated belt dropped at once
+tests/offline/test_belt_io_cache.lua::belt_io cache > splitter neighbour keeps full check
+tests/offline/test_belt_io_cache.lua::belt_io cache > dropped belt clears cached lines
+tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt takes item arriving this tick
+tests/offline/test_belt_io_fast.lua::belt_io fast > 270 per s belt takes every item within one tick of end
+tests/offline/test_belt_io_fast.lua::belt_io fast > budget still caps fast take
+tests/offline/test_belt_io_fast.lua::belt_io fast > turbo and slower take item reaching end this tick
+tests/offline/test_belt_io_fast.lua::belt_io fast > yellow and red take resting items only
+tests/offline/test_belt_io_fast.lua::belt_io fast > fast belt eta counts to take window not belt end
+tests/offline/test_belt_io_fast.lua::belt_io fast > refused item stops fast lane
+tests/offline/test_belt_io_front.lua::belt_io front v17 > kind ahead for same direction belt
+tests/offline/test_belt_io_front.lua::belt_io front v17 > kind across for belt turned 90
+tests/offline/test_belt_io_front.lua::belt_io front v17 > kind nil
+tests/offline/test_belt_io_front.lua::belt_io front v17 > kind follows a front belt that goes away or turns
+tests/offline/test_belt_io_front.lua::belt_io front v17 > front_ok follows kind
+tests/offline/test_belt_io_front.lua::belt_io front v17 > kind is cached like front
+tests/offline/test_belt_io_front.lua::belt_io front v17 > across push uses near lane
+tests/offline/test_belt_io_front.lua::belt_io front v17 > across can_push asks near lane back
+tests/offline/test_belt_io_front.lua::belt_io front v17 > ahead push unchanged
+tests/offline/test_belt_io_front.lua::belt_io front v17 > push to a further spot of front tile
 tests/offline/test_bench_builder.lua::bench builder > default scene unchanged
 tests/offline/test_bench_builder.lua::bench builder > tier sets belt placer loader
 tests/offline/test_bench_builder.lua::bench builder > extra tier uses row names
@@ -20,6 +103,27 @@ tests/offline/test_bench_run.lua::bench run > bad args exit 2
 tests/offline/test_bench_run.lua::bench run > modlist keeps stage entries adds bench
 tests/offline/test_bench_run.lua::bench run > makefile has bench-all rows
 tests/offline/test_bench_run.lua::bench run > run.sh no longer overwrites mod list
+tests/offline/test_circuit.lua::circuit > compare all six comparators
+tests/offline/test_circuit.lua::circuit > compare unknown comparator is false
+tests/offline/test_circuit.lua::circuit > compare false cases
+tests/offline/test_circuit.lua::circuit > enable nil means condition off
+tests/offline/test_circuit.lua::circuit > enable true applies condition
+tests/offline/test_circuit.lua::circuit v17 > sync reads belt settings
+tests/offline/test_circuit.lua::circuit v17 > apply writes belt settings
+tests/offline/test_circuit.lua::circuit v17 > apply then sync round trip
+tests/offline/test_copy.lua::copy > library record does not crash
+tests/offline/test_copy.lua::copy > library record gets tags
+tests/offline/test_copy.lua::copy > read-only record skipped
+tests/offline/test_copy.lua::copy > non-blueprint record skipped
+tests/offline/test_copy.lua::copy > stack still read as stack
+tests/offline/test_copy.lua::copy > blueprint renames variant to placer without mapping
+tests/offline/test_copy.lua::copy > blueprint adds tags when rec found
+tests/offline/test_copy.lua::copy > blueprint leaves other entities alone
+tests/offline/test_copy.lua::copy clone > clone owns copied lane store items
+tests/offline/test_copy.lua::copy v17 > default has read on
+tests/offline/test_copy.lua::copy v17 > blueprint keeps body and tags it
+tests/offline/test_copy.lua::copy v17 > paste syncs belt settings
+tests/offline/test_copy.lua::copy v17 > clone of body
 tests/offline/test_core.lua::core > new box is idle and green
 tests/offline/test_core.lua::core > same item on two lanes keeps two buffers
 tests/offline/test_core.lua::core > quality is separate buffer
@@ -73,6 +177,79 @@ tests/offline/test_counters.lua::counters > refused item counts nothing
 tests/offline/test_counters.lua::counters > reads count each detailed call
 tests/offline/test_counters.lua::counters > push counts belt item and items
 tests/offline/test_counters.lua::counters > visit counted once per gate pass
+tests/offline/test_data.lua::data v20 > body has no connector frame
+tests/offline/test_data.lua::data v20 > hood layer rows follow leaving direction
+tests/offline/test_data.lua::data v20 > hood layer follows custom index fields
+tests/offline/test_data.lua::data v20 > hood layer repeat count equals belt frames
+tests/offline/test_data.lua::data v20 > odd belt picture keeps belt picture
+tests/offline/test_data.lua::data v20 > source belt picture not modified
+tests/offline/test_data.lua::data v20 > body picture is belt plus hood
+tests/offline/test_data.lua::data v17 > body is belt copy per tier
+tests/offline/test_data.lua::data v17 > body fields
+tests/offline/test_data.lua::data v17 > body upgrade chain
+tests/offline/test_data.lua::data v17 > hood fields
+tests/offline/test_data.lua::data v17 > legacy boxes hidden without upgrade
+tests/offline/test_data.lua::data v17 > item still places placer
+tests/offline/test_data.lua::data > own subgroup row after belts
+tests/offline/test_data.lua::data > order yellow red blue turbo
+tests/offline/test_data.lua::data > item names follow vanilla series
+tests/offline/test_data.lua::data > simulations call scene with mods
+tests/offline/test_data.lua::data > simulations pre-run 900 ticks
+tests/offline/test_data.lua::data > placer joins belt group variants do not
+tests/offline/test_data.lua::data > yellow recipe matches table
+tests/offline/test_data.lua::data > chained tiers use previous box
+tests/offline/test_data.lua::data > craft times 30 45 60 120
+tests/offline/test_data.lua::data > recipes disabled until research
+tests/offline/test_data.lua::data > tech prereqs include ingredient unlock techs
+tests/offline/test_data.lua::data > tech count is belt count x 1.5
+tests/offline/test_data.lua::data > tech ingredients are union over prereqs
+tests/offline/test_data.lua::data > tech unlocks its recipe
+tests/offline/test_data.lua::data > body upgrade chain follows tier order
+tests/offline/test_data.lua::data > item weight 20 kg
+tests/offline/test_data.lua::data > no surface conditions
+tests/offline/test_data_extra.lua::data extra > chain fix-ups go to bodies
+tests/offline/test_data_extra.lua::data extra > source belt missing in raw
+tests/offline/test_data_extra.lua::data extra > vanilla prototypes identical to v8
+tests/offline/test_data_extra.lua::data extra > no mods no extra tiers
+tests/offline/test_data_extra.lua::data extra > arig adds hyper after turbo
+tests/offline/test_data_extra.lua::data extra > hidden belt skipped
+tests/offline/test_data_extra.lua::data extra > k2so hidden advanced belt ignored
+tests/offline/test_data_extra.lua::data extra > arig k2so chain turbo hyper superior
+tests/offline/test_data_extra.lua::data extra > all mods sorted by speed tie by row order
+tests/offline/test_data_extra.lua::data extra > belt tech without unit skipped
+tests/offline/test_data_extra.lua::data extra > missing tech skipped
+tests/offline/test_data_extra.lua::data extra > recipe chains previous tier
+tests/offline/test_data_extra.lua::data extra > tech prereqs belt tech previous tier and ingredient unlocks
+tests/offline/test_data_extra.lua::data extra > tech cost belt count x 1.5 and pack union
+tests/offline/test_data_extra.lua::data extra > body next_upgrade chain follows tier chains
+tests/offline/test_data_extra.lua::data extra > item order after turbo in chain order
+tests/offline/test_data_extra.lua::data extra > extra graphics paths use tier key
+tests/offline/test_data_extra.lua::data extra > info lists belt mods as visible optional deps
+tests/offline/test_data_extra.lua::data extra > nosa no turbo tier
+tests/offline/test_data_extra.lua::data extra > nosa extras chain after blue
+tests/offline/test_data_extra.lua::data extra > nosa extra recipe bulk inserter processing unit
+tests/offline/test_data_extra.lua::data extra > sa extra recipe unchanged
+tests/offline/test_data_extra.lua::data extra > owner missing row skipped
+tests/offline/test_data_extra.lua::data extra > ab-sa ub-ultimate not live
+tests/offline/test_data_extra.lua::data extra > ab-sa ab rows after turbo
+tests/offline/test_data_extra.lua::data extra > splitter missing row skipped logged
+tests/offline/test_data_extra.lua::data extra > speed at or below top vanilla skipped
+tests/offline/test_data_extra.lua::data extra > own_role keeps slow row
+tests/offline/test_data_extra.lua::data extra > se chain space root then deep space
+tests/offline/test_data_extra.lua::data extra > container allowed in se space
+tests/offline/test_data_extra.lua::data extra > ab four rows speed order
+tests/offline/test_data_extra.lua::data extra > upgrade chain from top vanilla
+tests/offline/test_data_extra.lua::data extra > info lists space-age as optional
+tests/offline/test_data_extra.lua::data extra > extra box matches resized vanilla box
+tests/offline/test_data_extra.lua::data extra > extra box matches mask of vanilla box
+tests/offline/test_data_extra.lua::data extra > extra mask copied into every chain
+tests/offline/test_data_extra.lua::data extra > nil mask stays nil
+tests/offline/test_data_extra.lua::data extra > se space root recipe
+tests/offline/test_data_extra.lua::data extra > se space root tech
+tests/offline/test_data_extra.lua::data extra > se deep space recipe needs space box
+tests/offline/test_data_extra.lua::data extra > after target inactive skips row
+tests/offline/test_data_extra.lua::data extra > se plus k2 two chains
+tests/offline/test_data_extra.lua::data extra > yellow recipe unchanged by root rule
 tests/offline/test_data_hidden.lua::data hidden > makes arm and store
 tests/offline/test_data_hidden.lua::data hidden > arm fields
 tests/offline/test_data_hidden.lua::data hidden > store fields
@@ -92,6 +269,46 @@ tests/offline/test_filter.lua::filter > empty slot false skipped
 tests/offline/test_guard.lua::guard > contract frozen
 tests/offline/test_guard.lua::guard > no require inside runtime functions
 tests/offline/test_guard.lua::guard > names frozen
+tests/offline/test_gui.lua::gui > uses screen frame
+tests/offline/test_gui.lua::gui > sections order skip timeout circuit
+tests/offline/test_gui.lua::gui > ten slots show filters
+tests/offline/test_gui.lua::gui > empty slot shows empty
+tests/offline/test_gui.lua::gui > slot click opens editor
+tests/offline/test_gui.lua::gui > editor writes comparator and quality
+tests/offline/test_gui.lua::gui > any quality clears quality
+tests/offline/test_gui.lua::gui > clearing slot writes false
+tests/offline/test_gui.lua::gui > quality list sorted by level with any first
+tests/offline/test_gui.lua::gui > one quality hides picker
+tests/offline/test_gui.lua::gui > quality mod shows picker
+tests/offline/test_gui.lua::gui > one quality filter saves item only
+tests/offline/test_gui.lua::gui > one quality stored quality filter loads
+tests/offline/test_gui.lua::gui > timeout switch and seconds written
+tests/offline/test_gui.lua::gui > bad timeout text ignored
+tests/offline/test_gui.lua::gui > circuit enable and condition written
+tests/offline/test_gui.lua::gui > flush checkbox and signal written
+tests/offline/test_gui.lua::gui > foreign gui events ignored
+tests/offline/test_gui.lua::gui > rows use aligned styles
+tests/offline/test_gui.lua::gui lanes > section has two rows of twelve slots
+tests/offline/test_gui.lua::gui lanes > slot shows item count quality
+tests/offline/test_gui.lua::gui lanes > click leaves stack in lane
+tests/offline/test_gui.lua::gui lanes > slot click never inserts into player
+tests/offline/test_gui.lua::gui lanes > click on empty slot does nothing
+tests/offline/test_gui.lua::gui lanes > rec without stores shows empty rows
+tests/offline/test_gui.lua::gui lanes > refresh updates open window
+tests/offline/test_gui.lua::gui v20 > lane slot shows quality of its stack
+tests/offline/test_gui.lua::gui v20 > normal quality is written too
+tests/offline/test_gui.lua::gui v20 > empty slot clears quality and tooltip
+tests/offline/test_gui.lua::gui v20 > refresh updates quality in place
+tests/offline/test_gui.lua::gui v20 > stack without quality field
+tests/offline/test_gui.lua::gui v17 > open builds screen frame and sets opened
+tests/offline/test_gui.lua::gui v17 > open twice keeps one frame
+tests/offline/test_gui.lua::gui v17 > game belt window is replaced
+tests/offline/test_gui.lua::gui v17 > open input opens for selected packer
+tests/offline/test_gui.lua::gui v17 > closed destroys own frame only
+tests/offline/test_gui.lua::gui v17 > close button closes
+tests/offline/test_gui.lua::gui v17 > lane slot click takes nothing
+tests/offline/test_gui.lua::gui v17 > read contents tick
+tests/offline/test_gui.lua::gui v17 > enable and condition changes are applied to belt
 tests/offline/test_ledger.lua::ledger > full stacks leave partial stays
 tests/offline/test_ledger.lua::ledger > belt stack follows bss and item stack size
 tests/offline/test_ledger.lua::ledger > order by first seen then name then quality
@@ -132,6 +349,27 @@ tests/offline/test_ledger_look.lua::ledger look > sweep merges partial hands of 
 tests/offline/test_ledger_look.lua::ledger look > next sweep comes when the oldest remembered hand times out
 tests/offline/test_ledger_look.lua::ledger look > second stack of same kind still in hands: next sweep at next look
 tests/offline/test_ledger_look.lua::ledger look > hands lanes are separate
+tests/offline/test_ledger_look.lua::ledger steer v20 > lane is not steered until it jams
+tests/offline/test_ledger_look.lua::ledger steer v20 > jam switches steering on: kinds with a full stack only
+tests/offline/test_ledger_look.lua::ledger steer v20 > steering stays while leftovers are in store and ends after quiet looks
+tests/offline/test_ledger_look.lua::ledger steer v20 > empty store on steered lane gives empty list
+tests/offline/test_ledger_look.lua::ledger steer v20 > steered lane keeps three slots free: oldest leftovers leave, several per look
+tests/offline/test_ledger_look.lua::ledger steer v20 > lane that is not steered flushes as before
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > built box gets ledger and parts
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > rotate keeps stores and rebuilds arms
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > mined box returns store items
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > died box spills store items
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > mined box returns items held by arms
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > mined box without buffer spills hand items
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > died box spills items held by arms
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > upgrade stash does not drain hands
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > config change ensures parts of v15 rec
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > upgrade carries stores
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > clone gets own parts and copies items
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > old save becomes extra
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > migrated rec only ensured
+tests/offline/test_lifecycle_arms.lua::lifecycle arms > stale stash cleans its parts
+tests/offline/test_lifecycle_arms.lua::lifecycle v17 > mined body returns hands
 tests/offline/test_locale.lua::locale > vanilla style names
 tests/offline/test_locale.lua::locale > every prototype has name and description
 tests/offline/test_locale.lua::locale > recipes and setting described
@@ -165,6 +403,28 @@ tests/offline/test_perf2.lua::perf2 > pull reads front item without detailed con
 tests/offline/test_perf2.lua::perf2 > pull skips lane when no item at exit
 tests/offline/test_perf2.lua::perf2 > pull removes only accepted part of front item
 tests/offline/test_perf2.lua::perf2 > core finds partial by key with 47 others present
+tests/offline/test_registry.lua::registry > upgrade mine stashes rec
+tests/offline/test_registry.lua::registry > upgrade build takes stash
+tests/offline/test_registry.lua::registry > upgraded rec keeps settings and lane parts
+tests/offline/test_registry.lua::registry > upgraded rec gets tier and dir from new entity
+tests/offline/test_registry.lua::registry > stash from older tick ignored and pruned
+tests/offline/test_registry.lua::registry > stash other force ignored
+tests/offline/test_registry.lua::registry > normal mine removes lane parts
+tests/offline/test_registry.lua::registry > upgrade reconnects missing wires
+tests/offline/test_registry.lua::registry > player mine of marked box removes parts
+tests/offline/test_registry.lua::registry v17 > placer becomes body
+tests/offline/test_registry.lua::registry v17 > legacy box built becomes body
+tests/offline/test_registry.lua::registry v17 > body with control behaviour is synced
+tests/offline/test_registry.lua::registry v17 > tags imported before sync
+tests/offline/test_registry.lua::registry v17 > new_rec only for bodies
+tests/offline/test_registry.lua::registry v17 > rotated updates dir and parts
+tests/offline/test_registry.lua::registry v17 > removal never reads chest inventory
+tests/offline/test_registry.lua::registry v17 > migrate chest to body
+tests/offline/test_registry.lua::registry v17 > migrate overflow goes to hidden spare store, not on ground
+tests/offline/test_registry.lua::registry v17 > migrate never doubles items named by extra
+tests/offline/test_registry.lua::registry v17 > migrate without body drops rec with items spilled
+tests/offline/test_registry.lua::registry v17 > config change migrates legacy recs once
+tests/offline/test_registry.lua::registry v17 > stash and take_stash for bodies
 tests/offline/test_sim.lua::sim > four infinity chests bottom pair one tile upstream
 tests/offline/test_sim.lua::sim > inserters between chests and belt
 tests/offline/test_sim.lua::sim > machinery off frame
@@ -191,7 +451,6 @@ tests/offline/test_tick.lua::tick arms > rate cap by credit
 tests/offline/test_tick.lua::tick arms > passes rules to ledger
 tests/offline/test_tick.lua::tick arms > circuit off pauses both lanes
 tests/offline/test_tick.lua::tick arms > hoard kinds go to arms
-tests/offline/test_tick.lua::tick arms > extra leaves first and pauses its lane
 tests/offline/test_tick.lua::tick arms > led from used slots
 tests/offline/test_tick.lua::tick arms > empty box sleeps 15 ticks
 tests/offline/test_tick.lua::tick arms > sleeping box costs no engine read
@@ -202,8 +461,6 @@ tests/offline/test_tick.lua::tick > on research caches belt stack size
 tests/offline/test_tick.lua::tick > invalid entity drops rec
 tests/offline/test_tick.lua::tick > decon stops visits and pauses arms
 tests/offline/test_tick.lua::tick > decon mark pauses both lanes without a visit
-tests/offline/test_tick.lua::tick > items put into box from outside become extra on lane one
-tests/offline/test_tick.lua::tick > empty box container costs one cheap check per slot
 tests/offline/test_tick.lua::tick > visit gap follows belt item gap
 tests/offline/test_tick.lua::tick > full lane store asks arms whether a new kind waits
 tests/offline/test_tick.lua::tick > hoard asked only when a kind holds a full stack or a kind is still skipped
@@ -220,9 +477,12 @@ tests/offline/test_tick_look.lua::tick look > look never plans or hoards
 tests/offline/test_tick_look.lua::tick look > look sets hand and pauses
 tests/offline/test_tick_look.lua::tick look > scan gets contents and options
 tests/offline/test_tick_look.lua::tick look > flush pieces are pushed and removed
+tests/offline/test_tick_look.lua::tick look > second flush piece of one look goes to a further belt spot
+tests/offline/test_tick_look.lua::tick look > steered lane: arms get allowed kinds, partial hand of other kind goes back to store, no jam flush
+tests/offline/test_tick_look.lua::tick look > steered lane keeps hand when store has no room
+tests/offline/test_tick_look.lua::tick look > flush signal on steered lane still flushes hands
 tests/offline/test_tick_look.lua::tick look > hands are read only when wanted
 tests/offline/test_tick_look.lua::tick look > need_slot only asked when store is full
-tests/offline/test_tick_look.lua::tick look > extra items leave first
 tests/offline/test_tick_look.lua::tick look > led and used slots
 tests/offline/test_tick_look.lua::tick look > mode switch
 tests/offline/test_tick_look.lua::tick look > schedule touches only boxes whose look tick it is and follows box table
@@ -230,7 +490,10 @@ tests/offline/test_tick_look.lua::tick look > front belt asked once per 120 tick
 tests/offline/test_tick_look.lua::tick look > look reuses option table
 tests/offline/test_tick_look.lua::tick look > merge pushes one full stack clears hands and returns rest to store
 tests/offline/test_tick_look.lua::tick look > merge does nothing when belt refuses
-tests/offline/test_tick_look.lua::tick look > merge rest that store refuses goes to box container
+tests/offline/test_tick_look.lua::tick look > merge rest that store refuses is spilled at packer
+tests/offline/test_tick_look.lua::tick look > spare store gives its items to lane store and goes away
+tests/offline/test_tick_look.lua::tick look > spare store keeps what lane store can not take yet
+tests/offline/test_tick_look.lua::tick look > front kind is given to out arms at every look
 tests/offline/test_tick_look.lua::tick look > stopped box still counts used slots for led
 tests/offline/test_tick_look.lua::tick look > items waiting in out arm hands keep led yellow
 tests/offline/test_tick_look.lua::tick look > no space travel flag and belt stack above 1: script path stacks, out arms paused
