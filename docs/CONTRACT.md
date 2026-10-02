@@ -424,7 +424,7 @@ Own window, no chest window to hang on: frame `sushi_packer_frame` in `player.gu
 
 - `scripts/names.lua`: `N.STORE_SLOTS = 24`, `N.ARM_HANDS`, `N.OUT_FAST`, `N.out_count(speed)`, `N.HOT`, `N.hot_look(speed)`, `N.HOT_FREE`, `N.PRESS`.
 - arms: in hand i of a lane gets `inserter_stack_size_override = N.ARM_HANDS[(i - 1) % #N.ARM_HANDS + 1]` (cap `N.ARM_HAND`); `rec.in_hands` = signature of pattern applied; `arms.ensure` applies pattern to packers of older versions without rebuild; out hands per lane = `N.out_count(belt speed)`.
-- tick: `rec.hot` (true | nil) after each engine look; `storage.sched.hot[unit]`; hot packer looked at when `(tick + unit) % N.hot_look(belt speed) == 0`; no extra looks on belts up to turbo speed (`tick._hot_look(tier)`, private).
+- tick: `rec.hot` (true | nil) after each engine look; `storage.sched.hot[unit]`; hot packer looked at when `(tick + unit) % N.hot_look(belt speed) == 0`; switched off on every belt by `N.HOT.above = math.huge` (V21-4); `tick._hot_look(tier)` private.
 - ledger: `plan` / `plan_full` under store pressure put up to `N.PRESS` oldest leftovers at head of plan.
 - gui: lane slot buttons in a table of 12 columns per lane.
 - No public signature added or changed (`tests/offline/contract.lua` untouched).

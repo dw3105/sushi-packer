@@ -351,6 +351,9 @@ describe("modtiers", function()
     -- v1.21 (FND-0053, bar author 2026-10-02: 98 % of a free belt on fastest belt of every mod set, both packer ways).
     -- Feeds: steady trickle of 21 rare kinds, of 60 rare kinds (more kinds than store slots), single items of seven
     -- kinds, full stacks. Replaces v1.20 test "many kinds trickling in do not pile up on fastest tier".
+    -- Known shortfall by author's decision (V21-4, 2026-10-02: no extra looks, they cost 3.5 x script time): belt
+    -- faster than turbo + more kinds than store slots, engine way: 0.52 (270/s) .. 0.97 of a free belt as in v1.20.
+    -- There the bar is 0.45: it must not get worse than v1.20, and what comes in still goes out.
     force.belt_stack_size_bonus = 3
     storage.belt_stack = {}
     local tier = intake.top_tier()
@@ -358,6 +361,7 @@ describe("modtiers", function()
     for _, feed in ipairs({ "hard", "many", "seven", "fours" }) do
       for _, mode in ipairs({ "free", "engine", "script" }) do rows[#rows + 1] = { tier = tier, mode = mode, feed = feed } end
     end
-    intake.run(surface, force, rows, function(rigs) intake.verdict(surface, rigs, 0.98) end)
+    local fast = prototypes.entity[N.TIER[tier].belt].belt_speed > 0.125
+    intake.run(surface, force, rows, function(rigs) intake.verdict(surface, rigs, 0.98, fast and { many = 0.45 } or nil) end)
   end)
 end)

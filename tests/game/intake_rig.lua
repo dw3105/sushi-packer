@@ -132,7 +132,8 @@ end
 
 -- Standard verdict: every packer row takes in at least `bar` of its free row (same tier, same feed), what comes in
 -- goes out, nothing on ground, free belt really was full.
-function M.verdict(surface, rigs, bar)
+-- bars (optional): { [feed] = bar } overrides `bar` for engine-way rows of that feed (named known shortfall).
+function M.verdict(surface, rigs, bar, bars)
   local ref = {}
   for _, g in ipairs(rigs) do if g.mode == "free" then ref[g.tier .. "/" .. g.feed] = g end end
   local lines, bad = {}, {}
@@ -153,7 +154,8 @@ function M.verdict(surface, rigs, bar)
       for lane = 1, 2 do
         local under_way = 0
         for _, b in ipairs(g.front) do under_way = under_way + b.get_transport_line(lane).get_item_count() end
-        if g.fed[lane] < bar * f.fed[lane] then bad[#bad + 1] = "belt behind packer backs up, lane " .. lane .. ": " .. line end
+        local want = (bars and g.mode == "engine" and bars[g.feed]) or bar
+        if g.fed[lane] < want * f.fed[lane] then bad[#bad + 1] = "belt behind packer backs up, lane " .. lane .. ": " .. line end
         if g.out[lane] + under_way < 0.95 * g.fed[lane] then bad[#bad + 1] = "what comes in does not go out, lane " .. lane .. ": " .. line end
       end
     end

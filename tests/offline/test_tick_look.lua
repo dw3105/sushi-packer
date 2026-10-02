@@ -237,8 +237,13 @@ describe("tick v21",function()
     f.run(30); eq(f.rec.hot,nil); eq(storage.sched.hot[30],nil); f.evals=0; for t=31,60 do f.run(t) end; eq(f.evals,1); done()
   end)
   it("extra look period follows belt speed",function()
+    -- author 2026-10-02: no extra looks on any belt (pressured bench: 3.5 x script time on a 270/s belt); switch is
+    -- N.HOT.above. Rule itself stays tested with the switch opened.
+    for _, speed in ipairs({0.03125,0.125,0.15625,0.1875,0.21875,0.5625,3}) do eq(N.hot_look(speed),nil) end
+    local above=N.HOT.above; N.HOT.above=0.125
     eq(N.hot_look(0.03125),nil); eq(N.hot_look(0.125),nil); eq(N.hot_look(0.15625),19); eq(N.hot_look(0.1875),16)
     eq(N.hot_look(0.21875),13); eq(N.hot_look(0.5625),5); eq(N.hot_look(3),2)
+    N.HOT.above=above
   end)
   it("schedule rebuild keeps hot packers",function()
     local x={}; for i=1,22 do x[i]={name="iron",quality="q"..i,count=1} end

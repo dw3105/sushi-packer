@@ -23,4 +23,5 @@ Speed is the same as 0.1.16 on vanilla belts. On one very fast modded belt (270 
 0.1.20 / 0.2.20: fixes items piling up inside the packer when many kinds arrive (for example the same items in several qualities); the window shows item quality; blueprints and ghosts show the packer with its hood.
 
 0.1.21 / 0.2.21: fixes the belt in front of the packer moving in jerks when it carries many item kinds or single, unstacked items. A lane now holds 24 kinds (was 12); the window shows them in rows of 12. Speed on vanilla belts is unchanged; on modded belts above 144 items/s packers cost about 12 % more (4 more hidden output inserters per lane).
+Known in 0.1.21: on modded belts faster than the turbo belt that carry more than 24 item kinds per lane, the belt in front of a packer can still back up (as in 0.1.20).
 

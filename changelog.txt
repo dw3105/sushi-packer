@@ -3,7 +3,7 @@ Version: 0.2.21
 Date: 2026-10-02
   Bugfixes:
     - The belt in front of a box moved in jerks when it carried many item kinds or single, unstacked items: the hidden inserters waited to fill their hands. One of every four now takes single items and never waits.
-    - With more item kinds than lane slots a box filled up and stopped taking. A lane now holds 24 kinds (was 12), and when even that is not enough, leftovers leave sooner. This also covers boxes with pass-through filters.
+    - With more item kinds than lane slots a box filled up and stopped taking. A lane now holds 24 kinds (was 12). Boxes with pass-through filters let the oldest leftover out when a lane is full.
     - Very fast modded belts (above 144 items/s): a box passes a fully stacked belt at belt speed.
   Changes:
     - The box window shows lane slots in rows of 12.
@@ -13,7 +13,7 @@ Version: 0.1.21
 Date: 2026-10-02
   Bugfixes:
     - The belt in front of a box moved in jerks when it carried many item kinds or single, unstacked items: the hidden inserters waited to fill their hands. One of every four now takes single items and never waits.
-    - With more item kinds than lane slots a box filled up and stopped taking. A lane now holds 24 kinds (was 12), and when even that is not enough, leftovers leave sooner. This also covers boxes with pass-through filters.
+    - With more item kinds than lane slots a box filled up and stopped taking. A lane now holds 24 kinds (was 12). Boxes with pass-through filters let the oldest leftover out when a lane is full.
     - Very fast modded belts (above 144 items/s): a box passes a fully stacked belt at belt speed.
   Changes:
     - The box window shows lane slots in rows of 12.
