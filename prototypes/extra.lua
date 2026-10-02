@@ -96,17 +96,13 @@ function M.build(raw)
     }))
   end
   if #rows > 0 then
-    for _, dir in ipairs(N.DIRS) do
-      local base = top and raw.container[N.variant(top, dir)]
-      if base then
-        base.next_upgrade = first_main and N.variant(first_main, dir) or nil
-        -- FND-0029: other mods may resize our containers before this runs (aai-containers resize-1x1);
-        -- upgrade chain needs one bounding box, so extras copy the top vanilla box.
-        for _, row in ipairs(rows) do
-          raw.container[N.variant(row.key, dir)].collision_box = table.deepcopy(base.collision_box)
-          -- FND-0034: mods may edit masks before this runs (Mining Drones adds mining_drone layer); chain needs one mask.
-          raw.container[N.variant(row.key, dir)].collision_mask = table.deepcopy(base.collision_mask)
-        end
+    local base = raw["transport-belt"][N.body(top)]
+    if base then
+      base.next_upgrade = first_main and N.body(first_main) or nil
+      for _, row in ipairs(rows) do
+        local body = raw["transport-belt"][N.body(row.key)]
+        body.collision_box = table.deepcopy(base.collision_box)
+        body.collision_mask = table.deepcopy(base.collision_mask)
       end
     end
   end

@@ -44,6 +44,25 @@ local function includes(rows, expected)
 end
 
 describe("data extra", function()
+  it("chain fix-ups go to bodies", function()
+    local raw = load("arig")
+    raw["transport-belt"][N.TIER.turbo.belt].collision_box = { { -0.3, -0.3 }, { 0.3, 0.3 } }
+    raw["transport-belt"][N.TIER.turbo.belt].collision_mask = { layers = { ground_tile = true } }
+    require("prototypes.extra").build(raw)
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, N.body("planetaris-hyper"))
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].collision_box, raw["transport-belt"][N.body("turbo")].collision_box)
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].collision_mask, raw["transport-belt"][N.body("turbo")].collision_mask)
+    for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("turbo", dir)].next_upgrade, nil) end
+  end)
+
+  it("source belt missing in raw", function()
+    F.reset()
+    rawset(F.raw["transport-belt"], "transport-belt", nil)
+    local tier = require("prototypes.tier")
+    local good, err = pcall(tier.make, "yellow", { strict = true, index = 1 })
+    eq(good, false)
+    ok(tostring(err):find("yellow", 1, true) and tostring(err):find("transport-belt", 1, true), tostring(err))
+  end)
   it("vanilla prototypes identical to v8", function()
     F.reset()
     dofile("prototypes/packer.lua")
@@ -56,7 +75,7 @@ describe("data extra", function()
     local extra = require("prototypes.extra")
     eq(extra.tiers(raw), {})
     extra.build(raw)
-    eq(#F.extended, 37)
+    eq(#F.extended, 45)
     for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("turbo", dir)].next_upgrade, nil) end
   end)
 
@@ -138,12 +157,12 @@ describe("data extra", function()
     includes(unit.ingredients, { "production-science-pack", "utility-science-pack", "space-science-pack", "kr-singularity-tech-card" })
   end)
 
-  it("next_upgrade chain keeps direction", function()
+  it("body next_upgrade chain follows tier chains", function()
     local raw = load("arig-k2so")
     require("prototypes.extra").build(raw)
-    eq(raw.container[N.variant("turbo", "west")].next_upgrade, N.variant("planetaris-hyper", "west"))
-    eq(raw.container[N.variant("planetaris-hyper", "west")].next_upgrade, N.variant("kr-superior", "west"))
-    eq(raw.container[N.variant("kr-superior", "west")].next_upgrade, nil)
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, N.body("planetaris-hyper"))
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].next_upgrade, N.body("kr-superior"))
+    eq(raw["transport-belt"][N.body("kr-superior")].next_upgrade, nil)
   end)
 
   it("item order after turbo in chain order", function()
@@ -253,11 +272,11 @@ describe("data extra", function()
   end)
   it("upgrade chain from top vanilla", function()
     local raw=load("se"); require("prototypes.extra").build(raw)
-    eq(raw.container[N.variant("blue","west")].next_upgrade,nil)  -- v11 (U-3): no upgrade across chains
-    eq(raw.container[N.variant("se-space","west")].next_upgrade,N.variant("se-deep-space","west"))
-    eq(raw.container[N.variant("se-deep-space","west")].next_upgrade,nil)
+    eq(raw["transport-belt"][N.body("blue")].next_upgrade,nil)  -- v11 (U-3): no upgrade across chains
+    eq(raw["transport-belt"][N.body("se-space")].next_upgrade,N.body("se-deep-space"))
+    eq(raw["transport-belt"][N.body("se-deep-space")].next_upgrade,nil)
     raw=load("arig"); require("prototypes.extra").build(raw)
-    eq(raw.container[N.variant("turbo","west")].next_upgrade,N.variant("planetaris-hyper","west"))
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade,N.body("planetaris-hyper"))
   end)
   it("info lists space-age as optional", function()
     local file=assert(io.open("info.json","r")); local content=file:read("*a"); file:close()
@@ -269,41 +288,41 @@ describe("data extra", function()
     -- data-final-fixes, before ours; next_upgrade target must have the same bounding box or the game refuses to load.
     local raw = load("se")
     for _, tier in ipairs({ "yellow", "red", "blue" }) do
-      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_box = { { -0.3, -0.3 }, { 0.3, 0.3 } } end
+      raw["transport-belt"][N.body(tier)].collision_box = { { -0.3, -0.3 }, { 0.3, 0.3 } }
     end
     require("prototypes.extra").build(raw)
     for _, dir in ipairs(N.DIRS) do
-      eq(raw.container[N.variant("se-deep-space", dir)].collision_box, { { -0.3, -0.3 }, { 0.3, 0.3 } })
+      eq(raw["transport-belt"][N.body("se-deep-space")].collision_box, { { -0.3, -0.3 }, { 0.3, 0.3 } })
     end
   end)
   it("extra box matches mask of vanilla box", function()
     local raw = load("arig")
     local mask = { layers = { item = true, object = true, player = true, water_tile = true, is_object = true, is_lower_object = true, mining_drone = true } }
     for _, tier in ipairs({ "yellow", "red", "blue", "turbo" }) do
-      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_mask = mask end
+      raw["transport-belt"][N.body(tier)].collision_mask = mask
     end
     require("prototypes.extra").build(raw)
     for _, dir in ipairs(N.DIRS) do
-      local copied = raw.container[N.variant("planetaris-hyper", dir)].collision_mask
+      local copied = raw["transport-belt"][N.body("planetaris-hyper")].collision_mask
       eq(copied, mask)
-      ok(copied ~= raw.container[N.variant("turbo", dir)].collision_mask, "mask must be deep-copied")
+      ok(copied ~= raw["transport-belt"][N.body("turbo")].collision_mask, "mask must be deep-copied")
     end
   end)
   it("extra mask copied into every chain", function()
     local raw = load("se")
     local mask = { layers = { item = true, object = true, player = true, water_tile = true, is_object = true, is_lower_object = true, mining_drone = true } }
     for _, tier in ipairs({ "yellow", "red", "blue" }) do
-      for _, dir in ipairs(N.DIRS) do raw.container[N.variant(tier, dir)].collision_mask = mask end
+      raw["transport-belt"][N.body(tier)].collision_mask = mask
     end
     require("prototypes.extra").build(raw)
     for _, tier in ipairs({ "se-space", "se-deep-space" }) do
-      for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant(tier, dir)].collision_mask, mask) end
+      eq(raw["transport-belt"][N.body(tier)].collision_mask, mask)
     end
   end)
   it("nil mask stays nil", function()
     local raw = load("arig")
     require("prototypes.extra").build(raw)
-    for _, dir in ipairs(N.DIRS) do eq(raw.container[N.variant("planetaris-hyper", dir)].collision_mask, nil) end
+    eq(raw["transport-belt"][N.body("planetaris-hyper")].collision_mask, nil)
   end)
   it("se space root recipe", function()
     local raw = load("se"); require("prototypes.extra").build(raw)
@@ -336,8 +355,8 @@ describe("data extra", function()
   end)
   it("se plus k2 two chains", function()
     local raw=load("se")
-    raw["transport-belt"]["kr-superior-transport-belt"]={speed=0.1875}
-    raw["transport-belt"]["kr-advanced-transport-belt"]={speed=0.125,hidden=true}
+    raw["transport-belt"]["kr-superior-transport-belt"]={type="transport-belt",name="kr-superior-transport-belt",speed=0.1875}
+    raw["transport-belt"]["kr-advanced-transport-belt"]={type="transport-belt",name="kr-advanced-transport-belt",speed=0.125,hidden=true}
     raw.item["kr-superior-splitter"]={}; raw.item["kr-advanced-splitter"]={}
     raw.recipe["kr-superior-splitter"]={}; raw.recipe["kr-advanced-splitter"]={}
     raw.technology["kr-logistic-5"]={unit={count=2000,ingredients={{"production-science-pack",1}}},effects={}}
@@ -349,10 +368,10 @@ describe("data extra", function()
     eq({rows[1].prev,rows[2].prev,rows[3].prev},{nil,"blue","se-space"})
     raw.technology["kr-logistic-5"].prerequisites={}
     require("prototypes.extra").build(raw)
-    eq(raw.container[N.variant("blue","west")].next_upgrade,N.variant("kr-superior","west"))
-    eq(raw.container[N.variant("se-space","west")].next_upgrade,N.variant("se-deep-space","west"))
-    eq(raw.container[N.variant("kr-superior","west")].next_upgrade,nil)
-    eq(raw.container[N.variant("se-deep-space","west")].next_upgrade,nil)
+    eq(raw["transport-belt"][N.body("blue")].next_upgrade,N.body("kr-superior"))
+    eq(raw["transport-belt"][N.body("se-space")].next_upgrade,N.body("se-deep-space"))
+    eq(raw["transport-belt"][N.body("kr-superior")].next_upgrade,nil)
+    eq(raw["transport-belt"][N.body("se-deep-space")].next_upgrade,nil)
   end)
   it("yellow recipe unchanged by root rule", function()
     F.reset(); dofile("prototypes/packer.lua")

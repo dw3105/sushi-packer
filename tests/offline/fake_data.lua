@@ -105,7 +105,11 @@ function F.strip_sa()
 end
 
 local function add_belt(raw, name, speed, hidden)
-  raw["transport-belt"][name] = { type = "transport-belt", name = name, speed = speed, hidden = hidden or nil }
+  raw["transport-belt"][name] = { type = "transport-belt", name = name, speed = speed, hidden = hidden or nil,
+    belt_animation_set = { animation_set = { filename = "__base__/graphics/entity/transport-belt/transport-belt.png" } },
+    collision_box = { { -0.4, -0.4 }, { 0.4, 0.4 } },
+    circuit_connector = { fake = "belt-connector-" .. name },
+    related_underground_belt = name:gsub("transport%-belt", function() return "underground-belt" end) }
 end
 
 function F.with_mods(set)

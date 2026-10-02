@@ -21,6 +21,73 @@ local function science_names(unit)
   return out
 end
 
+describe("data v17", function()
+  local function deep_equal(a, b, path)
+    eq(a, b, path)
+  end
+
+  it("body is belt copy per tier", function()
+    local raw = load()
+    local source = table.deepcopy(raw["transport-belt"][N.TIER.yellow.belt])
+    local body = raw["transport-belt"][N.body("yellow")]
+    ok(body ~= nil, "yellow body missing")
+    for _, key in ipairs({ "speed", "belt_animation_set", "collision_box", "circuit_connector" }) do
+      deep_equal(body[key], source[key], key)
+    end
+    eq(raw["transport-belt"][N.TIER.yellow.belt], source, "source belt changed")
+  end)
+
+  it("body fields", function()
+    local raw = load()
+    local body = raw["transport-belt"][N.body("yellow")]
+    eq(body.type, "transport-belt"); eq(body.name, N.body("yellow"))
+    eq(body.icon, "__sushi-packer__/graphics/icons/sushi-packer-yellow.png"); eq(body.icon_size, 64)
+    eq(body.localised_name, { "entity-name." .. N.placer("yellow") })
+    eq(body.minable, { mining_time = 0.2, result = N.item("yellow") })
+    eq(body.placeable_by, { item = N.item("yellow"), count = 1 })
+    eq(body.fast_replaceable_group, N.FAST_REPLACE_GROUP)
+    eq(body.related_underground_belt, nil); eq(body.corpse, N.remnant("yellow"))
+    eq(body.max_health, 350); eq(body.se_allow_in_space, true); eq(body.icons, nil)
+    eq(body.factoriopedia_simulation, raw.item[N.item("yellow")].factoriopedia_simulation)
+    eq(body.hidden_in_factoriopedia, false)
+  end)
+
+  it("body upgrade chain", function()
+    local raw = load()
+    eq(raw["transport-belt"][N.body("yellow")].next_upgrade, N.body("red"))
+    eq(raw["transport-belt"][N.body("red")].next_upgrade, N.body("blue"))
+    eq(raw["transport-belt"][N.body("blue")].next_upgrade, N.body("turbo"))
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, nil)
+  end)
+
+  it("hood fields", function()
+    local raw = load()
+    local hood = raw["simple-entity-with-owner"][N.hood("yellow")]
+    local placer = raw["simple-entity-with-owner"][N.placer("yellow")]
+    ok(hood ~= nil, "yellow hood missing")
+    eq(hood.type, "simple-entity-with-owner"); eq(hood.picture, placer.picture)
+    eq(hood.collision_mask, { layers = {} }); eq(hood.selectable_in_game, false)
+    eq(hood.hidden, true); eq(hood.hidden_in_factoriopedia, true)
+    eq(hood.flags, { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral" })
+    eq(hood.minable, nil); eq(hood.max_health, 350); eq(hood.render_layer, "object")
+  end)
+
+  it("legacy boxes hidden without upgrade", function()
+    local raw = load()
+    for _, tier in ipairs(N.TIERS) do for _, dir in ipairs(N.DIRS) do
+      local box = raw.container[N.variant(tier, dir)]
+      eq(box.type, "container"); eq(box.inventory_size, N.SLOTS); eq(box.hidden, true)
+      eq(box.hidden_in_factoriopedia, true); eq(box.next_upgrade, nil)
+      eq(box.factoriopedia_simulation, nil); eq(box.placeable_by, { item = N.item(tier), count = 1 })
+    end end
+  end)
+
+  it("item still places placer", function()
+    local raw = load()
+    for _, tier in ipairs(N.TIERS) do eq(raw.item[N.item(tier)].place_result, N.placer(tier)) end
+  end)
+end)
+
 describe("data", function()
   it("own subgroup row after belts", function()
     local raw = load()
@@ -50,7 +117,7 @@ describe("data", function()
       expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
       eq(raw.item[N.item(tier)].factoriopedia_simulation, expected, tier .. " item")
       expected.init = 'remote.call("sushi-packer", "scene", "factoriopedia")'
-      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation, expected, tier .. " north")
+      eq(raw["transport-belt"][N.body(tier)].factoriopedia_simulation, expected, tier .. " body")
     end
     expected.init = 'remote.call("sushi-packer", "scene", "tips")'
     eq(raw["tips-and-tricks-item"][N.TIPS].simulation, expected)
@@ -61,7 +128,7 @@ describe("data", function()
     dofile("prototypes/tips.lua")
     for _, tier in ipairs(N.TIERS) do
       eq(raw.item[N.item(tier)].factoriopedia_simulation.init_update_count, 900, tier .. " item")
-      eq(raw.container[N.variant(tier, "north")].factoriopedia_simulation.init_update_count, 900, tier .. " north")
+      eq(raw["transport-belt"][N.body(tier)].factoriopedia_simulation.init_update_count, 900, tier .. " body")
     end
     eq(raw["tips-and-tricks-item"][N.TIPS].simulation.init_update_count, 900)
   end)
@@ -141,11 +208,11 @@ describe("data", function()
     end
   end)
 
-  it("next_upgrade chain keeps direction", function()
+  it("body upgrade chain follows tier order", function()
     local raw = load()
-    eq(raw.container[N.variant("yellow", "east")].next_upgrade, N.variant("red", "east"))
-    eq(raw.container[N.variant("blue", "west")].next_upgrade, N.variant("turbo", "west"))
-    eq(raw.container[N.variant("turbo", "west")].next_upgrade, nil)
+    eq(raw["transport-belt"][N.body("yellow")].next_upgrade, N.body("red"))
+    eq(raw["transport-belt"][N.body("blue")].next_upgrade, N.body("turbo"))
+    eq(raw["transport-belt"][N.body("turbo")].next_upgrade, nil)
   end)
 
   it("item weight 20 kg", function()
