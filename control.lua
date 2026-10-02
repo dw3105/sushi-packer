@@ -18,12 +18,16 @@ script.on_configuration_changed(function(data)
   registry.on_configuration_changed(data)
 end)
 
--- Build: placers (normal path) and variants (clone/revive/undo/script paths). Active tiers only (v9 M-1:
--- modded tier names without prototype would break filters; FND-0022 P3 prototypes readable here).
+-- Build: placers (normal path), bodies (blueprint / upgrade / clone / revive / undo / script paths) and legacy
+-- chest boxes (ghosts of blueprints made before v17). Active tiers only (v9 M-1: modded tier names without
+-- prototype would break filters; FND-0022 P3 prototypes readable here).
+-- v17: packer = belt body (N.body); legacy boxes are swapped to bodies when met (registry).
 local build_filter = {}
 local box_filter = {}
 for _, tier in ipairs(N.active()) do
   build_filter[#build_filter + 1] = { filter = "name", name = N.placer(tier) }
+  build_filter[#build_filter + 1] = { filter = "name", name = N.body(tier) }
+  box_filter[#box_filter + 1] = { filter = "name", name = N.body(tier) }
   for _, dir in ipairs(N.DIRS) do
     build_filter[#build_filter + 1] = { filter = "name", name = N.variant(tier, dir) }
     box_filter[#box_filter + 1] = { filter = "name", name = N.variant(tier, dir) }
@@ -50,8 +54,9 @@ script.on_event(defines.events.on_entity_died, registry.on_died, box_filter)
 script.on_event(defines.events.on_marked_for_deconstruction, function(e) tick.on_decon(e, true) end, box_filter)
 script.on_event(defines.events.on_cancelled_deconstruction, function(e) tick.on_decon(e, false) end, box_filter)
 
-script.on_event(N.INPUT_ROTATE, function(e) registry.on_rotate_input(e, false) end)
-script.on_event(N.INPUT_REVERSE_ROTATE, function(e) registry.on_rotate_input(e, true) end)
+-- v17: game rotates belt body itself; hidden parts follow
+script.on_event(defines.events.on_player_rotated_entity, registry.on_rotated)
+script.on_event(defines.events.on_player_flipped_entity, registry.on_rotated)
 
 script.on_event(defines.events.on_player_setup_blueprint, copy.on_setup_blueprint)
 script.on_event(defines.events.on_entity_settings_pasted, copy.on_settings_pasted)

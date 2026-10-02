@@ -18,7 +18,5 @@ end
 data:extend(leds)
 
 data:extend({
-  { type = "custom-input", name = N.INPUT_ROTATE, key_sequence = "", linked_game_control = "rotate" },
-  { type = "custom-input", name = N.INPUT_REVERSE_ROTATE, key_sequence = "", linked_game_control = "reverse-rotate" },
   { type = "custom-input", name = N.INPUT_OPEN, key_sequence = "", linked_game_control = "open-gui" },  -- v17: belt kind opens no window by itself
 })

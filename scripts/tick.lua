@@ -61,41 +61,6 @@ function M.on_research(e)
   storage.belt_stack[force.index] = belt_io.belt_stack_size(force)
 end
 
-local function remove_extra(rec, box_inv, entry, amount)
-  box_inv.remove({ name = entry.name, quality = entry.quality, count = amount })
-  entry.count = entry.count - amount
-  if entry.count <= 0 then
-    for i, x in ipairs(rec.extra) do if x == entry then table.remove(rec.extra, i); break end end
-  end
-  if #rec.extra == 0 then rec.extra = nil end
-end
-
-local function drain_extra(rec, lane, bss, credit, counters)
-  if not rec.extra then return credit, false end
-  local has_lane = false
-  for _, entry in ipairs(rec.extra) do if entry.lane == lane and entry.count > 0 then has_lane = true; break end end
-  if not has_lane then return credit, false end
-  local box_inv = rec.entity.get_inventory(defines.inventory.chest)
-  while rec.extra do
-    local entry
-    for _, candidate in ipairs(rec.extra) do
-      if candidate.lane == lane and candidate.count > 0 then entry=candidate; break end
-    end
-    if not entry then return credit, false end
-    local size = math.min(bss, stack_size(entry.name))
-    while entry.count > 0 and credit >= 1 do
-      local piece = { name=entry.name, quality=entry.quality, count=math.min(entry.count,size) }
-      local pushed = belt_io.push(rec,lane,piece,bss)
-      if pushed <= 0 then return credit,true end
-      remove_extra(rec,box_inv,entry,pushed)
-      if counters then counters.items_in=counters.items_in+pushed end
-      credit = credit - 1
-    end
-    if entry.count > 0 then return credit,true end
-  end
-  return credit,false
-end
-
 -- v15 perf (bench 2026-10-01: first loop cost 0.077 ms per turbo box, rig 0.012): engine calls per lane visit are
 -- can_push (1), get_contents (1), per belt stack out insert + remove. No contents read while lane cannot push, except
 -- once per SLOW ticks (hoarding rule, LED, timers). Used slots estimated from contents; engine asked only when the
@@ -119,30 +84,18 @@ local function timeout_for(rec)
   return tick_timeout
 end
 
-local function lane_has_extra(rec, lane)
-  local extra = rec.extra
-  if not extra then return false end
-  for i = 1, #extra do if extra[i].lane == lane and extra[i].count > 0 then return true end end
-  return false
-end
-
 local skip_filters
 local function skip_fn(name, quality) return filter.match(skip_filters, name, quality, levels()) end
 
 -- Returns true when lane store is known empty.
 local function visit_lane(rec, lane, tick, bss, rate, elapsed, flush_all, counters)
   local stopped = rec.enabled == false or rec.decon == true
-  local extra_lane = lane_has_extra(rec, lane)
-  arms.pause(rec, lane, stopped or extra_lane)
+  arms.pause(rec, lane, stopped)
   local cap = 2 * rate
   if cap < 2 then cap = 2 end
   local credit = (rec.out_credit[lane] or 0) + rate * elapsed
   if credit > cap then credit = cap end
-  if extra_lane and not stopped then
-    credit, extra_lane = drain_extra(rec, lane, bss, credit, counters)
-    if not extra_lane then arms.pause(rec, lane, false) end
-  end
-  local can = not stopped and not extra_lane and credit >= 1 and belt_io.can_push(rec, lane)
+  local can = not stopped and credit >= 1 and belt_io.can_push(rec, lane)
   rec.slow = rec.slow or { 0, 0 }
   if not can and not flush_all and tick < rec.slow[lane] then
     rec.out_credit[lane] = credit
@@ -211,31 +164,19 @@ end
 
 local function engine_look(rec, tick, bss, flush_all)
   -- front belt check costs engine calls: asked once per 120 ticks (V16-6: up to 2 s late after front belt is rotated)
+  -- v17: front is "ahead" (belt-like entity running our way), "across" (belt running across: out arms aim at its
+  -- near lane, V17-5) or nil
   local front = rec.front_was
-  if front ~= true or tick - (rec.front_at or -120) >= 120 then  -- missing front: asked at every look
-    front = belt_io.front_ok(rec); rec.front_was, rec.front_at = front, tick
+  if not front or tick - (rec.front_at or -120) >= 120 then  -- missing front: asked at every look
+    front = belt_io.front_kind(rec); rec.front_was, rec.front_at = front, tick
+    if front then arms.aim_out(rec, front) end
   end
   local stopped = rec.enabled == false or rec.decon == true or not front
   arms.hand(rec, bss)
   rec.used = rec.used or { 0, 0 }
   for lane=1,2 do
-    local extra_lane = lane_has_extra(rec, lane)
     arms.skip(rec, lane, EMPTY)
-    if extra_lane then
-      local lane_stopped = rec.enabled == false or rec.decon == true
-      arms.pause(rec, lane, true)
-      arms.pause_out(rec, lane, true)
-      local interval = M._interval(rec.tier)
-      local elapsed = tick - (rec.last_poll or (tick - interval))
-      local rate = belt_io.lane_rate(rec.tier)
-      local credit = (rec.out_credit[lane] or 0) + rate * elapsed
-      local remained
-      if not lane_stopped then credit, remained = drain_extra(rec, lane, bss, credit, storage and storage.sp_counters)
-      else remained = true end
-      rec.out_credit[lane] = credit
-      if not remained then arms.pause(rec, lane, stopped); arms.pause_out(rec, lane, stopped) end
-      rec.used[lane] = 0
-    else
+    do
       arms.pause(rec, lane, rec.enabled == false or rec.decon == true)
       arms.pause_out(rec, lane, stopped)
       local inv = rec.invs[lane]
@@ -295,7 +236,10 @@ local function engine_look(rec, tick, bss, flush_all)
             if rest>0 then
               held_piece.count=rest
               local put=inv.insert(held_piece)
-              if put<rest then held_piece.count=rest-put; rec.entity.get_inventory(defines.inventory.chest).insert(held_piece) end
+              if put<rest then  -- store full: rest on ground at packer, never lost (no chest body since v17)
+                held_piece.count=rest-put
+                rec.entity.surface.spill_item_stack({ position = rec.entity.position, stack = held_piece })
+              end
             end
           end
           for i=1,#indices do
@@ -328,28 +272,6 @@ local function update_led(rec)
   if not rec.led or rec.led.state ~= state or rec.led.visible ~= visible then led.set(rec, state, visible) end
 end
 
--- Once per 60 ticks per box: items someone put into box container (inserter, robot, player) and that are not
--- old-save extra yet become extra on lane 1 (D-1 "surplus adopted as left-lane arrival"). Empty container: one call.
-local function adopt_outside(rec, tick)
-  local entity = rec.entity
-  if not entity.valid then return end
-  rec.force_index = entity.force.index
-  local box_inv = entity.get_inventory(defines.inventory.chest)
-  if box_inv.is_empty() then return end
-  local known = {}
-  for _, x in ipairs(rec.extra or EMPTY) do local k = x.name .. "\0" .. x.quality; known[k] = (known[k] or 0) + x.count end
-  for _, c in ipairs(box_inv.get_contents()) do
-    local more = c.count - (known[c.name .. "\0" .. c.quality] or 0)
-    if more > 0 then
-      rec.extra = rec.extra or {}
-      local hit
-      for _, x in ipairs(rec.extra) do if x.lane == 1 and x.name == c.name and x.quality == c.quality then hit = x; break end end
-      if hit then hit.count = hit.count + more else rec.extra[#rec.extra + 1] = { name = c.name, quality = c.quality, count = more, lane = 1 } end
-      rec.next_poll = tick
-    end
-  end
-end
-
 -- v16 schedule (INT, bench 2026-10-01: walking over every box every tick cost 0.38 ms per 200 boxes).
 -- storage.sched = { n = box count, buckets = { [1..60] = { unit, ... } }, fast = { [unit] = true } }.
 -- Engine-mode box sits in 2 buckets (its look ticks: (tick + unit) % 30 == 0). Box in script mode or with extra
@@ -380,7 +302,7 @@ local function build_sched()
       local b = (-unit) % LOOK
       local list = buckets[b + 1]; list[#list + 1] = unit
       list = buckets[b + LOOK + 1]; list[#list + 1] = unit
-      if rec.extra ~= nil or is_script_mode(rec) then fast[unit] = true end
+      if is_script_mode(rec) then fast[unit] = true end
     end
   end
   return { n = n, buckets = buckets, fast = fast }
@@ -409,7 +331,7 @@ local function visit(rec, tick, script_mode, interval, counters)
     -- Idle sleep only after stores stayed empty 30 ticks: a busy pass-through box (belt stack 1) empties its
     -- stores on most visits; sleeping 15 ticks there cost 10-25 % of belt rate (rate test, 2026-10-01).
     local idle = false
-    if empty1 and empty2 and rec.extra == nil then
+    if empty1 and empty2 then
       rec.empty_since = rec.empty_since or tick
       idle = tick - rec.empty_since >= 30
     else
@@ -419,7 +341,7 @@ local function visit(rec, tick, script_mode, interval, counters)
   else
     engine_look(rec, tick, bss, flush_now)
     rec.last_poll = tick
-    rec.next_poll = tick + (interval or 0)  -- interval only set while extra items drain
+    rec.next_poll = tick + (interval or 0)
     rec.empty_since = nil
   end
   update_led(rec)
@@ -427,9 +349,8 @@ end
 
 -- Box of `fast` set: every tick, v15 due rule. Leaves the set when it is a plain engine-mode box again.
 local function fast_step(sched, rec, unit, tick, counters)
-  if not rec.decon and (tick + unit) % 60 == 0 then adopt_outside(rec, tick) end
   local script_mode = is_script_mode(rec)
-  if not script_mode and rec.extra == nil then
+  if not script_mode then
     sched.fast[unit] = nil  -- bucket loop (runs after this, same tick) looks at it when its tick comes
     return
   end
@@ -466,8 +387,7 @@ function M.on_tick(e)
     local unit = list[i]
     local rec = boxes[unit]
     if rec and rec.stores and not fast[unit] then
-      if not rec.decon and (tick + unit) % 60 == 0 then adopt_outside(rec, tick) end
-      if rec.extra ~= nil or is_script_mode(rec) then
+      if is_script_mode(rec) then
         fast[unit] = true  -- found at its look: from now on checked every tick
         local interval = M._interval(rec.tier)
         if not rec.decon and tick >= (rec.next_poll or 0) then visit(rec, tick, is_script_mode(rec), interval, counters) end
@@ -493,10 +413,8 @@ function M.on_decon(e, marked)
     rec.decon=marked; rec.next_poll=0
     if rec.stores then
       for lane=1,2 do
-        local has_extra=false
-        for _, entry in ipairs(rec.extra or {}) do if entry.lane==lane and entry.count>0 then has_extra=true; break end end
-        arms.pause(rec,lane,marked==true or rec.enabled==false or has_extra)
-        arms.pause_out(rec,lane,marked==true or rec.enabled==false or has_extra or not belt_io.front_ok(rec))
+        arms.pause(rec,lane,marked==true or rec.enabled==false)
+        arms.pause_out(rec,lane,marked==true or rec.enabled==false or not belt_io.front_ok(rec))
       end
     end
     update_led(rec)
