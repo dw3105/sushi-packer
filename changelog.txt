@@ -2,13 +2,19 @@
 Version: 0.2.23
 Date: 2026-10-04
   Features:
-    - PLACEHOLDER (written from final code at S6).
+    - Hold Alt to see which way each sushi packer runs: one arrow per packer, pointing the way items leave.
+    - Each lane now holds at most one item stack of one kind (e.g. 100 iron plates, 50 ore). When the front belt is blocked, one kind can no longer fill the whole lane; it is taken again once half a stack has left. At most 5 kinds per lane are limited at once.
+  Changes:
+    - Alt-mode no longer shows the icons and arrows of the hidden parts inside a packer.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.23
 Date: 2026-10-04
   Features:
-    - PLACEHOLDER (written from final code at S6).
+    - Hold Alt to see which way each sushi packer runs: one arrow per packer, pointing the way items leave.
+    - Each lane now holds at most one item stack of one kind (e.g. 100 iron plates, 50 ore). When the front belt is blocked, one kind can no longer fill the whole lane; it is taken again once half a stack has left. At most 5 kinds per lane are limited at once.
+  Changes:
+    - Alt-mode no longer shows the icons and arrows of the hidden parts inside a packer.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.22
