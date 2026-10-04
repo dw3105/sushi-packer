@@ -59,3 +59,5 @@
 | `056` | `sushi-packer/agent` | v17 lifecycle: body is packer, old chests migrate | 2026-10-02 |
 | `057` | `sushi-packer/agent` | v20 gui: lane slots show quality | 2026-10-02 |
 | `058` | `sushi-packer/agent` | v20 data: hood in body belt picture, no connector frame | 2026-10-02 |
+| `062` | `sushi-packer/agent` | v23 altmode: alt-mode arrow, hide-alt-info on hidden parts | 2026-10-04 |
+| `063` | `sushi-packer/agent` | v23 cap: kind cap in engine way, mop arms, filter_writes counter | 2026-10-04 |
