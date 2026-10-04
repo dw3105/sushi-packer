@@ -209,13 +209,13 @@ local function engine_look(rec, tick, bss, flush_all)
   arms.hand(rec, bss)
   rec.used = rec.used or { 0, 0 }
   for lane=1,2 do
-    arms.skip(rec, lane, EMPTY)
     do
       arms.pause(rec, lane, rec.enabled == false or rec.decon == true)
       arms.pause_out(rec, lane, stopped)
       if rec.spare then refill(rec, lane) end
       local inv = rec.invs[lane]
       local contents = inv.get_contents()
+      arms.skip(rec, lane, ledger.hoard(rec.ledger, lane, contents, stack_size))
       local n = #contents
       local used = 0
       for i=1,n do used = used + math.ceil(contents[i].count / stack_size(contents[i].name)) end
@@ -470,13 +470,13 @@ function M.on_tick(e)
   end
 end
 local function zero_counters()
-  return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0, full=0 }
+  return { visits=0, reads=0, pulls=0, pushes=0, items_in=0, items_out=0, full=0, filter_writes=0 }
 end
 function M.counters_on() storage.sp_counters = zero_counters() end
 function M.counters()
   local c = storage and storage.sp_counters
   if not c then return nil end
-  return { visits=c.visits, reads=c.reads, pulls=c.pulls, pushes=c.pushes, items_in=c.items_in, items_out=c.items_out, full=c.full or 0 }
+  return { visits=c.visits, reads=c.reads, pulls=c.pulls, pushes=c.pushes, items_in=c.items_in, items_out=c.items_out, full=c.full or 0, filter_writes=c.filter_writes or 0 }
 end
 function M.on_decon(e, marked)
   local entity = e and e.entity
