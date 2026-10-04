@@ -10,3 +10,4 @@
 | v0.6 | 2026-09-29 | SP-11..SP-16 from FRC-0021..0026 (author approved all 6); SP-10 output timeout 180 s. |
 | v0.7 | 2026-09-29 | SP-17..SP-21 from FRC-0027..0030, 0032 (author approved all); FRC-0031 = report to `~/skills` owner (lane review crash), no repo rule. |
 | v0.8 | 2026-09-30 | SP-22..SP-24 + SP-21 `--file` from FRC-0033..0037 (author approved all 4 proposals); FRC-0038 no new rule. |
+| v0.9 | 2026-10-04 | SP-25 from FRC-0065 (author approved "yes"); FRC-0066..0068 recorded, no new rule. |

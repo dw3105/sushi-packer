@@ -55,6 +55,10 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 - **SP-23** **Version bump by grep.** Before bump, `grep -rn '<old ver>'` over `tests/ tools/ README.md portal/ info.json`; every hit bumped or named as history. Never sed by line numbers (v1.13: missed pin cost one full-suite round).
 - **SP-24** **Portal thread = text + images.** Reading player report lists every `<img>` in thread HTML and reads each (screenshot often holds full error + mod list) before first grill question (v1.14 them8: screenshot missed, wrong question asked).
 
+## Visual gates (v0.9, friction log 2026-10-04 v23, author approved)
+
+- **SP-25** **Visual scene lists edge cases; belt art tested per frame.** Every in-game scene for author shows packer off belt, belt only behind, belt only in front, rotated across belt, on curve, not only on joined belt. Art added to belt prototype (`belt_animation_set` layer) gets offline test naming which of its 20 frames carry it: start / end cap frames draw beyond tile (v1.23: 2-3 hoods per packer off belt since v1.20 while 169 headless tests stayed green; `docs/FRICTION.md` 2026-10-04).
+
 | Reference | Read when |
 |---|---|
 | `references/ledger.md` | changing this skill |
