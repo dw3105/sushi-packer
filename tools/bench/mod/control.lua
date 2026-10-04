@@ -17,6 +17,6 @@ end)
 script.on_nth_tick(600, function()
   local c = remote.call("sushi-packer", "counters")
   if type(c) == "table" then
-    log(string.format("sushi-packer-bench counters tick=%d visits=%d reads=%d pulls=%d pushes=%d items_in=%d items_out=%d full=%d", game.tick, c.visits, c.reads, c.pulls, c.pushes, c.items_in, c.items_out, c.full or 0))
+    log(string.format("sushi-packer-bench counters tick=%d visits=%d reads=%d pulls=%d pushes=%d items_in=%d items_out=%d full=%d filter_writes=%d", game.tick, c.visits, c.reads, c.pulls, c.pushes, c.items_in, c.items_out, c.full or 0, c.filter_writes or 0))
   end
 end)
