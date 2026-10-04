@@ -25,7 +25,7 @@ local function hide(p, store)
   p.working_sound = nil
   p.flags = p.flags or {}
   for _, flag in ipairs({ "placeable-off-grid", "not-on-map", "not-blueprintable", "not-deconstructable",
-    "not-upgradable", "not-flammable", "not-in-kill-statistics" }) do add_flag(p.flags, flag) end
+    "not-upgradable", "not-flammable", "not-in-kill-statistics", "hide-alt-info" }) do add_flag(p.flags, flag) end
   if store then
     add_flag(p.flags, "no-automated-item-insertion")
   end

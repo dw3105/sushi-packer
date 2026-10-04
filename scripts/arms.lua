@@ -1,6 +1,8 @@
 -- Hidden lane stores and lane-locked inserters for each box.
 local N = require("scripts.names")
 local M = {}
+local ARROW = "utility/fluid_indication_arrow"
+local ARROW_ORIENTATION = { north = 0, east = 0.25, south = 0.5, west = 0.75 }
 
 function M.count(speed)
   for _, row in ipairs(N.ARMS) do
@@ -46,6 +48,18 @@ local function _destroy(part)
   if _valid(part) then part.destroy() end
 end
 
+local function _arrow(rec)
+  local arrow = rec.arrow
+  local orientation = ARROW_ORIENTATION[rec.dir]
+  if _valid(arrow) then
+    if arrow.orientation ~= orientation then arrow.orientation = orientation end
+    return
+  end
+  local entity = rec.entity
+  rec.arrow = rendering.draw_sprite { sprite = ARROW, target = entity, surface = entity.surface,
+    only_in_alt_mode = true, orientation = orientation, render_layer = "entity-info-icon" }
+end
+
 local _out_positions
 local _apply_aim
 
@@ -57,10 +71,12 @@ local function _hood(rec)
   local want = N.hood_sprite(rec.tier, rec.dir)
   if h ~= nil and h.valid then
     if h.sprite ~= want then h.sprite = want end
+    _arrow(rec)
     return
   end
   local entity = rec.entity
   rec.hood = rendering.draw_sprite { sprite = want, target = entity, surface = entity.surface, render_layer = "object" }
+  _arrow(rec)
 end
 
 function M.create(rec)
@@ -179,7 +195,8 @@ function M.destroy(rec, keep_stores)
   rec.out, rec.out_paused, rec.hand = nil, nil, nil
   rec.mop = nil
   _destroy(rec.hood)
-  rec.hood, rec.aim, rec.wired = nil, nil, nil
+  _destroy(rec.arrow)
+  rec.hood, rec.arrow, rec.aim, rec.wired = nil, nil, nil, nil
   if not keep_stores then
     for lane = 1, 2 do _destroy(rec.stores and rec.stores[lane]) end
     rec.stores, rec.invs = nil, nil
@@ -416,7 +433,7 @@ function M.ensure(rec)
     else for _, arm in ipairs(mops) do if not _valid(arm) then broken = true; break end end end
   end
   if broken then M.create(rec); return true end
-  if not _valid(rec.hood) or rec.hood.object_name ~= "LuaRenderObject" then _hood(rec) end
+  if not _valid(rec.hood) or rec.hood.object_name ~= "LuaRenderObject" or not _valid(rec.arrow) then _hood(rec) end
   if rec.in_hands ~= table.concat(N.ARM_HANDS, ",") then _in_hands(rec) end
   return false
 end
