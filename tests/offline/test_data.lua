@@ -156,7 +156,7 @@ describe("data v17", function()
     eq(hood.icon, placer.icon); eq(hood.icon_size, 64)  -- INT: engine refuses entity without icon (load error 2026-10-02)
     eq(hood.collision_mask, { layers = {} }); eq(hood.selectable_in_game, false)
     eq(hood.hidden, true); eq(hood.hidden_in_factoriopedia, true)
-    eq(hood.flags, { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral", "placeable-off-grid" })
+    eq(hood.flags, { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral", "placeable-off-grid", "hide-alt-info" })
     eq(hood.collision_box, { { -0.35, -0.35 }, { 0.35, 0.35 } })
     eq(hood.minable, nil); eq(hood.max_health, 350); eq(hood.render_layer, "object")
   end)
@@ -178,6 +178,15 @@ describe("data v17", function()
 end)
 
 describe("data", function()
+  it("old chest variants have hide-alt-info", function()
+    local raw = load()
+    for _, tier in ipairs(N.TIERS) do for _, dir in ipairs(N.DIRS) do
+      local flags = raw.container[N.variant(tier, dir)].flags
+      local found = false; for _, flag in ipairs(flags) do if flag == "hide-alt-info" then found = true end end
+      ok(found, N.variant(tier, dir) .. " missing hide-alt-info")
+    end end
+  end)
+
   it("own subgroup row after belts", function()
     local raw = load()
     local row = raw["item-subgroup"][N.SUBGROUP]
