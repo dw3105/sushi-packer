@@ -144,9 +144,10 @@ describe("v23 cap", function()
   end)
 
   it("capped kind taken again at half", function()
-    -- C-6: front appears -> stacks leave; at half a stack or less ore is taken again; all 150 pass, store never over 2 slots.
+    -- C-6: front appears -> stacks leave; at half a stack or less ore is taken again; all 152 pass (38 full belt stacks; a leftover below one belt stack would wait by design), store never over 2 slots.
+    async(9000)
     local _, rec, feed = build(surface, force, { front = 0 })
-    local step = feeder(feed, { rep(ORE, 150) })
+    local step = feeder(feed, { rep(ORE, 152) })
     local max_slots, max_held, front = 0, 0, nil
     run_until(function()
       step()
@@ -158,9 +159,10 @@ describe("v23 cap", function()
       run_until(function()
         step()
         local s = slots_of(rec, 1, ORE); if s > max_slots then max_slots = s end
-      end, function() return on_belts(surface, { { 0, -41 }, { 1, 0 } }, ORE) == 150 end, 4800, function()
-        assert.are_equal(150, on_belts(surface, { { 0, -41 }, { 1, 0 } }, ORE), "all ore passed after jam cleared")
+      end, function() return on_belts(surface, { { 0, -41 }, { 1, 0 } }, ORE) == 152 end, 4800, function()
+        assert.are_equal(152, on_belts(surface, { { 0, -41 }, { 1, 0 } }, ORE), "all ore passed after jam cleared")
         assert.is_true(max_slots <= 2, "never more than 2 slots: " .. max_slots)
+        done()
       end)
     end)
   end)
@@ -178,15 +180,17 @@ describe("v23 cap", function()
 
   it("items landing on body (mop arms) obey cap", function()
     -- C-6 on mop arms: ore put straight on the belt body, past the in arms; capped kind stays out of the store.
+    -- Ore lands after two looks (60 ticks): cap is set at a look, as for every kind.
     local box, rec = build(surface, force, { front = 0, behind = 1 })
     assert.are_equal(100, rec.invs[1].insert({ name = ORE, count = 100 }), "left store holds two stacks already")
-    local put = 0
+    local put, start = 0, game.tick
     run_until(function()
       local line = box.get_transport_line(1)
-      if put < 20 and line.can_insert_at_back() and line.insert_at_back({ name = ORE, count = 1 }) then put = put + 1 end
+      if game.tick - start >= 60 and put < 1 and line.can_insert_at_back() and line.insert_at_back({ name = ORE, count = 1 }) then put = put + 1 end
     end, function(t) return t >= 1200 end, 1200, function()
-      assert.are_equal(20, put, "ore put on body")
+      assert.are_equal(1, put, "ore put on body (body belt is stopped: item stays at back spot)")
       assert.are_equal(100, rec.invs[1].get_item_count(ORE), "mop arms took no capped ore into store")
+      assert.are_equal(1, box.get_transport_line(1).get_item_count(ORE), "capped ore waits on body, not lost")
     end)
   end)
 

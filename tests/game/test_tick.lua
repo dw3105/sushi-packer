@@ -508,8 +508,9 @@ describe("tick", function()
     local opened_at
     -- 3 kinds x 64 = 192 items = 48 belt stacks of 4 in left lane store. 100-tick window: yellow arms
     -- 8 / 40 per tick -> 20 stacks, + 8 hands; fast arms (one swing per 2 ticks) would move all 48.
-    local q = rep("iron-ore", 64)
-    for _, name in ipairs({ "copper-ore", "stone" }) do for _, x in ipairs(rep(name, 64)) do q[#q + 1] = x end end
+    -- v23: kinds of stack size 100, so kind cap (C-6, one item stack per kind) never bites at 64.
+    local q = rep("iron-plate", 64)
+    for _, name in ipairs({ "copper-plate", "steel-plate" }) do for _, x in ipairs(rep(name, 64)) do q[#q + 1] = x end end
     local step = feeder(feed, { q, {} })
     run_until(function()
       step()
