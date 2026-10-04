@@ -89,6 +89,14 @@ describe("data hidden", function()
     ok(not has_flag(result[2], "no-automated-item-removal"), "v16: out arms must be able to take from store")
   end)
 
+  it("every hidden part has hide-alt-info", function()
+    local result = parts()
+    for _, p in ipairs(result) do ok(has_flag(p, "hide-alt-info"), p.name .. " missing hide-alt-info") end
+    local raw = { inserter = { [N.OUT] = result[3] }, ["utility-constants"] = { default = { max_belt_stack_size = 20 } } }
+    require("prototypes.hidden").finalize(raw)
+    for name, p in pairs(raw.inserter) do ok(has_flag(p, "hide-alt-info"), name .. " missing hide-alt-info after finalize") end
+  end)
+
   it("parts draw nothing", function()
     local result = parts()
     local arm, store = result[1], result[2]

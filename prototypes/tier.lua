@@ -226,7 +226,7 @@ function M.make(tier, opts)
     name = N.hood(tier),
     icon = icon(tier), icon_size = 64,  -- engine asks icon of every entity (load error without)
     -- off-grid + one-tile box: entity without size snaps to tile corner (game 2026-10-02: hood sat at 11,19 for packer at 10.5,18.5)
-    flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral", "placeable-off-grid" },
+    flags = { "not-on-map", "not-blueprintable", "not-deconstructable", "not-upgradable", "not-flammable", "not-in-kill-statistics", "not-repairable", "placeable-neutral", "placeable-off-grid", "hide-alt-info" },
     collision_box = { { -0.35, -0.35 }, { 0.35, 0.35 } },
     picture = placer.picture,
     collision_mask = { layers = {} },
@@ -246,7 +246,7 @@ function M.make(tier, opts)
     local box = {
       type = "container",
       name = N.variant(tier, dir),
-      flags = { "placeable-neutral", "player-creation", "not-rotatable" },
+      flags = { "placeable-neutral", "player-creation", "not-rotatable", "hide-alt-info" },
       placeable_by = { item = N.item(tier), count = 1 },
       fast_replaceable_group = N.FAST_REPLACE_GROUP,
       inventory_size = N.SLOTS,

@@ -6,8 +6,10 @@ local function setup(speed)
   local created, writes, connectors = {}, {}, {}
   if rendering == nil then  -- v22: hood is a render object; plain fake unless a test brings its own
     rendering = { draw_sprite = function(spec)
-      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target, render_layer = spec.render_layer }
-      function o.destroy() o.valid = false end
+      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target,
+        surface = spec.surface, render_layer = spec.render_layer, only_in_alt_mode = spec.only_in_alt_mode,
+        orientation = spec.orientation, spec = spec }
+      function o.destroy() o.destroyed = true; o.valid = false end
       return o
     end }
   end
@@ -423,13 +425,13 @@ end)
 
 -- v22 (V22-2, FND-0054): hood is a script-drawn picture (render object), not a hidden entity: the entity cost script
 -- time on every packer (6 of 6 bench pairs). Rendering faked here.
-describe("arms v22", function()
+describe("arms", function()
   local function fake_rendering()
     local drawn = {}
     rendering = { draw_sprite = function(spec)
-      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target, render_layer = spec.render_layer, writes = 0 }
-      setmetatable(o, { __newindex = function(t, k, v) if k == "sprite" then rawset(t, "writes", rawget(t, "writes") + 1) end; rawset(t, k, v) end })
-      function o.destroy() o.valid = false end
+      local o = { valid = true, object_name = "LuaRenderObject", sprite = spec.sprite, target = spec.target, render_layer = spec.render_layer, orientation = spec.orientation, only_in_alt_mode = spec.only_in_alt_mode, writes = 0, spec = spec }
+      setmetatable(o, { __newindex = function(t, k, v) if k == "sprite" or k == "orientation" then rawset(t, "writes", rawget(t, "writes") + 1) end; rawset(t, k, v) end })
+      function o.destroy() o.destroyed = true; o.valid = false end
       drawn[#drawn + 1] = o
       return o
     end }
@@ -437,14 +439,14 @@ describe("arms v22", function()
   end
   it("create draws hood picture of tier and direction", function()
     local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
-    eq(#drawn, 1); eq(rec.hood, drawn[1]); eq(drawn[1].sprite, N.hood_sprite(rec.tier, rec.dir)); eq(drawn[1].target, rec.entity)
-    eq(drawn[1].render_layer, "object")
+    eq(#drawn, 2); eq(rec.hood.sprite, N.hood_sprite(rec.tier, rec.dir)); eq(rec.hood.target, rec.entity)
+    eq(rec.hood.render_layer, "object")
     for _, v in ipairs(s.created or {}) do ok(v.spec.name ~= N.hood(rec.tier), "no hood entity") end
   end)
   it("turn and upgrade change picture, no second drawing", function()
     local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
-    rec.dir = "east"; arms.create(rec); eq(#drawn, 1); eq(rec.hood.sprite, N.hood_sprite(rec.tier, "east"))
-    prototypes.entity[N.TIER.red.belt] = { belt_speed = 0.0625 }; rec.tier = "red"; arms.create(rec); eq(#drawn, 1); eq(rec.hood.sprite, N.hood_sprite("red", "east"))
+    rec.dir = "east"; arms.create(rec); eq(#drawn, 2); eq(rec.hood.sprite, N.hood_sprite(rec.tier, "east"))
+    prototypes.entity[N.TIER.red.belt] = { belt_speed = 0.0625 }; rec.tier = "red"; arms.create(rec); eq(#drawn, 2); eq(rec.hood.sprite, N.hood_sprite("red", "east"))
     local w = rec.hood.writes; arms.create(rec); eq(rec.hood.writes, w, "same picture: no write")
   end)
   it("hood entity of older save is removed and replaced", function()
@@ -456,12 +458,40 @@ describe("arms v22", function()
   it("lost picture redrawn by ensure without rebuild", function()
     local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
     local arm = rec.arms[1][1]; rec.hood.valid = false
-    eq(arms.ensure(rec), false); eq(#drawn, 2); ok(rec.hood.valid); eq(rec.arms[1][1], arm)
-    eq(arms.ensure(rec), false); eq(#drawn, 2)
+    eq(arms.ensure(rec), false); eq(#drawn, 3); ok(rec.hood.valid); eq(rec.arms[1][1], arm)
+    eq(arms.ensure(rec), false); eq(#drawn, 3)
   end)
   it("destroy removes picture", function()
     fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec); local h = rec.hood
     arms.destroy(rec); eq(h.valid, false); eq(rec.hood, nil)
   end)
+  it("create draws one alt-only arrow per packer", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec)
+    local found = {}
+    for _, call in ipairs(drawn) do if call.spec.sprite == "utility/fluid_indication_arrow" then found[#found + 1] = call end end
+    eq(#found, 1); eq(found[1].spec.only_in_alt_mode, true); eq(found[1].spec.target, rec.entity)
+  end)
+  it("arrow orientation per direction", function()
+    local expected = { north = 0, east = 0.25, south = 0.5, west = 0.75 }
+    for dir, orientation in pairs(expected) do
+      local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; rec.dir = dir; arms.create(rec)
+      eq(rec.arrow.orientation, orientation, dir)
+    end
+  end)
+  it("rotate rewrites arrow orientation, no second arrow", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec); local arrow = rec.arrow
+    rec.dir = "east"; arms.create(rec)
+    local count = 0; for _, call in ipairs(drawn) do if call.spec.sprite == "utility/fluid_indication_arrow" then count = count + 1 end end
+    eq(count, 1); eq(rec.arrow, arrow); eq(arrow.orientation, 0.25)
+  end)
+  it("destroy removes arrow", function()
+    fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec); local arrow = rec.arrow
+    arms.destroy(rec); eq(arrow.destroyed, true); eq(rec.arrow, nil)
+  end)
+  it("ensure redraws invalid arrow", function()
+    local drawn = fake_rendering(); local rec, s = setup(); rec.entity.surface = s; arms.create(rec); rec.arrow.valid = false
+    arms.ensure(rec)
+    local count = 0; for _, call in ipairs(drawn) do if call.spec.sprite == "utility/fluid_indication_arrow" then count = count + 1 end end
+    eq(count, 2); ok(rec.arrow.valid)
+  end)
 end)
-
