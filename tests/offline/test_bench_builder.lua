@@ -101,8 +101,8 @@ describe("bench builder", function()
     package.loaded["__sushi-packer__.tests.game.bench_builder"]={build=function(...) built={...} end}
     script={on_init=function(fn) handlers.init=fn end,on_nth_tick=function(n,fn) handlers.period=n; handlers.tick=fn end}
     settings={startup={ ["sushi-packer-bench-boxes"]={value=2},["sushi-packer-bench-tier"]={value="blue"},["sushi-packer-bench-flow"]={value="stacks"},["sushi-packer-bench-seed"]={value=5},["sushi-packer-bench-box"]={value=true} }}
-    game={surfaces={{}},forces={player={}}}; remote={call=function(_,name) calls[#calls+1]=name; if name=="counters" then return {visits=1,reads=2,pulls=3,pushes=4,items_in=5,items_out=6} end end}; log=function(s) logs[#logs+1]=s end
-    dofile("tools/bench/mod/control.lua"); handlers.init(); eq(built[5],{tier="blue",flow="stacks",seed=5,box=true}); eq(calls,{"counters_on"}); eq(handlers.period,600); game.tick=1200; handlers.tick(); eq(logs[1],"sushi-packer-bench counters tick=1200 visits=1 reads=2 pulls=3 pushes=4 items_in=5 items_out=6 full=0")
+    game={surfaces={{}},forces={player={}}}; remote={call=function(_,name) calls[#calls+1]=name; if name=="counters" then return {visits=1,reads=2,pulls=3,pushes=4,items_in=5,items_out=6,filter_writes=7} end end}; log=function(s) logs[#logs+1]=s end
+    dofile("tools/bench/mod/control.lua"); handlers.init(); eq(built[5],{tier="blue",flow="stacks",seed=5,box=true}); eq(calls,{"counters_on"}); eq(handlers.period,600); game.tick=1200; handlers.tick(); eq(logs[1],"sushi-packer-bench counters tick=1200 visits=1 reads=2 pulls=3 pushes=4 items_in=5 items_out=6 full=0 filter_writes=7")
     remote.call=function(_,name) calls[#calls+1]=name; return nil end; handlers.tick(); eq(#logs,1)
   end)
 end)
