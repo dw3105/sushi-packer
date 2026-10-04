@@ -728,3 +728,7 @@ Reading: player's text does not match what 0.1.22 builds: no prototype `sushi-pa
 | 2.0.77 without Space Age | same | same | same | (no turbo tier) |
 
 Reading: `electronics` is a prerequisite only of the yellow packer (its recipe needs a circuit, U-1 ingredient scan). Fast packer already needs `logistics-2` on every build. No change (V23-6); GennP asked for their mod list in reply after v1.23.
+
+## FND-0057 - One packer drew 2-3 hoods (author screenshots v1.23 test, 2026-10-04); in code since v1.20
+
+Author, in game, 0.1.23 test zip, turbo packer: off belt -> hood 3 tiles wide, after R on belt (faces across) -> 2 tiles; on a joined belt -> 1 (`~/share/sushi-packer/v23-test/Screenshot 2026-10-04 19*.png`). Headless probe (scratch `test_probe_v23`, dev-vm 2.0.77): after build, rotate and configuration change the script draws exactly 1 hood, 1 arrow, 1 LED, all on the packer tile; no other entity within 2 tiles. Cause: `M._hood_layer` (`0928a99`, v1.20) put the hood picture into all 20 belt frames, rows 13-20 too (`starting_*` / `ending_*`), which the game draws on the half tile beyond a belt end with no belt there. Fix V23-10: cap rows use own blank 128x128 png; straight + curve rows keep hood (blueprint preview / ghost). Offline test `data v20 > hood layer end caps are blank` red before fix, mutation (cap rows back to hood) red, golden diff = 32 cap filenames only. Headless draws no pictures: proof of look = author in game.

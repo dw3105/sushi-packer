@@ -40,9 +40,27 @@ describe("data v20", function()
   end)
 
   it("hood layer rows follow leaving direction", function()
+    -- straight and curve frames (rows 1-12) carry the hood of the side items leave
     local layer = tier_builder._hood_layer("yellow", picture_set())
-    local dirs = { "east", "west", "north", "south", "north", "east", "north", "west", "east", "south", "west", "south", "south", "south", "west", "west", "north", "north", "east", "east" }
+    local dirs = { "east", "west", "north", "south", "north", "east", "north", "west", "east", "south", "west", "south" }
     for row, dir in ipairs(dirs) do eq(layer.filenames[row], hood_path("yellow", dir), "row " .. row) end
+  end)
+
+  it("hood layer end caps are blank", function()
+    -- v23 (author 2026-10-04, screenshots): game draws belt start / end caps on the half tiles beyond a belt end;
+    -- a hood there showed 2-3 hoods for one packer without belt in front / behind. Cap frames get a blank picture.
+    local blank = "__sushi-packer__/graphics/entity/sushi-packer/blank-128.png"
+    local layer = tier_builder._hood_layer("yellow", picture_set())
+    for row = 13, 20 do eq(layer.filenames[row], blank, "cap row " .. row) end
+    local custom = tier_builder._hood_layer("yellow", { animation_set = { frame_count = 1, direction_count = 20 }, ending_east_index = 1, east_index = 20 })
+    eq(custom.filenames[1], blank, "custom ending index blank"); eq(custom.filenames[20], hood_path("yellow", "east"), "custom east index hood")
+  end)
+
+  it("blank cap picture ships as 128 by 128 png", function()
+    local f = assert(io.open("graphics/entity/sushi-packer/blank-128.png", "rb")); local head = f:read(24); f:close()
+    eq(head:sub(2, 4), "PNG")
+    local function u32(s, i) local a, b, c, d = s:byte(i, i + 3); return ((a * 256 + b) * 256 + c) * 256 + d end
+    eq({ u32(head, 17), u32(head, 21) }, { 128, 128 })
   end)
 
   it("hood layer follows custom index fields", function()

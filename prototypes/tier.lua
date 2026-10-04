@@ -45,16 +45,19 @@ function M._hood_layer(tier, set)
     local index = set[row[1]]
     if index == nil then index = default_index end
     if index < 1 or index > 20 or index ~= math.floor(index) then return nil end
+    -- v23: rows 13-20 are belt start / end caps, drawn by the game on the half tile beyond a belt end: blank there
+    local want = default_index > 12 and "blank" or row[3]
     local old = rows[index]
-    if old and old ~= row[3] then return nil end
-    rows[index] = row[3]
+    if old and old ~= want then return nil end
+    rows[index] = want
   end
 
   local filenames = {}
   for index = 1, 20 do
     local dir = rows[index]
     if not dir then return nil end
-    filenames[index] = G .. "entity/sushi-packer/" .. tier .. "/sushi-packer-" .. tier .. "-" .. dir .. ".png"
+    filenames[index] = dir == "blank" and G .. "entity/sushi-packer/blank-128.png"
+      or G .. "entity/sushi-packer/" .. tier .. "/sushi-packer-" .. tier .. "-" .. dir .. ".png"
   end
   local frame_count = base.frame_count or first and first.frame_count or 1
   return {
