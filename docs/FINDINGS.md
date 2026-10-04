@@ -716,3 +716,15 @@ Fix checked before build (2026-10-02 23:20-23:35 UTC, `~/.cache/sushi-packer/v21
 | 4 | try 2 mods: save created on 0.1.14 (`v1.14`), loaded on 0.1.22, 60 ticks (save holds no packers) | green: both exit 0 |
 
 Reading: player's text does not match what 0.1.22 builds: no prototype `sushi-packer-belt` in any commit (`git log --all -S` empty; yellow body is `sushi-packer-body`), our hood is last layer (`prototypes/tier.lua:199-206`) never `layers[0]`. (Path without `__..__` is portal markdown making `__sushi-packer__` bold, not a clue.) Every public 0.1.x zip (0.1.7..0.1.14, 0.1.21, 0.1.22, portal sha1 ok) has no `sushi-packer-belt` text; built names end `-body`/`-placer`/`-hood`/`-remnants`/`-<dir>`, none `-belt`; 0.1.22 dump: only belt kinds `*-sushi-packer-body`; public 0.1.22 `prototypes/` + `scripts/` identical to repo `964ab36`. Cause not known. Needed from player: `factorio-current.log`, Factorio version, full mod list.
+
+## FND-0056 - GennP item 3 ("fast packer needs logistics 2, not electronics"): already true on every build
+
+2026-10-04, dev-vm, `--dump-data` of staged code (= v1.22 code), prerequisites of every packer technology:
+
+| Build | `sushi-packer` (yellow) | `fast-sushi-packer` | `express-sushi-packer` | `turbo-sushi-packer` |
+|---|---|---|---|---|
+| 2.0.77 + Space Age | logistics, steel-processing, electronics | **logistics-2**, sushi-packer, fast-inserter, advanced-circuit | logistics-3, fast-sushi-packer, bulk-inserter, processing-unit | turbo-transport-belt, express-sushi-packer, stack-inserter, quantum-processor |
+| 2.1.20 + Space Age | same | same | same | same |
+| 2.0.77 without Space Age | same | same | same | (no turbo tier) |
+
+Reading: `electronics` is a prerequisite only of the yellow packer (its recipe needs a circuit, U-1 ingredient scan). Fast packer already needs `logistics-2` on every build. No change (V23-6); GennP asked for their mod list in reply after v1.23.
