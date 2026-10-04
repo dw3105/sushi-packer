@@ -1,5 +1,7 @@
 # REQUIREMENTS v23 — proposed wording (author decides)
 
+SUPERSEDED 2026-10-04: folded into `docs/REQUIREMENTS.md` v23 text, author approved ("approved"). Kept as history.
+
 `docs/REQUIREMENTS.md` is v21 text; only author amends it. v1.23 follows author decisions of grill 2026-10-04 (V23-1..V23-7, `docs/DECISIONS.md`). Rows below replace or add.
 
 | ID | v1.23 does | Proposed text |
