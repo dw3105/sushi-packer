@@ -28,4 +28,4 @@
 
 **Intake share** — what packer line takes in divided by what free belt beside it carries, same feed, same time. Below 1 = belt behind packer stands and goes ("jerks"). **Leftover** — items of one kind in lane store fewer than one belt stack.
 
-**Kind cap** — most of one item kind (item + quality) one lane store may hold: one item stack (item's own stack size, e.g. 100 iron plates), counting items already on way in. Kind at cap is not taken from belt until store holds half a stack or less; belt behind waits meanwhile.
+**Kind cap** — most of one item kind (item + quality) one lane store may hold: one item stack (item's own stack size, e.g. 100 iron plates). Items already in arms' hands still arrive, so kind may pass cap a little (never more than 2 slots). Kind at cap is not taken from belt until store holds half a stack or less; belt behind waits meanwhile.
