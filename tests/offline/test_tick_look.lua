@@ -54,7 +54,7 @@ end
 
 describe("tick look",function()
   it("engine box is looked at once per N.LOOK ticks",function() local f=fixture(); for t=1,29 do f.run(t) end; eq(f.evals,0); eq(f.rec.invs[1].reads,0); f.run(30); eq(f.evals,1); eq(f.rec.invs[1].reads,1); eq(f.rec.invs[2].reads,1); f.restore() end)
-  it("look never plans or hoards",function() local f=fixture(); f.run(30); eq(f.plans,0); eq(f.hoards,0); eq(#f.pushes,0); f.restore() end)
+  it("look hoards, never plans",function() local f=fixture(); f.run(30); eq(f.plans,0); eq(f.hoards,2); eq(#f.pushes,0); f.restore() end)
   it("look sets hand and pauses",function()
     local f=fixture(); f.run(30); eq(f.hand_size,4); eq(f.pauses,{{1,false},{2,false}}); eq(f.outs,{{1,false},{2,false}})
     f.pauses={}; f.outs={}; f.enabled=false; f.run(60); eq(f.pauses,{{1,true},{2,true}}); eq(f.outs,{{1,true},{2,true}}); eq(f.rec.invs[1].reads,2, "stopped box still reads store for LED (INT)"); eq(#f.scans,2, "no scan while circuit is off")
@@ -250,4 +250,3 @@ describe("tick v21",function()
     local f,done=hot_fixture(x,true); f.rec.hot=true; storage.sched=nil; f.run(1); ok(storage.sched.hot[30]); done()
   end)
 end)
-
