@@ -27,3 +27,5 @@
 **Side-loading in** — belt pointing at packer's flank pushing items into it. **Sideways front** — belt in front of packer running across; packer pushes onto its near lane like belt does.
 
 **Intake share** — what packer line takes in divided by what free belt beside it carries, same feed, same time. Below 1 = belt behind packer stands and goes ("jerks"). **Leftover** — items of one kind in lane store fewer than one belt stack.
+
+**Kind cap** — most lane-store room one item kind (item + quality) may take in one lane: one full belt stack plus items already on way in. Kind at cap is not taken from belt; belt behind waits until stack of that kind leaves.
