@@ -29,3 +29,7 @@ Cross-repo citation of findings raised in this repo (session-lifecycle CL-07). O
 | FND-0052 hood look, v1.21 window | 2026-10-02 | operator game | Hood in blueprint preview / ghost and v1.21 packer window seen in real game | closed (author: "it works") |
 | FND-0049 cause | 2026-10-02 | dev-vm | Speed gap since v1.17 = hood entity on packer tile (6 of 6 alternated pairs without hood lower) | cause found; fix waits on author (look of placed packer) |
 
+| FND-0055 Gamer433 crash 0.1.22 | 2026-10-04 | dev-vm | 4 headless repros green (player mods incl SE 0.7.52, wire mod); `sushi-packer-belt` in no public zip | OPEN: waits for player log (reply posted by author) |
+| FND-0056 logistics-2 prereq | 2026-10-04 | dev-vm | fast packer needs logistics-2 on 2.0/2.1, with and without Space Age | closed (no change, V23-6) |
+| FND-0057 2-3 hoods off belt | 2026-10-04 | dev-vm + operator game | belt end-cap frames carried hood since v1.20; fix V23-10 | closed (author: "it works now") |
+| close 2026-10-04 v1.23 | 2026-10-04 | dev-vm | v1.23 public: tag + GitHub main `0c7eeda`, portal 0.1.23 / 0.2.23 18:23 UTC, sha1 = release zips | open: dev-vm main docs commits after `0c7eeda` not on GitHub (first deferral; cost: next box, 1 min); Gamer433 log |

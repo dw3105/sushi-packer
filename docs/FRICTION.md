@@ -271,3 +271,19 @@ Row shape: `## FRC-NNNN - title`, then date + context, issue, root cause, propos
 
 **2026-10-02.** Removing `belt_io.pull`: grep for `belt_io.pull` found offline callers; game test file imports module as `io` and calls `io.pull`; six red tests found only by full round (same miss as FRC-0060, hours later). **Rule:** when removing or renaming a function, grep for `\.<name>(` over `scripts`, `tests/offline` and `tests/game`, not for `<module>.<name>`.
 
+
+## FRC-0065 - Author visual gate showed only packers on joined belts; 2-3 hoods per packer (since v1.20) found by author, not by plan
+
+**2026-10-04.** v1.23 Alt scene listed packers on belts only. Author built packers off belt and rotated across a belt: hood drawn 2-3 times (FND-0057), bug in public v1.20..v1.22. 169 headless tests green: headless draws no pictures. Bucket: proof gap (visual). Root cause: belt `belt_animation_set` layers also paint start / end caps beyond the tile; plan scene never had a belt end next to a packer. **Rule (proposed, skill):** every author visual scene lists edge cases: off belt, belt only behind, only in front, rotated across, curve; any art added to a belt prototype gets an offline test of which of its 20 frames carry it.
+
+## FRC-0066 - Own new game tests wrong three times before gate (async without done, stopped belt holds 1, leftover below belt stack)
+
+**2026-10-04.** `test_v23` cap tests: `async(9000)` without `done()` waited full 9000 ticks; mop test expected 4 items on stopped body (holds 1); 150 ore = 37 stacks + 2 leftover, leftover waits by design. Each found by running test on scratch cap code, cost 3 extra headless rounds (~15 min). Bucket: test authoring. **Rule (proposed, skill):** new game test seen GREEN on scratch fix code as well as RED on base before lanes start (done here, keep); async test ends with `done()`; item counts in flow tests use whole belt stacks.
+
+## FRC-0067 - Bench log line changed without its offline test first
+
+**2026-10-04.** Added `filter_writes` to `tools/bench/mod/control.lua` log line; `bench builder > control passes settings and logs counters` pins exact line, went red, found by offline sweep after commit. Bucket: red-first skipped on tool code. **Rule:** tool code with a pinning test follows red-first like mod code.
+
+## FRC-0068 - `lane.py launch --label` refused: gateslot label is not lane label
+
+**2026-10-04.** Passed `--label sushi-packer/agent`; launch refused `invalid lane label`. Relaunched without it, lost ~1 min. **Rule:** `lane.py launch` without `--label` in this repo (memory [[lane-launch-blocks]] example has none).
