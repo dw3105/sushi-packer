@@ -211,17 +211,21 @@ function M.skip(rec, lane, kinds)
   local signature = _signature(kinds)
   rec.skip = rec.skip or { "", "" }
   if rec.skip[lane] == signature then return end
-  for _, arm in ipairs((rec.arms and rec.arms[lane]) or {}) do
-    if _valid(arm) then
-      arm.use_filters = #kinds > 0
-      arm.inserter_filter_mode = "blacklist"
-      for i = 1, N.ARM_FILTERS do
-        local kind = kinds[i]
-        arm.set_filter(i, kind and { name = kind.name, quality = kind.quality, comparator = "=" } or nil)
+  for _, group in ipairs({ (rec.arms and rec.arms[lane]) or {}, (rec.mop and rec.mop[lane]) or {} }) do
+    for _, arm in ipairs(group) do
+      if _valid(arm) then
+        arm.use_filters = #kinds > 0
+        arm.inserter_filter_mode = "blacklist"
+        for i = 1, N.ARM_FILTERS do
+          local kind = kinds[i]
+          arm.set_filter(i, kind and { name = kind.name, quality = kind.quality, comparator = "=" } or nil)
+        end
       end
     end
   end
   rec.skip[lane] = signature
+  local counters = storage and storage.sp_counters
+  if counters then counters.filter_writes = (counters.filter_writes or 0) + 1 end
 end
 
 -- F-1: does an arm of this lane hold an item whose kind has no slot in the lane store yet?
