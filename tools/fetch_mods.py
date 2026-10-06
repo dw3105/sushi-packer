@@ -3,6 +3,7 @@
 
   tools/fetch_mods.py lock                 resolve every mod set -> tests/mods.lock.json (portal API, no login)
   tools/fetch_mods.py fetch FV [MODSET]    download locked zips for FV into ~/.cache/sushi-packer-mods/FV, sha1 checked
+  tools/fetch_mods.py fetch-adhoc FV MOD...   download newest portal mods + hard deps into ~/.cache/sushi-packer-mods/adhoc-FV (probe only)
   tools/fetch_mods.py list FV MODSET       print mod names of set (incl. deps), one per line
 
 Download needs ~/.factorio-portal (username=..., token=...), chmod 600, never in repo.
@@ -97,6 +98,32 @@ def sha1(p):
     return h.hexdigest()
 
 
+def download(entry, d, user, token):
+    os.makedirs(d, exist_ok=True)
+    p = os.path.join(d, entry["file"])
+    if os.path.exists(p) and sha1(p) == entry["sha1"]:
+        return p
+    url = "https://mods.factorio.com%s?username=%s&token=%s" % (entry["url"], user, token)
+    tmp = p + ".part"
+    req = urllib.request.Request(url, headers={"User-Agent": "sushi-packer-fetch/1"})  # default urllib UA gets 403
+    try:
+        with urllib.request.urlopen(req, timeout=600) as r, open(tmp, "wb") as f:
+            while True:
+                b = r.read(1 << 20)
+                if not b:
+                    break
+                f.write(b)
+        got = sha1(tmp)
+        if got != entry["sha1"]:
+            raise SystemExit(f"fetch_mods: sha1 mismatch {entry['file']}: {got} != {entry['sha1']}")
+        os.replace(tmp, p)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    print("fetched", entry["file"], os.path.getsize(p))
+    return p
+
+
 def cmd_fetch(fv, modset=None):
     lock = json.load(open(LOCK))[fv]
     names = members(fv, modset) if modset else sorted(lock)
@@ -110,22 +137,28 @@ def cmd_fetch(fv, modset=None):
             continue
         if user is None:
             user, token = creds()
-        url = "https://mods.factorio.com%s?username=%s&token=%s" % (e["url"], user, token)
-        tmp = p + ".part"
-        req = urllib.request.Request(url, headers={"User-Agent": "sushi-packer-fetch/1"})  # default urllib UA gets 403
-        with urllib.request.urlopen(req, timeout=600) as r, open(tmp, "wb") as f:
-            while True:
-                b = r.read(1 << 20)
-                if not b:
-                    break
-                f.write(b)
-        got = sha1(tmp)
-        if got != e["sha1"]:
-            os.remove(tmp)
-            raise SystemExit(f"fetch_mods: sha1 mismatch {e['file']}: {got} != {e['sha1']}")
-        os.replace(tmp, p)
-        print("fetched", e["file"], os.path.getsize(p))
+        download(e, d, user, token)
     print(f"fetch-{fv}-{modset or 'all'}-ok")
+
+
+def cmd_fetch_adhoc(fv, mods):
+    plan = resolve(fv, mods)
+    d = os.path.join(CACHE, "adhoc-" + fv)
+    os.makedirs(d, exist_ok=True)
+    for name in sorted(plan):
+        e = plan[name]
+        print("plan", name, e["version"], e["file"])
+    user = token = None
+    for name in sorted(plan):
+        e = plan[name]
+        p = os.path.join(d, e["file"])
+        if os.path.exists(p) and sha1(p) == e["sha1"]:
+            print("have", e["file"])
+            continue
+        if user is None:
+            user, token = creds()
+        download(e, d, user, token)
+    print(f"fetch-adhoc-{fv}-ok {len(plan)} mods {d}")
 
 
 if __name__ == "__main__":
@@ -136,5 +169,7 @@ if __name__ == "__main__":
         cmd_fetch(*a[1:])
     elif a[:1] == ["list"] and len(a) == 3:
         print("\n".join(members(a[1], a[2])))
+    elif a[:1] == ["fetch-adhoc"] and len(a) >= 3:
+        cmd_fetch_adhoc(a[1], a[2:])
     else:
         raise SystemExit(__doc__)
