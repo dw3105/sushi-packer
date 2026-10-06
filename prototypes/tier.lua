@@ -292,9 +292,11 @@ function M.relink(raw)
     local technology = raw.technology[N.tech(tier)]
     if technology and technology.unit then
       local recipe = raw.recipe[N.item(tier)]
-      local prerequisites, research_ingredients = tech_requirements(raw, tier, previous_tier, recipe.ingredients, false)
-      technology.prerequisites = prerequisites
-      technology.unit.ingredients = research_ingredients
+      if recipe then
+        local prerequisites, research_ingredients = tech_requirements(raw, tier, previous_tier, recipe.ingredients, false)
+        technology.prerequisites = prerequisites
+        technology.unit.ingredients = research_ingredients
+      end
       previous_tier = tier
     end
   end
