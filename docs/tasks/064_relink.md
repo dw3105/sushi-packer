@@ -94,6 +94,8 @@ Paste: red output of each new test at base, green after, both mutations red + re
 {"name": "lane064-keep-green", "command": "( n=0; while IFS= read -r t; do n=$((n+1)); tools/run_tests.sh 2.0 \"$t\" >/dev/null 2>&1 || { echo \"RED $t\"; exit 1; }; done < tests/offline/fixtures/v24_keep_green.txt; [ $n -ge 91 ] || { echo \"count=$n\"; exit 1; } ) && echo lane064-keep-green-ok", "expect_exit": 0, "expect_regex": "lane064-keep-green-ok", "timeout_s": 600}
 ```
 
+Owner base colours (`lanes-base-v24`, scratch `HOME`, 2026-10-06): lane064-scope GREEN, lane064-tests RED (no test file), lane064-guard GREEN, lane064-keep-green GREEN.
+
 ## Files this lane owns
 
 prototypes/tier.lua, data-final-fixes.lua, tests/offline/test_data_v24.lua (new). Never touch anything else.
