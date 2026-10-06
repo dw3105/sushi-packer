@@ -72,6 +72,8 @@ Red output of each new test at base, green after, both mutations red + restore g
 {"name": "lane065-keep-green", "command": "( for t in 'stage > versions are 0.1.24 and 0.2.24' 'stage > changelog format valid' 'stage > release stage needs no Factorio'; do tools/run_tests.sh 2.0 \"tests/offline/test_stage.lua::$t\" >/dev/null 2>&1 || { echo \"RED $t\"; exit 1; }; done ) && echo lane065-keep-green-ok", "expect_exit": 0, "expect_regex": "lane065-keep-green-ok", "timeout_s": 120}
 ```
 
+Owner base colours (`lanes-base-retro`, scratch `HOME`, 2026-10-06): lane065-scope GREEN, lane065-tests RED (no test files), lane065-fetch-unchanged RED (AST half green, no `fetch-adhoc` in usage yet), lane065-keep-green GREEN.
+
 ## Files this lane owns
 
 tools/fetch_mods.py, tools/dump_data.sh (new), tools/dump_report.py (new), Makefile, tests/tools/test_fetch_mods.py (new), tests/tools/test_dump_report.py (new). Never touch anything else.

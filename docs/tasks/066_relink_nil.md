@@ -59,7 +59,7 @@ Red output at base, green after, mutation red + restore green, `git log --onelin
 {"name": "lane066-keep-green", "command": "( n=0; while IFS= read -r t; do n=$((n+1)); tools/run_tests.sh 2.0 \"$t\" >/dev/null 2>&1 || { echo \"RED $t\"; exit 1; }; done < tests/offline/fixtures/v24_keep_green.txt; [ $n -ge 91 ] || { echo \"count=$n\"; exit 1; } ) && echo lane066-keep-green-ok", "expect_exit": 0, "expect_regex": "lane066-keep-green-ok", "timeout_s": 600}
 ```
 
-Owner base colours (`lanes-base-retro`, scratch `HOME`, 2026-10-06): see integrator note below.
+Owner base colours (`lanes-base-retro`, scratch `HOME`, 2026-10-06): lane066-scope GREEN, lane066-tests RED (test not found), lane066-keep-green GREEN.
 
 ## Files this lane owns
 
