@@ -5,10 +5,16 @@ FV ?= 2.0
 # Exact label only (gateslot looks weights up by exact label). Lane checks call tools/run_tests.sh direct.
 GATE := $(if $(shell command -v gateslot),gateslot --label sushi-packer/heavy --,)
 
-.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench bench-all verify
+.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench bench-all verify fetch-adhoc dump-data
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "%-14s %s\n", $$1, $$2}'
+
+fetch-adhoc: ## Download portal mods + hard deps for a probe: FV=, MODS="a b"
+	tools/fetch_mods.py fetch-adhoc $(FV) $(MODS)
+
+dump-data: ## Headless data dump of our mod with mod zips: FV=, MODS=<dir>, SA=1
+	$(GATE) tools/dump_data.sh $(FV) $(MODS) $(if $(SA),sa)
 
 factorio: ## Download headless Factorio FV=2.0 (2.0.77) or FV=2.1 (2.1.20) into ~/factorio-$(FV)
 	tools/fetch_factorio.sh $(FV)
