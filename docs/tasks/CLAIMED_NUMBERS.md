@@ -62,3 +62,5 @@
 | `062` | `sushi-packer/agent` | v23 altmode: alt-mode arrow, hide-alt-info on hidden parts | 2026-10-04 |
 | `063` | `sushi-packer/agent` | v23 cap: kind cap in engine way, mop arms, filter_writes counter | 2026-10-04 |
 | `064` | `sushi-packer/agent` | v24 relink: vanilla tier tech prerequisites scanned at data-final-fixes | 2026-10-06 |
+| `065` | `sushi-packer/agent` | dumptool | 2026-10-06 |
+| `066` | `sushi-packer/agent` | relink nil | 2026-10-06 |
