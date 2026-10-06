@@ -3,7 +3,7 @@ name: sushi-packer-code
 description: "Working rule for sushi-packer, Factorio 2.0 + 2.1 belt-stacking box mod: requirements contract, frozen seams, lanes run single offline mock-based Lua tests only, headless Factorio only at integrator merge and release, API in both versions only, no push from VM. Read before editing prototypes/, scripts/, tests/, control.lua, data.lua, or claiming anything about this repo."
 ---
 
-**v0.8 - 30 Sep 2026.** File caveman full. Change log in `references/ledger.md`, never here.
+**v0.10 - 6 Oct 2026.** File caveman full. Change log in `references/ledger.md`, never here.
 
 **Canonical copy is `skills/sushi-packer-code/` in this repo.** Live copy `~/.claude/skills/sushi-packer-code` installed by `make skill-install` from clean `main` only. Edit live copy and SessionStart audit report drift. Shape copied from `local-transcriber-code`; lane rules follow shared `codex-tasks`. Requirements file in docs outranks this skill; when they disagree, requirements win and this skill gets fixed on next round by integrator.
 
@@ -34,7 +34,7 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 
 ## Evidence, hosts, operator (v0.6, friction log 2026-09-29, author approved)
 
-- **SP-11** **"Cannot serve" needs engine probe.** Before telling author a player request cannot be served, probe engine fact the "no" rests on. Mod dependency text is not feature availability (findings 2026-09-29: stacking works with `space-age` mod off).
+- **SP-11** **Player request naming other mod: dump with that mod before any answer or ➡️ option.** `make fetch-adhoc FV= MODS="<mod>"` then `make dump-data FV= MODS=~/.cache/sushi-packer-mods/adhoc-<FV>` shows our techs and recipes under that mod set; also before telling author request cannot be served. Mod dependency text is not feature availability (2026-09-29: stacking works with `space-age` off). v1.24: option B (swap red circuit) recommended before pY dump; dump showed real cause = scan timing (`docs/FINDINGS.md` 2026-10-06).
 - **SP-12** **Grep tools before moving shared files.** Before move or delete in shared dir (`~/share`, `~/.cache`), `grep -rn <path> tools/ Makefile .github` in repo. `~/share` = only files author asked for or files presented (`docs/RULINGS.md`).
 - **SP-13** **Test asserts its environment.** Test or set that claims environment (mods on/off, settings) asserts it inside run (`tools/run_tests.sh` harness space-age guard). Set name is not proof.
 - **SP-14** **Probe proves rig first.** Rate/timing probe shows warm-up >= transit time for every tier measured, or known-good control per speed class, before numbers become finding (first blue-rate report 2026-09-29 was rig artifact).
@@ -51,7 +51,7 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 
 ## Plans, bumps, reports (v0.8, friction log 2026-09-30 v12/v13, author approved)
 
-- **SP-22** **Plan checklist first.** Every build plan opens with: very simple what + why it works first try, `Done =` list, lanes (max parallel, no needless lane; lanes single offline tests only), integrator loop (full suite once all merged, fix reds one test at a time, rerun, then main + boxes). Bug plan names headless red repro step (or author in-game error text) before any fix step (`docs/RULINGS.md` 2026-09-30; v1.13 plan rejected twice). Lanes launch with `lane.py --repo <int worktree> launch` (task file lives on int branch only).
+- **SP-22** **Plan checklist first.** Every build plan opens with: very simple what + why it works first try, `Done =` list, lanes (max parallel, no needless lane; lanes single offline tests only), integrator loop (full suite once all merged, fix reds one test at a time, rerun, then main + boxes). Bug plan names headless red repro step (or author in-game error text) before any fix step (`docs/RULINGS.md` 2026-09-30; v1.13 plan rejected twice). Lanes launch with `lane.py --repo <int worktree> launch` (task file lives on int branch only). Round commands in order: `references/lane-round.md`.
 - **SP-23** **Version bump by grep.** Before bump, `grep -rn '<old ver>'` over `tests/ tools/ README.md portal/ info.json`; every hit bumped or named as history. Never sed by line numbers (v1.13: missed pin cost one full-suite round).
 - **SP-24** **Portal thread = text + images.** Reading player report lists every `<img>` in thread HTML and reads each (screenshot often holds full error + mod list) before first grill question (v1.14 them8: screenshot missed, wrong question asked).
 
@@ -61,4 +61,5 @@ SP-02 has machine stop inside `tools/run_tests.sh` (and `make test-one`, which c
 
 | Reference | Read when |
 |---|---|
+| `references/lane-round.md` | cutting, launching, checking or merging a lane round |
 | `references/ledger.md` | changing this skill |
