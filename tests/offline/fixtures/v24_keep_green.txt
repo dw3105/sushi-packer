@@ -1,0 +1,91 @@
+tests/offline/test_data.lua::data v20 > body has no connector frame
+tests/offline/test_data.lua::data v20 > hood layer rows follow leaving direction
+tests/offline/test_data.lua::data v20 > hood layer end caps are blank
+tests/offline/test_data.lua::data v20 > blank cap picture ships as 128 by 128 png
+tests/offline/test_data.lua::data v20 > hood layer follows custom index fields
+tests/offline/test_data.lua::data v20 > hood layer repeat count equals belt frames
+tests/offline/test_data.lua::data v20 > odd belt picture keeps belt picture
+tests/offline/test_data.lua::data v20 > source belt picture not modified
+tests/offline/test_data.lua::data v20 > body picture is belt plus hood
+tests/offline/test_data.lua::data v17 > body is belt copy per tier
+tests/offline/test_data.lua::data v17 > body fields
+tests/offline/test_data.lua::data v17 > body upgrade chain
+tests/offline/test_data.lua::data v17 > hood fields
+tests/offline/test_data.lua::data v17 > legacy boxes hidden without upgrade
+tests/offline/test_data.lua::data v17 > item still places placer
+tests/offline/test_data.lua::data > old chest variants have hide-alt-info
+tests/offline/test_data.lua::data > own subgroup row after belts
+tests/offline/test_data.lua::data > order yellow red blue turbo
+tests/offline/test_data.lua::data > item names follow vanilla series
+tests/offline/test_data.lua::data > simulations call scene with mods
+tests/offline/test_data.lua::data > simulations pre-run 900 ticks
+tests/offline/test_data.lua::data > placer joins belt group variants do not
+tests/offline/test_data.lua::data > yellow recipe matches table
+tests/offline/test_data.lua::data > chained tiers use previous box
+tests/offline/test_data.lua::data > craft times 30 45 60 120
+tests/offline/test_data.lua::data > recipes disabled until research
+tests/offline/test_data.lua::data > tech prereqs include ingredient unlock techs
+tests/offline/test_data.lua::data > tech count is belt count x 1.5
+tests/offline/test_data.lua::data > tech ingredients are union over prereqs
+tests/offline/test_data.lua::data > tech unlocks its recipe
+tests/offline/test_data.lua::data > body upgrade chain follows tier order
+tests/offline/test_data.lua::data > item weight 20 kg
+tests/offline/test_data.lua::data > no surface conditions
+tests/offline/test_data.lua::data v22 > hood sprite per tier and direction with shadow
+tests/offline/test_data_extra.lua::data extra > chain fix-ups go to bodies
+tests/offline/test_data_extra.lua::data extra > source belt missing in raw
+tests/offline/test_data_extra.lua::data extra > vanilla prototypes identical to v8
+tests/offline/test_data_extra.lua::data extra > no mods no extra tiers
+tests/offline/test_data_extra.lua::data extra > arig adds hyper after turbo
+tests/offline/test_data_extra.lua::data extra > hidden belt skipped
+tests/offline/test_data_extra.lua::data extra > k2so hidden advanced belt ignored
+tests/offline/test_data_extra.lua::data extra > arig k2so chain turbo hyper superior
+tests/offline/test_data_extra.lua::data extra > all mods sorted by speed tie by row order
+tests/offline/test_data_extra.lua::data extra > belt tech without unit skipped
+tests/offline/test_data_extra.lua::data extra > missing tech skipped
+tests/offline/test_data_extra.lua::data extra > recipe chains previous tier
+tests/offline/test_data_extra.lua::data extra > tech prereqs belt tech previous tier and ingredient unlocks
+tests/offline/test_data_extra.lua::data extra > tech cost belt count x 1.5 and pack union
+tests/offline/test_data_extra.lua::data extra > body next_upgrade chain follows tier chains
+tests/offline/test_data_extra.lua::data extra > item order after turbo in chain order
+tests/offline/test_data_extra.lua::data extra > extra graphics paths use tier key
+tests/offline/test_data_extra.lua::data extra > info lists belt mods as visible optional deps
+tests/offline/test_data_extra.lua::data extra > nosa no turbo tier
+tests/offline/test_data_extra.lua::data extra > nosa extras chain after blue
+tests/offline/test_data_extra.lua::data extra > nosa extra recipe bulk inserter processing unit
+tests/offline/test_data_extra.lua::data extra > sa extra recipe unchanged
+tests/offline/test_data_extra.lua::data extra > owner missing row skipped
+tests/offline/test_data_extra.lua::data extra > ab-sa ub-ultimate not live
+tests/offline/test_data_extra.lua::data extra > ab-sa ab rows after turbo
+tests/offline/test_data_extra.lua::data extra > splitter missing row skipped logged
+tests/offline/test_data_extra.lua::data extra > speed at or below top vanilla skipped
+tests/offline/test_data_extra.lua::data extra > own_role keeps slow row
+tests/offline/test_data_extra.lua::data extra > se chain space root then deep space
+tests/offline/test_data_extra.lua::data extra > container allowed in se space
+tests/offline/test_data_extra.lua::data extra > ab four rows speed order
+tests/offline/test_data_extra.lua::data extra > upgrade chain from top vanilla
+tests/offline/test_data_extra.lua::data extra > info lists space-age as optional
+tests/offline/test_data_extra.lua::data extra > extra box matches resized vanilla box
+tests/offline/test_data_extra.lua::data extra > extra box matches mask of vanilla box
+tests/offline/test_data_extra.lua::data extra > extra mask copied into every chain
+tests/offline/test_data_extra.lua::data extra > nil mask stays nil
+tests/offline/test_data_extra.lua::data extra > se space root recipe
+tests/offline/test_data_extra.lua::data extra > se space root tech
+tests/offline/test_data_extra.lua::data extra > se deep space recipe needs space box
+tests/offline/test_data_extra.lua::data extra > after target inactive skips row
+tests/offline/test_data_extra.lua::data extra > se plus k2 two chains
+tests/offline/test_data_extra.lua::data extra > yellow recipe unchanged by root rule
+tests/offline/test_data_hidden.lua::data hidden > makes arm and store
+tests/offline/test_data_hidden.lua::data hidden > arm fields
+tests/offline/test_data_hidden.lua::data hidden > store fields
+tests/offline/test_data_hidden.lua::data hidden > parts are hidden and untouchable
+tests/offline/test_data_hidden.lua::data hidden > every hidden part has hide-alt-info
+tests/offline/test_data_hidden.lua::data hidden > parts draw nothing
+tests/offline/test_data_hidden.lua::data hidden > out arm stacks only with space travel flag
+tests/offline/test_data_hidden.lua::data hidden > finalize widens out arm hand to engine max belt stack
+tests/offline/test_data_hidden.lua::data hidden > out arm swing follows belt speed
+tests/offline/test_data_hidden.lua::data hidden > finalize makes one out arm per tier belt speed
+tests/offline/test_data_hidden.lua::data hidden > source prototypes untouched
+tests/offline/test_guard.lua::guard > contract frozen
+tests/offline/test_guard.lua::guard > no require inside runtime functions
+tests/offline/test_guard.lua::guard > names frozen
