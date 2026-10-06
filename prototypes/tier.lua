@@ -20,6 +20,55 @@ local function picture(tier, dir)
 end
 local function icon(tier) return G .. "icons/sushi-packer-" .. tier .. ".png" end
 
+local function tech_requirements(raw, tier, previous_tier, recipe_ingredients, root)
+  local T = N.TIER[tier]
+  local prerequisites = { T.tech }
+  local prerequisite_set = { [T.tech] = true }
+  local function add_prerequisite(name)
+    if not prerequisite_set[name] then
+      prerequisite_set[name] = true
+      prerequisites[#prerequisites + 1] = name
+    end
+  end
+  if previous_tier then
+    add_prerequisite(N.tech(previous_tier))
+  elseif not root then
+    add_prerequisite("steel-processing")
+  end
+
+  local technology_names = {}
+  for name in pairs(raw.technology) do technology_names[#technology_names + 1] = name end
+  table.sort(technology_names)
+  for _, ingredient in ipairs(recipe_ingredients) do
+    for _, technology_name in ipairs(technology_names) do
+      if technology_name ~= N.tech(tier) then
+        local technology = raw.technology[technology_name]
+        for _, effect in ipairs(technology.effects or {}) do
+          if effect.type == "unlock-recipe" and effect.recipe == ingredient.name then
+            add_prerequisite(technology_name)
+            break
+          end
+        end
+      end
+    end
+  end
+
+  local research_ingredients, research_ingredient_set = {}, {}
+  for _, prerequisite in ipairs(prerequisites) do
+    local technology = raw.technology[prerequisite]
+    if technology and technology.unit then
+      for _, ingredient in ipairs(technology.unit.ingredients or {}) do
+        local name = ingredient[1]
+        if not research_ingredient_set[name] then
+          research_ingredient_set[name] = true
+          research_ingredients[#research_ingredients + 1] = { name, ingredient[2] }
+        end
+      end
+    end
+  end
+  return prerequisites, research_ingredients
+end
+
 local BELT_ROWS = {
   { "east_index", "east", "east" }, { "west_index", "west", "west" },
   { "north_index", "north", "north" }, { "south_index", "south", "south" },
@@ -116,51 +165,7 @@ function M.make(tier, opts)
   elseif not belt_tech or not belt_tech.unit then
     return protos
   end
-  local prerequisites = { T.tech }
-  local prerequisite_set = { [T.tech] = true }
-  local function add_prerequisite(name)
-    if not prerequisite_set[name] then
-      prerequisite_set[name] = true
-      prerequisites[#prerequisites + 1] = name
-    end
-  end
-  if previous_tier then
-    add_prerequisite(N.tech(previous_tier))
-  elseif not opts.root then
-    add_prerequisite("steel-processing")
-  end
-
-  local recipe_ingredients = protos[2].ingredients
-  local technology_names = {}
-  for name in pairs(data.raw.technology) do technology_names[#technology_names + 1] = name end
-  table.sort(technology_names)
-  for _, ingredient in ipairs(recipe_ingredients) do
-    for _, technology_name in ipairs(technology_names) do
-      if technology_name ~= N.tech(tier) then
-        local technology = data.raw.technology[technology_name]
-        for _, effect in ipairs(technology.effects or {}) do
-          if effect.type == "unlock-recipe" and effect.recipe == ingredient.name then
-            add_prerequisite(technology_name)
-            break
-          end
-        end
-      end
-    end
-  end
-
-  local research_ingredients, research_ingredient_set = {}, {}
-  for _, prerequisite in ipairs(prerequisites) do
-    local technology = data.raw.technology[prerequisite]
-    if technology and technology.unit then
-      for _, ingredient in ipairs(technology.unit.ingredients or {}) do
-        local name = ingredient[1]
-        if not research_ingredient_set[name] then
-          research_ingredient_set[name] = true
-          research_ingredients[#research_ingredients + 1] = { name, ingredient[2] }
-        end
-      end
-    end
-  end
+  local prerequisites, research_ingredients = tech_requirements(data.raw, tier, previous_tier, protos[2].ingredients, opts.root)
   protos[#protos + 1] = {
     type = "technology",
     name = N.tech(tier),
@@ -281,5 +286,18 @@ function M.make(tier, opts)
   return protos
 end
 
+function M.relink(raw)
+  local previous_tier
+  for _, tier in ipairs(N.TIERS) do
+    local technology = raw.technology[N.tech(tier)]
+    if technology and technology.unit then
+      local recipe = raw.recipe[N.item(tier)]
+      local prerequisites, research_ingredients = tech_requirements(raw, tier, previous_tier, recipe.ingredients, false)
+      technology.prerequisites = prerequisites
+      technology.unit.ingredients = research_ingredients
+      previous_tier = tier
+    end
+  end
+end
 
 return M
