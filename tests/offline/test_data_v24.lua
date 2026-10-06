@@ -71,6 +71,33 @@ describe("data v24", function()
     end
   end)
 
+  it("relink keeps tech when recipe gone", function()
+    local tier = setup()
+    local fast = tech("fast-sushi-packer")
+    local before = copy(fast)
+    local prerequisites, unit = fast.prerequisites, fast.unit
+    F.raw.recipe["fast-sushi-packer"] = nil
+    local processing = tech("processing-unit")
+    for i = #processing.effects, 1, -1 do
+      local effect = processing.effects[i]
+      if effect.type == "unlock-recipe" and effect.recipe == "processing-unit" then table.remove(processing.effects, i) end
+    end
+    F.raw.technology.pu2 = {
+      type = "technology", name = "pu2", prerequisites = {},
+      effects = { { type = "unlock-recipe", recipe = "processing-unit" } },
+      unit = { count = 1, time = 1, ingredients = { { "automation-science-pack", 1 } } },
+    }
+
+    local succeeded = pcall(function() tier.relink(F.raw) end)
+    ok(succeeded)
+    eq(fast.prerequisites, before.prerequisites)
+    eq(fast.unit, before.unit)
+    ok(fast.prerequisites == prerequisites)
+    ok(fast.unit == unit)
+    eq(tech("express-sushi-packer").prerequisites,
+      { "logistics-3", "fast-sushi-packer", "bulk-inserter", "pu2" })
+  end)
+
   it("relink twice equals once", function()
     local tier = setup()
     move_advanced_circuit()
