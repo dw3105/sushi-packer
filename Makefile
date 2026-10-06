@@ -5,13 +5,16 @@ FV ?= 2.0
 # Exact label only (gateslot looks weights up by exact label). Lane checks call tools/run_tests.sh direct.
 GATE := $(if $(shell command -v gateslot),gateslot --label sushi-packer/heavy --,)
 
-.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench bench-all verify fetch-adhoc dump-data
+.PHONY: help factorio test test-one test-modsets ci-collect skill-lint skill-check skill-install zip load-check bench bench-all verify fetch-adhoc dump-data test-tools
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "%-14s %s\n", $$1, $$2}'
 
 fetch-adhoc: ## Download portal mods + hard deps for a probe: FV=, MODS="a b"
 	tools/fetch_mods.py fetch-adhoc $(FV) $(MODS)
+
+test-tools: ## Offline unit tests of tools/ (python stdlib, ms)
+	@for f in tests/tools/test_*.py; do python3 $$f || exit 1; done; echo test-tools-ok
 
 dump-data: ## Headless data dump of our mod with mod zips: FV=, MODS=<dir>, SA=1
 	$(GATE) tools/dump_data.sh $(FV) $(MODS) $(if $(SA),sa)
@@ -68,8 +71,9 @@ else ifeq ($(FV),2.1)
 	$(GATE) tools/bench/run.sh 2.1 --tier kr-superior --modset k2so --flow stacks --boxes 200
 endif
 
-verify: ## Gate before merge to main: skill lint + both full suites + skill drift
+verify: ## Gate before merge to main: skill lint + tool tests + both full suites + skill drift
 	$(MAKE) skill-lint
+	$(MAKE) test-tools
 	$(MAKE) test FV=2.0
 	$(MAKE) test FV=2.1
 	$(MAKE) skill-check
