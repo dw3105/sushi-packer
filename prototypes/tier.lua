@@ -89,6 +89,17 @@ function M._hood_layer(tier, set)
   local directions = base.direction_count or first and first.direction_count
   if directions ~= 20 then return nil end
 
+  local belt_layers = base.layers or { base }
+  if #belt_layers == 0 then return nil end
+  local frame_count
+  for _, layer in ipairs(belt_layers) do
+    if layer.frame_sequence ~= nil then return nil end
+    local length = (layer.frame_count or 1) * (layer.repeat_count or 1)
+    if type(length) ~= "number" or length ~= length or length == math.huge or length < 1 or length ~= math.floor(length) then return nil end
+    if frame_count and frame_count ~= length then return nil end
+    frame_count = length
+  end
+
   local rows = {}
   for default_index, row in ipairs(BELT_ROWS) do
     local index = set[row[1]]
@@ -108,7 +119,6 @@ function M._hood_layer(tier, set)
     filenames[index] = dir == "blank" and G .. "entity/sushi-packer/blank-128.png"
       or G .. "entity/sushi-packer/" .. tier .. "/sushi-packer-" .. tier .. "-" .. dir .. ".png"
   end
-  local frame_count = base.frame_count or first and first.frame_count or 1
   return {
     filenames = filenames,
     lines_per_file = 1,
