@@ -72,17 +72,17 @@ describe("data v20", function()
     local set = { animation_set = { frame_count = 32, direction_count = 20 } }
     eq(tier_builder._hood_layer("yellow", set).repeat_count, 32)
     local old = { filename = "base.png", frame_count = 16 }
-    set.animation_set = { layers = { old, { filename = "other.png" } }, direction_count = 20 }
+    set.animation_set = { layers = { old, { filename = "other.png", frame_count = 16 } }, direction_count = 20 }
     local layer = tier_builder._hood_layer("yellow", set)
     eq(layer.repeat_count, 16)
     local raw = load()
     local source = raw["transport-belt"][N.TIER.yellow.belt]
-    source.belt_animation_set = { animation_set = { layers = { old, { filename = "other.png" } }, direction_count = 20 } }
+    source.belt_animation_set = { animation_set = { layers = { old, { filename = "other.png", frame_count = 16 } }, direction_count = 20 } }
     local body = tier_builder.make("yellow", { index = 1 })
     local body_proto
     for _, proto in ipairs(body) do if proto.name == N.body("yellow") then body_proto = proto end end
     local layers = body_proto.belt_animation_set.animation_set.layers
-    eq(layers[1], old); eq(layers[2], { filename = "other.png" }); eq(layers[3], layer)
+    eq(layers[1], old); eq(layers[2], { filename = "other.png", frame_count = 16 }); eq(layers[3], layer)
   end)
 
   it("odd belt picture keeps belt picture", function()
@@ -359,5 +359,39 @@ describe("data v22", function()
         eq(sp.layers[2].draw_as_shadow, true)
       end
     end
+  end)
+end)
+describe("data v25", function()
+  local tier_builder = require("prototypes.tier")
+
+  it("hood length counts repeat on every layer", function()
+    local cases = {
+      { { layers = { { filename = "belt.png", frame_count = 8, repeat_count = 2 }, { filename = "arrows.png", frame_count = 16 } }, direction_count = 20 }, 16 },
+      { { layers = { { filename = "belt.png", frame_count = 8, repeat_count = 8 }, { filename = "arrows.png", frame_count = 64 } }, direction_count = 20 }, 64 },
+      { { layers = { { filename = "belt.png", frame_count = 8, repeat_count = 2 }, { filename = "arrows.png", frame_count = 16 }, { filename = "rails.png", frame_count = 8, repeat_count = 2 } }, direction_count = 20 }, 16 },
+      { { frame_count = 8, repeat_count = 4, direction_count = 20 }, 32 },
+    }
+    for _, case in ipairs(cases) do
+      eq(tier_builder._hood_layer("yellow", { animation_set = case[1] }).repeat_count, case[2])
+    end
+  end)
+
+  it("hood left out when belt layers disagree", function()
+    local cases = {
+      { layers = { { frame_count = 8, repeat_count = 2 }, { frame_count = 81 } }, direction_count = 20 },
+      { layers = { { frame_count = 16, frame_sequence = { 1, 2, 3 } } }, direction_count = 20 },
+      { layers = {}, direction_count = 20 },
+      { frame_count = 0, direction_count = 20 },
+    }
+    for _, animation_set in ipairs(cases) do eq(tier_builder._hood_layer("yellow", { animation_set = animation_set }), nil) end
+  end)
+
+  it("body keeps belt picture when hood left out", function()
+    local raw = load()
+    local source = raw["transport-belt"][N.TIER.yellow.belt]
+    source.belt_animation_set = { animation_set = { layers = { { filename = "a.png", frame_count = 8, repeat_count = 2 }, { filename = "b.png", frame_count = 81 } }, direction_count = 20 } }
+    local original = table.deepcopy(source.belt_animation_set)
+    local protos = tier_builder.make("yellow", { index = 1 })
+    for _, proto in ipairs(protos) do if proto.name == N.body("yellow") then eq(proto.belt_animation_set.animation_set, original.animation_set) end end
   end)
 end)
