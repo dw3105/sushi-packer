@@ -29,3 +29,7 @@
 **Intake share** — what packer line takes in divided by what free belt beside it carries, same feed, same time. Below 1 = belt behind packer stands and goes ("jerks"). **Leftover** — items of one kind in lane store fewer than one belt stack.
 
 **Kind cap** — most of one item kind (item + quality) one lane store may hold: one item stack (item's own stack size, e.g. 100 iron plates). Items already in arms' hands still arrive, so kind may pass cap a little (never more than 2 slots). Kind at cap is not taken from belt until store holds half a stack or less; belt behind waits meanwhile.
+
+**Hood** — packer's own picture over belt (tier color). Placed packer always shows it. Ghost and blueprint preview show it only when it fits belt picture; never stops game loading.
+
+**Belt skin mod** — mod that redraws belts (e.g. Black Rubber Belts). Packer belt look follows it; packer must load with any belt skin mod.
