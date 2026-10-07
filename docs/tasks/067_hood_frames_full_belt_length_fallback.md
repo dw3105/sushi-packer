@@ -76,7 +76,10 @@ Owner base colours (`lanes-base-v25`, scratch `HOME`, 2026-10-07): lane067-scope
 
 ## Files this lane owns
 
-prototypes/tier.lua (body of `M._hood_layer` only), tests/offline/test_data.lua (fixture of `hood layer repeat count equals belt frames` + new `describe("data v25")` block at end). Never touch anything else.
+- `prototypes/tier.lua` (body of `M._hood_layer` only)
+- `tests/offline/test_data.lua` (fixture of `hood layer repeat count equals belt frames` + new `describe("data v25")` block at end)
+
+Never touch anything else.
 
 Re-cut because: none
 
