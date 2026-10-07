@@ -139,5 +139,29 @@
       "BeltSpeedMultiplier-speed-factor": 2.0
     },
     "bench_only": true
+  },
+  "brb": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "black-rubber-belts-remastered"
+    ],
+    "_note": "v25 belt skin mod (Gamer433, FND-0059, V25-2): default style, belt layers 8 x 2 + arrows 16."
+  },
+  "brb-quad": {
+    "fv": [
+      "2.0",
+      "2.1"
+    ],
+    "mods": [
+      "black-rubber-belts-remastered"
+    ],
+    "settings": {
+      "arrow-style": "arrow-quadrupled",
+      "rail-style": "colored"
+    },
+    "_note": "v25 player style: 3 layers 8 x 8, 64, 8 x 8 (FND-0059)."
   }
 }

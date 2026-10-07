@@ -108,6 +108,12 @@
       "url": "/download/alien-biomes-graphics/6859bb487173e6ebc73b434e",
       "version": "0.7.1"
     },
+    "black-rubber-belts-remastered": {
+      "file": "black-rubber-belts-remastered_2.3.10.zip",
+      "sha1": "f495f1cd2fa8d84690ec00e09a2cff60ea6a86f1",
+      "url": "/download/black-rubber-belts-remastered/6ac42b401dd20ed38b7c03ff",
+      "version": "2.3.10"
+    },
     "boblibrary": {
       "file": "boblibrary_2.1.0.zip",
       "sha1": "c2f97c52bb45fc26643a397899bd6e269622940e",
@@ -421,6 +427,18 @@
       "sha1": "8ddfa5a980413e0c8dac6155905b0693fd5a48b8",
       "url": "/download/alien-biomes-graphics/6a3b94a586ba470d8520dbe9",
       "version": "0.8.0"
+    },
+    "belt-direction-indicator": {
+      "file": "belt-direction-indicator_1.0.2.zip",
+      "sha1": "bc7b892f6f4bd31289064f362cf517ed77a9fa66",
+      "url": "/download/belt-direction-indicator/6a9f248759dd498dc2d800cc",
+      "version": "1.0.2"
+    },
+    "black-rubber-belts-remastered": {
+      "file": "black-rubber-belts-remastered_2.4.6.zip",
+      "sha1": "52529414289688d8b1de85656bd7e53763089b65",
+      "url": "/download/black-rubber-belts-remastered/6ac42b53b1cb15c798432ce9",
+      "version": "2.4.6"
     },
     "boblibrary": {
       "file": "boblibrary_3.0.1.zip",
