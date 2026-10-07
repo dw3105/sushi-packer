@@ -64,3 +64,4 @@
 | `064` | `sushi-packer/agent` | v24 relink: vanilla tier tech prerequisites scanned at data-final-fixes | 2026-10-06 |
 | `065` | `sushi-packer/agent` | dumptool | 2026-10-06 |
 | `066` | `sushi-packer/agent` | relink nil | 2026-10-06 |
+| `067` | `sushi-packer/agent` | hood frames: full belt length, fallback | 2026-10-07 |
