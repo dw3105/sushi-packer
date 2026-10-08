@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.25
+Date: 2026-10-08
+  Bugfixes:
+    - Game no longer fails to load with belt mods that redraw belts (e.g. Black Rubber Belts): packer belt picture now matches the belt's own animation length.
+---------------------------------------------------------------------------------------------------
+Version: 0.1.25
+Date: 2026-10-08
+  Bugfixes:
+    - Game no longer fails to load with belt mods that redraw belts (e.g. Black Rubber Belts): packer belt picture now matches the belt's own animation length.
+---------------------------------------------------------------------------------------------------
 Version: 0.2.24
 Date: 2026-10-06
   Bugfixes:
