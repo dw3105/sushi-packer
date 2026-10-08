@@ -152,8 +152,7 @@
   },
   "brb-quad": {
     "fv": [
-      "2.0",
-      "2.1"
+      "2.0"
     ],
     "mods": [
       "black-rubber-belts-remastered"
@@ -162,6 +161,20 @@
       "arrow-style": "arrow-quadrupled",
       "rail-style": "colored"
     },
-    "_note": "v25 player style: 3 layers 8 x 8, 64, 8 x 8 (FND-0059)."
+    "_note": "v25 player style (2.0, Black Rubber 2.3.x): 3 layers 8 x 8, 64, 8 x 8 (FND-0059). 2.1 Black Rubber has no arrow-quadrupled: see brb-quad-21."
+  },
+  "brb-quad-21": {
+    "fv": [
+      "2.1"
+    ],
+    "mods": [
+      "black-rubber-belts-remastered"
+    ],
+    "settings": {
+      "tier-style": "quadrupled",
+      "rail-style": "colored",
+      "stripe-style": "prismatic"
+    },
+    "_note": "v25 2.1 Black Rubber 2.4.x longest style: 4 layers 8 x 8, 64, 8 x 8, 8 x 8 (FND-0059)."
   }
 }
